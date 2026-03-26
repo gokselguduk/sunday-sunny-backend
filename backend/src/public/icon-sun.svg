@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sunday Sunny">
+  <defs>
+    <radialGradient id="core" cx="42%" cy="38%" r="55%">
+      <stop offset="0%" stop-color="#FFF8E7"/>
+      <stop offset="35%" stop-color="#FFD54F"/>
+      <stop offset="70%" stop-color="#FF9800"/>
+      <stop offset="100%" stop-color="#E65100"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00D4FF" stop-opacity="0.45"/>
+      <stop offset="55%" stop-color="#7B5CFF" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#080C14" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="rayGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE082"/>
+      <stop offset="100%" stop-color="#FF6F00"/>
+    </linearGradient>
+    <linearGradient id="rayCyan" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00D4FF"/>
+      <stop offset="100%" stop-color="#00B8D4"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="#080C14"/>
+  <g transform="translate(256,256) scale(0.86) translate(-256,-256)">
+    <circle cx="256" cy="256" r="220" fill="url(#glow)"/>
+    <g transform="translate(256,256)" filter="url(#soft)">
+      <g stroke-linecap="round" fill="none">
+        <path d="M0-175 L0-115" stroke="url(#rayCyan)" stroke-width="14" opacity="0.95"/>
+        <path d="M124-124 L81-81" stroke="url(#rayGold)" stroke-width="12" opacity="0.9"/>
+        <path d="M175 0 L115 0" stroke="url(#rayCyan)" stroke-width="14" opacity="0.95"/>
+        <path d="M124 124 L81 81" stroke="url(#rayGold)" stroke-width="12" opacity="0.9"/>
+        <path d="M0 175 L0 115" stroke="url(#rayCyan)" stroke-width="14" opacity="0.95"/>
+        <path d="M-124 124 L-81 81" stroke="url(#rayGold)" stroke-width="12" opacity="0.9"/>
+        <path d="M-175 0 L-115 0" stroke="url(#rayCyan)" stroke-width="14" opacity="0.95"/>
+        <path d="M-124-124 L-81-81" stroke="url(#rayGold)" stroke-width="12" opacity="0.9"/>
+      </g>
+      <g stroke-linecap="round" fill="none" opacity="0.75">
+        <path d="M60-165 L40-110" stroke="#FFB300" stroke-width="8"/>
+        <path d="M165-60 L110-40" stroke="#00E5FF" stroke-width="8"/>
+        <path d="M165 60 L110 40" stroke="#FFB300" stroke-width="8"/>
+        <path d="M60 165 L40 110" stroke="#00E5FF" stroke-width="8"/>
+        <path d="M-60 165 L-40 110" stroke="#FFB300" stroke-width="8"/>
+        <path d="M-165 60 L-110 40" stroke="#00E5FF" stroke-width="8"/>
+        <path d="M-165-60 L-110-40" stroke="#FFB300" stroke-width="8"/>
+        <path d="M-60-165 L-40-110" stroke="#00E5FF" stroke-width="8"/>
+      </g>
+    </g>
+    <circle cx="256" cy="256" r="78" fill="url(#core)" stroke="#FFF3E0" stroke-width="3" stroke-opacity="0.35"/>
+    <circle cx="256" cy="256" r="78" fill="none" stroke="url(#rayCyan)" stroke-width="2" opacity="0.25"/>
+  </g>
+</svg>
