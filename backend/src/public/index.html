@@ -55,6 +55,12 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .page{display:none}.page.active{display:block}
 .dash-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 16px}
 .stat-box{background:var(--bg1);border-radius:12px;padding:12px;text-align:center;border:1px solid var(--border)}
+.stat-box.stat-go{cursor:pointer;transition:border-color .15s,transform .12s}
+.stat-box.stat-go:active{transform:scale(0.98)}
+.stat-box.stat-go:hover{border-color:rgba(0,212,255,0.35)}
+.firsat-banner.stat-go{cursor:pointer;transition:border-color .15s,transform .12s}
+.firsat-banner.stat-go:active{transform:scale(0.99)}
+.firsat-banner.stat-go:hover{border-color:rgba(0,212,255,0.25)}
 .stat-num{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;margin-bottom:2px}
 .stat-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.3px}
 .firsat-banner{margin:0 16px 12px;padding:12px 16px;border-radius:14px;border:1px solid;display:flex;align-items:center;justify-content:space-between}
@@ -249,17 +255,17 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 <div class="content">
   <div class="page active" id="page-dashboard">
     <div class="dash-stats">
-      <div class="stat-box"><div class="stat-num" id="s-sinyal" style="color:var(--accent)">—</div><div class="stat-lbl">Sinyal</div></div>
-      <div class="stat-box"><div class="stat-num" id="s-nadir" style="color:var(--green)">—</div><div class="stat-lbl">🔥 Nadir</div></div>
+      <div class="stat-box stat-go" role="button" tabindex="0" title="Tüm sinyaller" onclick="goSinyallerFiltre('tum')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('tum')}"><div class="stat-num" id="s-sinyal" style="color:var(--accent)">—</div><div class="stat-lbl">Sinyal</div></div>
+      <div class="stat-box stat-go" role="button" tabindex="0" title="🔥 Nadir (80+)" onclick="goSinyallerFiltre('nadir')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('nadir')}"><div class="stat-num" id="s-nadir" style="color:var(--green)">—</div><div class="stat-lbl">🔥 Nadir</div></div>
       <div class="stat-box"><div class="stat-num" id="s-kur" style="color:var(--amber)">—</div><div class="stat-lbl">USD/TRY</div></div>
     </div>
     <p id="board-hint" style="font-size:10px;color:var(--text3);text-align:center;padding:0 16px 10px;line-height:1.45"></p>
     <div class="fb-grid">
-      <div class="firsat-banner fb-nadir" style="flex-direction:column;align-items:flex-start;gap:4px">
+      <div class="firsat-banner fb-nadir stat-go" role="button" tabindex="0" title="Nadir listesine git" style="flex-direction:column;align-items:flex-start;gap:4px" onclick="goSinyallerFiltre('nadir')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('nadir')}">
         <div style="font-size:10px;color:var(--text3)">🔥 Nadir Fırsat (80+)</div>
         <div class="fb-sayi" id="b-nadir-sayi" style="color:var(--green)">0</div>
       </div>
-      <div class="firsat-banner fb-guclu" style="flex-direction:column;align-items:flex-start;gap:4px">
+      <div class="firsat-banner fb-guclu stat-go" role="button" tabindex="0" title="Güçlü listesine git" style="flex-direction:column;align-items:flex-start;gap:4px" onclick="goSinyallerFiltre('guclu')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('guclu')}">
         <div style="font-size:10px;color:var(--text3)">✅ Güçlü Fırsat (65+)</div>
         <div class="fb-sayi" id="b-guclu-sayi" style="color:var(--accent)">0</div>
       </div>
@@ -274,17 +280,17 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 
   <div class="page" id="page-sinyaller">
     <div class="filtre-wrap">
-      <button class="filtre-btn active" onclick="filtre('tum',this)">Tümü</button>
-      <button class="filtre-btn" onclick="filtre('nadir',this)">🔥 Nadir</button>
-      <button class="filtre-btn" onclick="filtre('nadirhist',this)">⭐ Geçmiş Nadir</button>
-      <button class="filtre-btn" onclick="filtre('guclu',this)">✅ Güçlü</button>
-      <button class="filtre-btn" onclick="filtre('div',this)">📊 Divergence</button>
-      <button class="filtre-btn" onclick="filtre('4tf',this)">⚡ 4TF</button>
-      <button class="filtre-btn" onclick="filtre('fvg',this)">🎯 FVG</button>
-      <button class="filtre-btn" onclick="filtre('arb',this)">💱 Arbitraj</button>
-      <button class="filtre-btn" onclick="filtre('candle',this)">🕯 Formasyon</button>
-      <button class="filtre-btn" onclick="filtre('fav',this)">★ Favori</button>
-      <button class="filtre-btn" onclick="filtre('anchor',this)">📌 Referansım</button>
+      <button type="button" class="filtre-btn active" data-filtre="tum" onclick="filtre('tum',this)">Tümü</button>
+      <button type="button" class="filtre-btn" data-filtre="nadir" onclick="filtre('nadir',this)">🔥 Nadir</button>
+      <button type="button" class="filtre-btn" data-filtre="nadirhist" onclick="filtre('nadirhist',this)">⭐ Geçmiş Nadir</button>
+      <button type="button" class="filtre-btn" data-filtre="guclu" onclick="filtre('guclu',this)">✅ Güçlü</button>
+      <button type="button" class="filtre-btn" data-filtre="div" onclick="filtre('div',this)">📊 Divergence</button>
+      <button type="button" class="filtre-btn" data-filtre="4tf" onclick="filtre('4tf',this)">⚡ 4TF</button>
+      <button type="button" class="filtre-btn" data-filtre="fvg" onclick="filtre('fvg',this)">🎯 FVG</button>
+      <button type="button" class="filtre-btn" data-filtre="arb" onclick="filtre('arb',this)">💱 Arbitraj</button>
+      <button type="button" class="filtre-btn" data-filtre="candle" onclick="filtre('candle',this)">🕯 Formasyon</button>
+      <button type="button" class="filtre-btn" data-filtre="fav" onclick="filtre('fav',this)">★ Favori</button>
+      <button type="button" class="filtre-btn" data-filtre="anchor" onclick="filtre('anchor',this)">📌 Referansım</button>
     </div>
     <div class="arama-wrap">
       <input class="arama-input" id="arama" placeholder="Coin ara... (örn: BTC)" oninput="ara(this.value)">
@@ -884,6 +890,18 @@ function goPage(pageId){
   const b=document.querySelector('.nav-btn[data-nav="'+pageId+'"]');
   if(b)sayfa(pageId,b);
 }
+/** Dashboard’dan Sinyaller sekmesine geçip ilgili filtreyi seçer */
+function goSinyallerFiltre(code){
+  goPage('sinyaller');
+  const btn=document.querySelector('#page-sinyaller .filtre-btn[data-filtre="'+code+'"]');
+  if(btn)filtre(code,btn);
+  else{
+    aktifF=code;
+    document.querySelectorAll('#page-sinyaller .filtre-btn').forEach(b=>b.classList.remove('active'));
+    renderSinyaller();
+  }
+  window.scrollTo(0,0);
+}
 function flashAppToast(html){
   const el=document.getElementById('nadir-toast');
   if(!el)return;
@@ -905,7 +923,12 @@ function gotoInvestRef(symbol){
   const short=sym.replace('USDT','');
   flashAppToast('<strong style="color:var(--accent)">Liste dışı</strong> · '+short+' bu tur sinyal listesinde yok. Tam tarama sonrası tekrar bak veya Sinyaller’de ara.');
 }
-function filtre(f,btn){aktifF=f;document.querySelectorAll('.filtre-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderSinyaller()}
+function filtre(f,btn){
+  aktifF=f;
+  document.querySelectorAll('#page-sinyaller .filtre-wrap .filtre-btn').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  renderSinyaller();
+}
 function ara(v){araM=v.trim().toUpperCase();renderSinyaller()}
 
 function sabitleYatirimRef(idx){
