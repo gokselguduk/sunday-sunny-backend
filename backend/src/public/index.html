@@ -279,7 +279,7 @@ body.has-ref-dock .content{padding-bottom:138px}
     <p style="font-size:11px;color:var(--text3);padding:0 16px 8px;line-height:1.45;margin-top:-4px">Karta dokun: coin detayı. Alttaki <strong>Referansım</strong> şeridinden her zaman tek dokunuşla aynı coin’e dön.</p>
     <div class="invest-strip-wrap" id="invest-strip"></div>
     <div class="section-hdr">En İyi Fırsatlar</div>
-    <div class="dash-gelir-link">💎 Yüksek gelir beklentisi özeti ve madde madde gerekçe: <button type="button" onclick="goPage('gelir')">Gelir+ sekmesi</button></div>
+    <div class="dash-gelir-link">💎 Günlük “sürpriz sıçrama” adayları (hacim + MTF + kıvılcım örüntüsü): <button type="button" onclick="goPage('gelir')">Gelir+</button></div>
     <div style="padding:0 16px" id="top-list"><div class="loading"><div class="spinner"></div></div></div>
   </div>
 
@@ -304,10 +304,10 @@ body.has-ref-dock .content{padding-bottom:138px}
   </div>
 
   <div class="page" id="page-gelir">
-    <div class="section-hdr">Yüksek gelir potansiyeli</div>
+    <div class="section-hdr">Sürpriz sıçrama adayları</div>
     <div style="padding:0 16px 10px">
-      <p style="font-size:12px;color:var(--text2);line-height:1.55">Burada yalnızca <strong>fırsat skoru</strong>, <strong>risk/ödül</strong>, <strong>hedef yüzdeleri</strong>, <strong>çoklu zaman dilimi</strong> ve <strong>AI etiketi</strong> birlikte anlamlı görünen pariteler listelenir. Aşağıdaki maddeler otomatik özetdir.</p>
-      <p style="font-size:10px;color:var(--text3);line-height:1.5;margin-top:8px"><strong>Yatırım tavsiyesi değildir.</strong> Kriter örneği: skor ≥60, R/R ≥1,15, manipülasyon riski &lt;7, «AL» veya «GÜÇLÜ AL» — veya çok yüksek skor + güçlü R/R birlikte.</p>
+      <p style="font-size:12px;color:var(--text2);line-height:1.55">Binance TR’de bazen görülen günlük <strong>%30–50–100+</strong> hareketleri kimse kesin öngöremez. Bu sekme, motorun topladığı verilerle <strong>erken koşu örüntülerini</strong> bir araya getirir: sıkışma + hacim ısınması, MTF hizası, kırılım rejimi, mum içi kıvılcım, hacim Z-skoru, derinlik/delta, geniş TP alanı vb.</p>
+      <p style="font-size:10px;color:var(--text3);line-height:1.5;margin-top:8px"><strong>Runner skoru</strong> sunucuda hesaplanır; yüksek değer = listede öne çıkar, garanti değildir. Tarama öncesi kayıtlarda alan boş kalabilir — tam tarama sonrası güncellenir.</p>
     </div>
     <div style="padding:0 16px" id="gelir-liste"><div class="loading"><div class="spinner"></div></div></div>
   </div>
@@ -856,13 +856,23 @@ function isHighYieldCandidate(s){
   if(fs>=68&&rr>=1.85)return true;
   return false;
 }
-function gelirPotansiyelSkoru(s){
+function runnerLabelTr(lab){
+  const m={SICAK_IZLE:'Sıcak izle',ERKEN_ADAY:'Erken aday',IZLEME:'İzleme listesi',DUSUK:'Düşük eşleşme'};
+  return m[lab]||lab||'—';
+}
+function isRunnerListCandidate(s){
+  const rp=s.runnerPotential;
+  if(rp&&typeof rp.score==='number'){
+    if(rp.score>=42)return true;
+    if(rp.score>=34&&(s.firsatSkoru?.skor||0)>=68)return true;
+    return false;
+  }
+  return isHighYieldCandidate(s);
+}
+function runnerSortKey(s){
+  const rs=s.runnerPotential?.score||0;
   const fs=s.firsatSkoru?.skor||0;
-  const rr=Math.min(Number(s.atr?.riskReward)||0,5);
-  const tp3=Math.min(s.atr?.tp3Pct||0,30);
-  const aiW=s.ai?.verdict==='GÜÇLÜ AL'?22:(s.ai?.verdict==='AL'?14:0);
-  const mtf=s.mtfDetay?.allAligned?10:0;
-  return fs*1.2+rr*14+tp3*1.8+aiW+mtf;
+  return rs*1000+fs;
 }
 function buildGelirAnalizBullets(s){
   const out=[];
@@ -885,6 +895,22 @@ function buildGelirAnalizBullets(s){
   out.push(`<span style="color:var(--text3)">Uyarı:</span> Geçmiş performans veya skor gelecek getiriyi garanti etmez; likidite ve haber riski dışarıdadır.`);
   return out;
 }
+function buildRunnerBulletList(s){
+  const rp=s.runnerPotential;
+  const lines=[];
+  if(rp&&Array.isArray(rp.reasons)&&rp.reasons.length){
+    rp.reasons.forEach(function(t){lines.push(t);});
+  }else{
+    return buildGelirAnalizBullets(s);
+  }
+  const pc=Number(s.priceChange24h||0);
+  lines.push(`Özet sayılar: fırsat skoru <strong>${s.firsatSkoru?.skor||0}</strong> · 24s <strong>${pc>=0?'+':''}${pc.toFixed(1)}%</strong> · AI <strong>${s.ai?.verdict||'—'}</strong>.`);
+  const rr=s.atr?.riskReward;
+  if(Number.isFinite(rr))lines.push(`R/R ≈ 1:${rr} · TP3 teorik ~+%${(s.atr?.tp3Pct||0).toFixed(1)}.`);
+  if(rp&&rp.disclaimer)lines.push('<span style="color:var(--text3)">'+rp.disclaimer+'</span>');
+  else lines.push('<span style="color:var(--text3)">Uyarı: Geçmiş veya skor gelecek getiriyi garanti etmez.</span>');
+  return lines;
+}
 function gelirKartHTML(s){
   const idx=s._idx;
   const sym=s.symbol?.replace('USDT','')||'';
@@ -894,16 +920,22 @@ function gelirKartHTML(s){
   const chg=s.priceChange24h||0;
   const rr=s.atr?.riskReward;
   const isFav=favs.includes(s.symbol);
-  const bullets=buildGelirAnalizBullets(s);
+  const rp=s.runnerPotential;
+  const rs=rp&&typeof rp.score==='number'?rp.score:null;
+  const runCol=rs==null?'var(--accent)':rs>=72?'var(--green)':rs>=52?'var(--accent)':rs>=38?'var(--amber)':'var(--text3)';
+  const bullets=buildRunnerBulletList(s);
   const li=bullets.map(b=>`<li>${b}</li>`).join('');
   const rrTxt=Number.isFinite(rr)?String(rr):'—';
   const hz=horizonKartHTML(s);
+  const labTxt=rp?runnerLabelTr(rp.label):'Klasik filtre';
+  const runnerChip=rs!=null?`<span class="gelir-chip" style="background:rgba(123,92,255,0.14);color:var(--accent2);border:1px solid rgba(123,92,255,0.3)">Runner ${rs}</span><span class="gelir-chip" style="background:var(--bg2);color:${runCol};border:1px solid var(--border)">${labTxt}</span>`:'';
   return`<div class="gelir-card" style="border-left:3px solid ${r}" onclick="modalAc(${idx})">
     <div class="gelir-card-top">
       <div style="min-width:0">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <span class="kart-symbol">${sym}</span>
-          <span class="gelir-chip" style="background:rgba(0,212,255,0.12);color:var(--accent);border:1px solid rgba(0,212,255,0.25)">Potansiyel</span>
+          <span class="gelir-chip" style="background:rgba(0,212,255,0.12);color:var(--accent);border:1px solid rgba(0,212,255,0.25)">Sıçrama adayı</span>
+          ${runnerChip}
           <span class="gelir-chip" style="background:var(--bg2);color:${r};border:1px solid var(--border)">Skor ${fs}</span>
           <span class="gelir-chip" style="background:var(--bg2);color:var(--text2);border:1px solid var(--border)">R/R 1:${rrTxt}</span>
         </div>
@@ -926,15 +958,15 @@ function renderPotansiyelPage(){
   if(!sig.length){
     if(scanMeta?.isScanning){
       const pct=scanMeta.totalCoins?Math.round((scanMeta.scannedCoins/scanMeta.totalCoins)*100):0;
-      el.innerHTML=`<div class="bos">Tarama sürüyor… ${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0} (%${pct})<br>Gelir+ listesi sinyaller geldikçe dolar</div>`;
+      el.innerHTML=`<div class="bos">Tarama sürüyor… ${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0} (%${pct})<br>Gelir+ / sıçrama adayları sinyaller geldikçe dolar</div>`;
     }else{
       el.innerHTML='<div class="bos">Henüz sinyal yok<br>Tarama sonrası burada görünecek</div>';
     }
     return;
   }
-  const candidates=sig.filter(isHighYieldCandidate).sort((a,b)=>gelirPotansiyelSkoru(b)-gelirPotansiyelSkoru(a));
+  const candidates=sig.filter(isRunnerListCandidate).sort((a,b)=>runnerSortKey(b)-runnerSortKey(a));
   if(!candidates.length){
-    el.innerHTML='<div class="bos">Şu an «yüksek gelir potansiyeli» filtresine uyan parite yok.<br>Skor, R/R ve AI etiketi birlikte ele alınıyor; <strong>Sinyaller</strong> sekmesinde daha geniş liste var.</div>';
+    el.innerHTML='<div class="bos">Şu an «sürpriz sıçrama adayı» eşiğine uyan parite yok.<br>Runner skoru tarama sonrası güncellenir; <strong>Sinyaller</strong> sekmesinde tüm liste var.</div>';
     return;
   }
   el.innerHTML=candidates.map(gelirKartHTML).join('')+'<div style="height:24px"></div>';

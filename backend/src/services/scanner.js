@@ -19,6 +19,7 @@ const {
   applyAnomalyPenalty
 } = require('./scanner/scoring');
 const { buildDiagnostics } = require('./scanner/diagnostics');
+const { computeRunnerPotential } = require('./scanner/runnerPotential');
 const { estimateTargetHorizon } = require('../indicators/targetHorizon');
 
 let lastSignals = [];
@@ -139,6 +140,7 @@ async function scanSingle(coin, sentiment) {
     // Fırsat Skoru hesapla
     const firsatSkoru = calcFirsatSkoru(signal);
     signal.firsatSkoru = firsatSkoru;
+    signal.runnerPotential = computeRunnerPotential(signal);
     signal.usdTryRate  = await binance.getUSDTRY();
 
     if (firsatSkoru.skor < CONFIG.MIN_FIRSAT) return null;
