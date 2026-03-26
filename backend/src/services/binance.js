@@ -72,6 +72,8 @@ function parseConfiguredSymbols(rawList) {
 }
 async function getOHLCV(symbol, interval, limit) {
   if (!limit) limit = 500;
+  // Binance USDT-M klines: limit max 1500
+  limit = Math.min(1500, Math.max(1, Math.floor(Number(limit)) || 500));
   try {
     const res = await axios.get(`${BASE}/klines`, {
       params: { symbol: symbol.toUpperCase(), interval, limit },

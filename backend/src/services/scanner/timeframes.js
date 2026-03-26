@@ -1,13 +1,19 @@
+const { CONFIG } = require('./config');
+const L = () => CONFIG.OHLCV_LIMITS;
+const gap = () => CONFIG.OHLCV_REQUEST_GAP_MS || 250;
+
 async function getMultiTimeframe(pair, deps) {
   const { binance, indicators } = deps;
+  const lim = L();
+  const g = gap();
   try {
-    const c1d = await binance.getOHLCV(pair, '1d', 500);
-    await binance.bekle(200);
-    const c4h = await binance.getOHLCV(pair, '4h', 500);
-    await binance.bekle(200);
-    const c1h = await binance.getOHLCV(pair, '1h', 500);
-    await binance.bekle(200);
-    const c15m = await binance.getOHLCV(pair, '15m', 500);
+    const c1d = await binance.getOHLCV(pair, '1d', lim['1d']);
+    await binance.bekle(g);
+    const c4h = await binance.getOHLCV(pair, '4h', lim['4h']);
+    await binance.bekle(g);
+    const c1h = await binance.getOHLCV(pair, '1h', lim['1h']);
+    await binance.bekle(g);
+    const c15m = await binance.getOHLCV(pair, '15m', lim['15m']);
 
     return {
       d1: c1d.length >= 50 ? indicators.analyzeCandles(c1d) : null,
