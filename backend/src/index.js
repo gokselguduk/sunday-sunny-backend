@@ -9,7 +9,6 @@ const scanner  = require('./services/scanner');
 const memory   = require('./services/memory');
 const notifier = require('./services/notifier');
 const nadirAlert = require('./services/nadirAlert');
-const coinAdvisor = require('./services/coinAdvisor');
 const binance = require('./services/binance');
 const btcPulse = require('./services/btcPulse');
 
@@ -29,6 +28,7 @@ app.use(
     }
   })
 );
+app.get('/bitcoin.html', (req, res) => res.redirect(301, '/'));
 notifier.configurePush();
 
 // ── SAĞLIK ──────────────────────────────────
@@ -132,138 +132,6 @@ app.post('/api/push/unsubscribe', async (req, res) => {
   res.json({ ok });
 });
 
-// ── AI DANIŞMAN (yalnızca soru-cevap; tarama akışına karışmaz) ──
-app.get('/api/ai/advisor-status', (req, res) => {
-  res.json(coinAdvisor.getAdvisorStatus());
-});
-
-app.post('/api/ai/coin-ask', async (req, res) => {
-  const result = await coinAdvisor.ask(req.body || {});
-  if (!result.ok) {
-    let status = 400;
-    if (String(result.error || '').includes('ANTHROPIC_API_KEY')) status = 503;
-    else if (String(result.error || '').includes('alınamadı') || String(result.error || '').includes('Danışman yanıtı')) status = 502;
-    return res.status(status).json(result);
-  }
-  res.json(result);
-});
-
-/** Tam analiz: 24s ticker + isteğe bağlı haber + genişletilmiş yanıt */
-app.post('/api/ai/coin-analyze', async (req, res) => {
-  const body = req.body || {};
-  const result = await coinAdvisor.ask({
-    ...body,
-    fullAnalysis: true,
-    includeNews: body.includeNews !== false
-  });
-  if (!result.ok) {
-    let status = 400;
-    if (String(result.error || '').includes('ANTHROPIC_API_KEY')) status = 503;
-    else if (String(result.error || '').includes('alınamadı') || String(result.error || '').includes('Danışman yanıtı')) status = 502;
-    return res.status(status).json(result);
-  }
-  res.json(result);
-});
-
-// ── PORTFÖY DAĞITIM TAVSİYESİ ───────────────
-app.post('/api/portfolio/distribute', function(req, res) {
-  const { butce } = req.body;
-  const sinyaller = scanner.getLastSignals();
-  const sentiment = sinyaller[0]?.sentiment;
-  const fg = sentiment?.value || 50;
-
-  if (!sinyaller.length) {
-    return res.json({ error: 'Henüz sinyal yok, tarama bekleniyor.' });
-  }
-
-  // Piyasa koşulu
-  let strateji, maxPozisyon, nakitOran;
-  if (fg <= 20) {
-    strateji = 'AGRESİF'; maxPozisyon = 4; nakitOran = 0.10;
-  } else if (fg <= 40) {
-    strateji = 'DENGELİ'; maxPozisyon = 5; nakitOran = 0.15;
-  } else if (fg <= 60) {
-    strateji = 'TEMKİNLİ'; maxPozisyon = 5; nakitOran = 0.25;
-  } else if (fg <= 80) {
-    strateji = 'SAVUNMACI'; maxPozisyon = 3; nakitOran = 0.40;
-  } else {
-    strateji = 'NAKİT_TUT'; maxPozisyon = 1; nakitOran = 0.70;
-  }
-
-  // Anomali varsa uyar
-  const anomaliVar = sinyaller.some(s => s.anomaly?.isAnomaly);
-  if (anomaliVar) nakitOran = Math.min(nakitOran + 0.10, 0.80);
-
-  // En iyi sinyalleri seç (son turda eşik geçenler; tahtada kalan “eski” satırlar hariç)
-  const adaylar = sinyaller
-    .filter(s => !s.absentThisScan)
-    .filter(s => (s.firsatSkoru?.skor || 0) >= 50)
-    .filter(s => !s.anomaly?.isAnomaly || s.anomaly.signal === 'DIKKAT')
-    .slice(0, maxPozisyon);
-
-  if (!adaylar.length) {
-    return res.json({
-      strateji, fg,
-      mesaj: 'Şu an yeterli kalitede sinyal yok. Nakit beklet.',
-      nakitTut: butce,
-      dagitim: []
-    });
-  }
-
-  // Kelly Criterion ile ağırlık hesapla
-  const toplamSkor = adaylar.reduce((t, s) => t + (s.firsatSkoru?.skor || 50), 0);
-  const yatirimButce = butce * (1 - nakitOran);
-
-  const dagitim = adaylar.map(s => {
-    const fs = s.firsatSkoru?.skor || 50;
-    const agirlik = fs / toplamSkor;
-    const tutar = Math.round(yatirimButce * agirlik / 100) * 100;
-    const oran = parseFloat((agirlik * 100).toFixed(1));
-    const usdTutar = tutar / (s.usdTryRate || 38);
-    const miktar = usdTutar / s.lastClose;
-
-    return {
-      symbol:      s.symbol,
-      firsatSkor:  fs,
-      seviye:      s.firsatSkoru?.seviye || '',
-      emoji:       s.firsatSkoru?.emoji || '',
-      tutar:       tutar,
-      oran:        oran,
-      girisFiyati: s.lastClose,
-      girisTRY:    parseFloat((s.lastClose * (s.usdTryRate || 38)).toFixed(2)),
-      miktar:      parseFloat(miktar.toFixed(6)),
-      sl:          s.atr?.stopLoss,
-      slTRY:       parseFloat((s.atr?.stopLoss * (s.usdTryRate || 38)).toFixed(2)),
-      slPct:       s.atr?.stopLossPct,
-      tp1:         s.atr?.takeProfit1,
-      tp1TRY:      parseFloat((s.atr?.takeProfit1 * (s.usdTryRate || 38)).toFixed(2)),
-      tp1Pct:      s.atr?.tp1Pct,
-      maxRisk:     parseFloat((tutar * (s.atr?.stopLossPct || 3) / 100).toFixed(0)),
-      divergence:  s.divergence?.bullish || s.divergence?.hidden_bullish,
-      allAligned:  s.mtfDetay?.allAligned,
-      aiVerdict:   s.ai?.verdict
-    };
-  });
-
-  const toplamYatirim = dagitim.reduce((t, d) => t + d.tutar, 0);
-  const nakitMiktar   = butce - toplamYatirim;
-  const toplamRisk    = dagitim.reduce((t, d) => t + d.maxRisk, 0);
-
-  res.json({
-    strateji,
-    fg,
-    fgLabel:       sentiment?.label || '',
-    butce,
-    yatirim:       toplamYatirim,
-    nakit:         nakitMiktar,
-    nakitOran:     parseFloat((nakitOran * 100).toFixed(0)),
-    toplamRisk,
-    riskOrani:     parseFloat((toplamRisk / butce * 100).toFixed(1)),
-    pozisyonSayisi: dagitim.length,
-    anomaliUyari:  anomaliVar,
-    dagitim
-  });
-});
 // ── SOCKET.IO ───────────────────────────────
 io.on('connection', async (socket) => {
   const initialSignals = scanner.getLatestSignals();
