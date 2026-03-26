@@ -16,6 +16,8 @@ const OHLCV_LIMITS = {
 };
 
 const minScoreEnv = parseInt(process.env.MIN_SCORE, 10);
+const regMaxMissedEnv = parseInt(process.env.REGISTRY_MAX_MISSED_SCANS, 10);
+const priceRefreshEnv = parseInt(process.env.REGISTRY_PRICE_REFRESH_MS, 10);
 
 const CONFIG = {
   SCAN_DELAY_MS: 1000,
@@ -25,7 +27,15 @@ const CONFIG = {
   MIN_FIRSAT: 35,
   OHLCV_LIMITS,
   /** İki kline isteği arası (ms); rate limit + daha büyük yanıtlar için hafif artırıldı */
-  OHLCV_REQUEST_GAP_MS: 250
+  OHLCV_REQUEST_GAP_MS: 250,
+  /** Kaç tam tarama üst üste eşik altı kalınca tahtadan düşsün (silinmez, sadece API listesinden çıkar) */
+  REGISTRY_MAX_MISSED_SCANS: Number.isFinite(regMaxMissedEnv)
+    ? Math.min(50, Math.max(1, regMaxMissedEnv))
+    : 8,
+  /** Tam tarama dışı tahta fiyat yenilemesi (ms); 0 = kapalı. REGISTRY_PRICE_REFRESH_MS=0 */
+  REGISTRY_PRICE_REFRESH_MS: Number.isFinite(priceRefreshEnv)
+    ? Math.min(600000, Math.max(0, priceRefreshEnv))
+    : 180000
 };
 
 module.exports = { CONFIG };

@@ -22,22 +22,92 @@ const { buildDiagnostics } = require('./scanner/diagnostics');
 const { computeRunnerPotential } = require('./scanner/runnerPotential');
 const { estimateTargetHorizon } = require('../indicators/targetHorizon');
 
+/** Parite → son tam tarama sinyali (taramalar arası birleşik tahta) */
+const signalRegistry = new Map();
+
 let lastSignals = [];
 let liveSignals = [];
 let subscribers = [];
 let isScanning  = false;
 let allCoins    = [];
+let priceRefreshTimer = null;
+let qualifiedThisScanRun = 0;
+
 let scanState = {
   isScanning: false,
   totalCoins: 0,
   scannedCoins: 0,
   signalCount: 0,
+  qualifiedThisScan: 0,
+  boardFresh: 0,
+  boardStale: 0,
   startedAt: null,
   updatedAt: null,
   etaSeconds: 0
 };
 
-async function scanSingle(coin, sentiment) {
+function computeVsPreviousScan(prev, curr) {
+  if (!prev) {
+    return {
+      isFirst: true,
+      scoreDelta: null,
+      firsatDelta: null,
+      pricePctSinceLastScan: null,
+      previousScannedAt: null
+    };
+  }
+  const pf = prev.firsatSkoru?.skor;
+  const cf = curr.firsatSkoru?.skor;
+  return {
+    isFirst: false,
+    scoreDelta: curr.score - prev.score,
+    firsatDelta:
+      Number.isFinite(pf) && Number.isFinite(cf) ? Math.round(cf - pf) : null,
+    pricePctSinceLastScan:
+      prev.lastClose > 0
+        ? parseFloat((((curr.lastClose - prev.lastClose) / prev.lastClose) * 100).toFixed(3))
+        : null,
+    previousScannedAt: prev.scannedAt || null
+  };
+}
+
+function sortBoard(list) {
+  return [...list].sort((a, b) => {
+    const aFresh = !a.absentThisScan;
+    const bFresh = !b.absentThisScan;
+    if (aFresh !== bFresh) return aFresh ? -1 : 1;
+    return (b.firsatSkoru?.skor || 0) - (a.firsatSkoru?.skor || 0);
+  });
+}
+
+function buildSortedBoard() {
+  const maxMiss = CONFIG.REGISTRY_MAX_MISSED_SCANS;
+  const list = [];
+  for (const s of signalRegistry.values()) {
+    if ((s.missedScanCount || 0) >= maxMiss) continue;
+    list.push(s);
+  }
+  return sortBoard(list);
+}
+
+function boardStats(board) {
+  let fresh = 0;
+  let stale = 0;
+  for (const s of board) {
+    if (s.absentThisScan) stale += 1;
+    else fresh += 1;
+  }
+  return { fresh, stale };
+}
+
+function normalizeScanPair(raw) {
+  const x = String(raw || '').trim().toUpperCase().replace(/\s+/g, '');
+  if (!x) return null;
+  return x.endsWith('USDT') ? x : `${x}USDT`;
+}
+
+async function scanSingle(coin, sentiment, opts = {}) {
+  const saveHistory = opts.saveHistory !== false;
   try {
     const tf = await getMultiTimeframe(coin.pair, { binance, indicators });
     if (!tf.h1 || !tf.h4) return null;
@@ -45,7 +115,6 @@ async function scanSingle(coin, sentiment) {
     const dirs = getTimeframeDirections(tf);
     if (hasDirectionConflict(dirs)) return null;
 
-    // Order book + ticker + footprint + arbitraj paralel
     const [depth, ticker, footprint] = await Promise.all([
       binance.getOrderBook(coin.pair),
       binance.get24hTicker(coin.pair),
@@ -57,18 +126,15 @@ async function scanSingle(coin, sentiment) {
     const diagnostics    = buildDiagnostics({ tf, orderBook });
     const usdTryRate     = await binance.getUSDTRY();
 
-    // Arbitraj (sadece BTC, ETH, BNB, SOL için — rate limit koruması)
     const majorCoins = ['BTC','ETH','BNB','SOL','XRP','ADA','AVAX','DOT'];
     let arbitraj = null;
     if (majorCoins.includes(coin.symbol)) {
       arbitraj = await calcArbitraj(coin.pair, tf.h1.lastClose, usdTryRate);
     }
 
-    // Rejim
     const { regime, regimeScore } = resolveRegime(tf, priceChange24h);
     let extraScore = calculateExtraScore({ sentiment, dirs, footprint, arbitraj, orderBook, regimeScore });
 
-    // Anomali cezası
     const anomalyAdjusted = applyAnomalyPenalty(tf, extraScore);
     if (anomalyAdjusted.reject) {
       console.log(`ANOMALİ [MANIP] ${coin.pair}: Z=${tf.h1.anomaly.zScore}`);
@@ -139,17 +205,21 @@ async function scanSingle(coin, sentiment) {
       return null;
     }
 
-    // Fırsat Skoru hesapla
     const firsatSkoru = calcFirsatSkoru(signal);
     signal.firsatSkoru = firsatSkoru;
     signal.runnerPotential = computeRunnerPotential(signal);
 
     if (firsatSkoru.skor < CONFIG.MIN_FIRSAT) return null;
 
-    const signalKey = await memory.saveSignal(signal);
-    signal.memoryKey = signalKey;
+    if (saveHistory) {
+      const signalKey = await memory.saveSignal(signal);
+      signal.memoryKey = signalKey;
+    } else {
+      const prev = signalRegistry.get(signal.symbol);
+      signal.memoryKey = prev?.memoryKey || null;
+    }
 
-    console.log(`✅ ${coin.pair}: Skor=${netScore} Fırsat=${firsatSkoru.skor} ${firsatSkoru.emoji} ${firsatSkoru.seviye}`);
+    console.log(`✅ ${coin.pair}: Skor=${netScore} Fırsat=${firsatSkoru.skor} ${firsatSkoru.emoji} ${firsatSkoru.seviye}${saveHistory ? '' : ' (tahta güncelleme)'}`);
     return signal;
 
   } catch (err) {
@@ -158,25 +228,56 @@ async function scanSingle(coin, sentiment) {
   }
 }
 
+function mergeQualifiedSignal(result) {
+  const prev = signalRegistry.get(result.symbol);
+  result.vsPreviousScan = computeVsPreviousScan(prev, result);
+  result.absentThisScan = false;
+  result.missedScanCount = 0;
+  result.fullScanCount = (prev?.fullScanCount || 0) + 1;
+  result.firstSeenAt = prev?.firstSeenAt || result.scannedAt;
+  result.anchorCloseLastFullScan = result.lastClose;
+  delete result.vsLastFullScanPricePct;
+  delete result.lastPriceTickAt;
+  signalRegistry.set(result.symbol, result);
+}
+
+function markMissedDuringScan(pair) {
+  if (!signalRegistry.has(pair)) return;
+  const ex = signalRegistry.get(pair);
+  ex.absentThisScan = true;
+  ex.missedScanCount = (ex.missedScanCount || 0) + 1;
+  ex.lastFailedScanAt = new Date().toISOString();
+}
+
 async function scanMarket() {
   if (isScanning) { console.log('Tarama devam ediyor...'); return getLatestSignals(); }
   isScanning = true;
   const start = Date.now();
+  qualifiedThisScanRun = 0;
   console.log(`Tarama basladi — ${allCoins.length} coin`);
   scanState = {
     isScanning: true,
     totalCoins: allCoins.length,
     scannedCoins: 0,
     signalCount: 0,
+    qualifiedThisScan: 0,
+    boardFresh: 0,
+    boardStale: 0,
     startedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     etaSeconds: 0,
     phase: 'starting'
   };
-  liveSignals = [];
+
+  const preBoard = buildSortedBoard();
+  liveSignals = preBoard;
+  const bs = boardStats(preBoard);
+  scanState.signalCount = preBoard.length;
+  scanState.boardFresh = bs.fresh;
+  scanState.boardStale = bs.stale;
   broadcast({
     type: 'scan_progress',
-    data: [],
+    data: preBoard.slice(0, 100),
     scan: { ...scanState },
     time: new Date().toISOString()
   });
@@ -186,24 +287,37 @@ async function scanMarket() {
   scanState.phase = 'scanning';
   scanState.updatedAt = new Date().toISOString();
 
-  const results = [];
   for (let i = 0; i < allCoins.length; i++) {
-    const result = await scanSingle(allCoins[i], sentiment);
-    if (result) results.push({ ...result, _idx: results.length });
+    const coin = allCoins[i];
+    const result = await scanSingle(coin, sentiment);
+    if (result) {
+      qualifiedThisScanRun += 1;
+      mergeQualifiedSignal(result);
+    } else {
+      markMissedDuringScan(coin.pair);
+    }
+
     scanState.scannedCoins = i + 1;
-    scanState.signalCount = results.length;
+    const board = buildSortedBoard();
+    const st = boardStats(board);
+    scanState.signalCount = board.length;
+    scanState.qualifiedThisScan = qualifiedThisScanRun;
+    scanState.boardFresh = st.fresh;
+    scanState.boardStale = st.stale;
     scanState.updatedAt = new Date().toISOString();
+
     const progressEvery = (i + 1) % 2 === 0 || i === 0 || i + 1 === allCoins.length;
     if (progressEvery) {
-      const e=Math.round((Date.now()-start)/1000);
-      const eta=i+1<allCoins.length?Math.round((e/(i+1))*(allCoins.length-i-1)):0;
+      const e = Math.round((Date.now() - start) / 1000);
+      const eta = i + 1 < allCoins.length ? Math.round((e / (i + 1)) * (allCoins.length - i - 1)) : 0;
       scanState.etaSeconds = eta;
-      const partial = [...results].sort((a,b) => (b.firsatSkoru?.skor||0) - (a.firsatSkoru?.skor||0));
-      liveSignals = partial;
-      console.log(`Tarandi: ${i+1}/${allCoins.length} — Sinyal: ${results.length} — ${e}s${eta>0?' — Kalan: ~'+eta+'s':''}`);
+      liveSignals = board;
+      console.log(
+        `Tarandi: ${i+1}/${allCoins.length} — Tahtada: ${board.length} (bu tur uygun: ${qualifiedThisScanRun}) — ${e}s${eta > 0 ? ' — Kalan: ~' + eta + 's' : ''}`
+      );
       broadcast({
         type: 'scan_progress',
-        data: partial.slice(0, 100),
+        data: board.slice(0, 100),
         scan: { ...scanState },
         time: new Date().toISOString()
       });
@@ -211,42 +325,131 @@ async function scanMarket() {
     await binance.bekle(CONFIG.SCAN_DELAY_MS);
   }
 
-  // Fırsat skoruna göre sırala
-  results.sort((a,b) => (b.firsatSkoru?.skor||0) - (a.firsatSkoru?.skor||0));
+  const board = buildSortedBoard();
+  lastSignals = board;
+  liveSignals = board;
 
-  const totalTime = Math.round((Date.now()-start)/1000);
-  lastSignals = results;
-  liveSignals = results;
-  isScanning  = false;
+  const totalTime = Math.round((Date.now() - start) / 1000);
+  isScanning = false;
+  const stEnd = boardStats(board);
   scanState = {
     ...scanState,
     isScanning: false,
     phase: 'done',
     scannedCoins: allCoins.length,
-    signalCount: results.length,
+    signalCount: board.length,
+    qualifiedThisScan: qualifiedThisScanRun,
+    boardFresh: stEnd.fresh,
+    boardStale: stEnd.stale,
     etaSeconds: 0,
     updatedAt: new Date().toISOString()
   };
-  broadcast({ type:'scan_complete', data:results, scan:{ ...scanState }, time:new Date().toISOString() });
 
-  const nadir  = results.filter(r=>r.firsatSkoru?.skor>=80).length;
-  const guclu  = results.filter(r=>r.firsatSkoru?.skor>=65).length;
-  const div    = results.filter(r=>r.divergence?.bullish||r.divergence?.hidden_bullish).length;
-  const fvg    = results.filter(r=>r.fvg?.inBullishFVG).length;
-  const arb    = results.filter(r=>r.arbitraj?.isOpportunity).length;
+  broadcast({ type:'scan_complete', data: board, scan:{ ...scanState }, time:new Date().toISOString() });
 
-  console.log(`Tarama tamamlandi — ${results.length} sinyal — ${totalTime}s`);
-  console.log(`🔥 Nadir=${nadir} ✅ Güçlü=${guclu} | Divergence=${div} FVG=${fvg} Arbitraj=${arb}`);
+  const nadir  = board.filter(r => !r.absentThisScan && r.firsatSkoru?.skor >= 80).length;
+  const guclu  = board.filter(r => !r.absentThisScan && r.firsatSkoru?.skor >= 65).length;
+  const div    = board.filter(r => r.divergence?.bullish||r.divergence?.hidden_bullish).length;
+  const fvg    = board.filter(r => r.fvg?.inBullishFVG).length;
+  const arb    = board.filter(r => r.arbitraj?.isOpportunity).length;
+
+  console.log(`Tarama tamamlandi — tahta: ${board.length} sinyal (bu tur uygun: ${qualifiedThisScanRun}) — ${totalTime}s`);
+  console.log(`🔥 Nadir(yeni tur)=${nadir} ✅ Güçlü(yeni tur)=${guclu} | Divergence=${div} FVG=${fvg} Arbitraj=${arb}`);
   const afterResolve = await autoResolver.resolvePendingSignals();
   if (afterResolve.resolved > 0) {
     console.log(`AutoResolver (bitis): ${afterResolve.resolved}/${afterResolve.checked} sinyal kapatildi`);
   }
-  return results;
+  return board;
+}
+
+async function tickRegistryPrices() {
+  if (isScanning || signalRegistry.size === 0) return;
+  const syms = [...signalRegistry.keys()];
+  for (const sym of syms) {
+    const s = signalRegistry.get(sym);
+    if (!s || (s.missedScanCount || 0) >= CONFIG.REGISTRY_MAX_MISSED_SCANS) continue;
+    try {
+      const ticker = await binance.get24hTicker(sym);
+      const price = parseFloat(ticker?.lastPrice);
+      if (!Number.isFinite(price)) {
+        await binance.bekle(120);
+        continue;
+      }
+      const anchor = s.anchorCloseLastFullScan != null ? s.anchorCloseLastFullScan : s.lastClose;
+      s.lastClose = price;
+      s.priceChange24h = parseFloat(ticker?.priceChangePercent) || s.priceChange24h;
+      s.lastPriceTickAt = new Date().toISOString();
+      if (anchor > 0) {
+        s.vsLastFullScanPricePct = parseFloat((((price - anchor) / anchor) * 100).toFixed(3));
+      }
+    } catch (_) {
+      /* atla */
+    }
+    await binance.bekle(120);
+  }
+  lastSignals = buildSortedBoard();
+  liveSignals = lastSignals;
+  const st = boardStats(lastSignals);
+  scanState.signalCount = lastSignals.length;
+  scanState.boardFresh = st.fresh;
+  scanState.boardStale = st.stale;
+  scanState.updatedAt = new Date().toISOString();
+  broadcast({
+    type: 'signal_board_tick',
+    data: lastSignals.slice(0, 100),
+    scan: { ...scanState },
+    time: new Date().toISOString()
+  });
+}
+
+/**
+ * Tek parite tam analiz + tahtaya yazma. Redis geçmişine yeni kayıt açmaz (saveHistory: false).
+ */
+async function refreshSymbol(rawSymbol) {
+  const pair = normalizeScanPair(rawSymbol);
+  if (!pair) return { ok: false, error: 'Geçersiz sembol (örn. BTC veya BTCUSDT)' };
+
+  const base = pair.endsWith('USDT') ? pair.slice(0, -4) : pair;
+  let coin = allCoins.find((c) => c.pair === pair);
+  if (!coin) coin = { id: base.toLowerCase(), symbol: base, pair };
+
+  if (isScanning) {
+    return { ok: false, error: 'Tam tarama sürüyor; bitince tekrar deneyin.' };
+  }
+
+  const sentiment = await binance.getFearGreed();
+  const result = await scanSingle(coin, sentiment, { saveHistory: false });
+  if (!result) {
+    markMissedDuringScan(pair);
+    lastSignals = buildSortedBoard();
+    liveSignals = lastSignals;
+    return { ok: false, error: 'Bu tur eşiklerden geçmedi veya veri yok', symbol: pair, board: lastSignals };
+  }
+
+  mergeQualifiedSignal(result);
+  lastSignals = buildSortedBoard();
+  liveSignals = lastSignals;
+  broadcast({
+    type: 'symbol_refreshed',
+    data: lastSignals.slice(0, 100),
+    scan: { ...getScanState() },
+    refreshed: pair,
+    time: new Date().toISOString()
+  });
+
+  return { ok: true, symbol: pair, signal: result, board: lastSignals };
+}
+
+function startRegistryPriceRefresh() {
+  if (priceRefreshTimer || CONFIG.REGISTRY_PRICE_REFRESH_MS <= 0) return;
+  priceRefreshTimer = setInterval(tickRegistryPrices, CONFIG.REGISTRY_PRICE_REFRESH_MS);
+  console.log(`Tahta fiyat yenilemesi: her ${CONFIG.REGISTRY_PRICE_REFRESH_MS / 1000}s`);
 }
 
 async function startAutoScan() {
   allCoins = await binance.getTRYCoins();
   console.log(`Otomatik tarama — her ${CONFIG.SCAN_INTERVAL_MS/60000} dk`);
+  startRegistryPriceRefresh();
   setTimeout(() => {
     scanMarket();
     setInterval(scanMarket, CONFIG.SCAN_INTERVAL_MS);
@@ -259,4 +462,12 @@ function getLastSignals() { return lastSignals; }
 function getLatestSignals() { return isScanning ? liveSignals : lastSignals; }
 function getScanState() { return { ...scanState }; }
 
-module.exports = { scanMarket, getLastSignals, getLatestSignals, getScanState, startAutoScan, subscribe };
+module.exports = {
+  scanMarket,
+  refreshSymbol,
+  getLastSignals,
+  getLatestSignals,
+  getScanState,
+  startAutoScan,
+  subscribe
+};

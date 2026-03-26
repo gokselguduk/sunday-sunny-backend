@@ -18,9 +18,18 @@ const INTERVAL_MS = (() => {
   return 120000;
 })();
 
+/** Tam MTF analizi dışında canlı fiyat / 24s özet (varsayılan 15s). BTC_TICKER_POLL_MS=0 kapatır. */
+const TICKER_POLL_MS = (() => {
+  const n = parseInt(process.env.BTC_TICKER_POLL_MS, 10);
+  if (n === 0) return 0;
+  if (Number.isFinite(n) && n >= 5000) return Math.min(n, 120000);
+  return 15000;
+})();
+
 let snapshot = null;
 let lastError = null;
 let pulseTimer = null;
+let tickerTimer = null;
 const subscribers = [];
 
 function getBtcSnapshot() {
@@ -32,12 +41,14 @@ function getBtcSnapshot() {
       message: 'Henüz nabız verisi yok; birkaç saniye içinde güncellenecek.',
       lastError,
       updatedAt: null,
-      nextRefreshMs: INTERVAL_MS
+      nextRefreshMs: INTERVAL_MS,
+      tickerPollMs: TICKER_POLL_MS
     };
   }
   return {
     ...snapshot,
-    nextRefreshMs: INTERVAL_MS
+    nextRefreshMs: INTERVAL_MS,
+    tickerPollMs: TICKER_POLL_MS
   };
 }
 
@@ -84,6 +95,7 @@ async function refreshBtcPulse() {
       ok: true,
       symbol: BTC_PAIR,
       currency: 'USDT',
+      tickerAt: new Date().toISOString(),
       lastPrice,
       lastClose: tf.h1.lastClose,
       priceChange24h,
@@ -150,6 +162,26 @@ async function refreshBtcPulse() {
   }
 }
 
+async function refreshBtcTickerLight() {
+  if (!snapshot?.ok) return;
+  try {
+    const ticker = await binance.get24hTicker(BTC_PAIR);
+    const lp = parseFloat(ticker?.lastPrice);
+    if (!Number.isFinite(lp)) return;
+    snapshot.lastPrice = lp;
+    if (ticker?.priceChangePercent != null) {
+      snapshot.priceChange24h = parseFloat(ticker.priceChangePercent);
+    }
+    if (ticker?.highPrice != null) snapshot.high24h = parseFloat(ticker.highPrice);
+    if (ticker?.lowPrice != null) snapshot.low24h = parseFloat(ticker.lowPrice);
+    if (ticker?.quoteVolume != null) snapshot.quoteVolume24h = parseFloat(ticker.quoteVolume);
+    snapshot.tickerAt = new Date().toISOString();
+    broadcast();
+  } catch (_) {
+    /* sessiz */
+  }
+}
+
 function subscribe(cb) {
   subscribers.push(cb);
 }
@@ -166,7 +198,14 @@ function startBtcPulse(io) {
   }, 2500);
 
   pulseTimer = setInterval(refreshBtcPulse, INTERVAL_MS);
-  console.log(`BTC nabız: ${BTC_PAIR} — her ${INTERVAL_MS / 1000}s güncelleme`);
+  console.log(`BTC nabız: ${BTC_PAIR} — tam analiz her ${INTERVAL_MS / 1000}s`);
+
+  if (TICKER_POLL_MS >= 5000) {
+    setTimeout(() => {
+      tickerTimer = setInterval(refreshBtcTickerLight, TICKER_POLL_MS);
+    }, 4000);
+    console.log(`BTC ticker: canlı fiyat ~her ${TICKER_POLL_MS / 1000}s`);
+  }
 }
 
 module.exports = {
@@ -175,5 +214,6 @@ module.exports = {
   getBtcSnapshot,
   subscribe,
   BTC_PAIR,
-  INTERVAL_MS
+  INTERVAL_MS,
+  TICKER_POLL_MS
 };

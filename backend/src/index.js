@@ -75,6 +75,16 @@ app.get('/api/scan/now', async (req, res) => {
   }
 });
 
+/** Tek coin tam analiz; tahtayı günceller, Redis’e yeni BEKLIYOR kaydı açmaz */
+app.post('/api/scan/symbol', async (req, res) => {
+  const r = await scanner.refreshSymbol(req.body?.symbol);
+  if (!r.ok) {
+    const status = r.error?.includes('sürüyor') ? 409 : 400;
+    return res.status(status).json(r);
+  }
+  res.json(r);
+});
+
 app.get('/api/performance/tiers', async (req, res) => {
   const limit = parseInt(req.query.limit, 10);
   const data = await memory.getTierPerformance(limit);
@@ -175,8 +185,9 @@ app.post('/api/portfolio/distribute', function(req, res) {
   const anomaliVar = sinyaller.some(s => s.anomaly?.isAnomaly);
   if (anomaliVar) nakitOran = Math.min(nakitOran + 0.10, 0.80);
 
-  // En iyi sinyalleri seç
+  // En iyi sinyalleri seç (son turda eşik geçenler; tahtada kalan “eski” satırlar hariç)
   const adaylar = sinyaller
+    .filter(s => !s.absentThisScan)
     .filter(s => (s.firsatSkoru?.skor || 0) >= 50)
     .filter(s => !s.anomaly?.isAnomaly || s.anomaly.signal === 'DIKKAT')
     .slice(0, maxPozisyon);
@@ -268,7 +279,8 @@ io.on('connection', async (socket) => {
 scanner.subscribe(async (data) => {
   let payload = data;
   if (data?.type === 'scan_complete') {
-    await memory.recordNadirFromScan(data.data || []);
+    const fresh = (data.data || []).filter((s) => !s.absentThisScan);
+    await memory.recordNadirFromScan(fresh);
     const nadirTrail = await memory.getNadirTrail();
     payload = {
       ...data,
@@ -279,7 +291,7 @@ scanner.subscribe(async (data) => {
   io.emit('scan_update', payload);
   if (data?.type !== 'scan_complete') return;
 
-  const signals = data.data || [];
+  const signals = (data.data || []).filter((s) => !s.absentThisScan);
   const nadirSigs = nadirAlert.pickNadirSignals(signals);
   if (!signals.length || !nadirSigs.length) return;
 
