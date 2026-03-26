@@ -388,6 +388,25 @@ function getStorageInfo() {
   };
 }
 
+/** Genel push/alert meta (F&G snapshot, alış bandı cooldown vb.) */
+async function getAlertMeta(key) {
+  try {
+    const r = getRedis();
+    return await r.get(`alert:meta:${key}`);
+  } catch (err) {
+    return null;
+  }
+}
+
+async function setAlertMeta(key, value) {
+  try {
+    const r = getRedis();
+    await r.set(`alert:meta:${key}`, String(value));
+  } catch (err) {
+    /* ignore */
+  }
+}
+
 module.exports = {
   saveSignal,
   updateSignalResult,
@@ -402,5 +421,7 @@ module.exports = {
   setNadirPushLastAt,
   recordNadirFromScan,
   getNadirTrail,
-  getStorageInfo
+  getStorageInfo,
+  getAlertMeta,
+  setAlertMeta
 };

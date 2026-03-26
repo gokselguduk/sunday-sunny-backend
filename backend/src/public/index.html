@@ -20,7 +20,13 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .header{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(8,12,20,0.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:10px 16px}
 .header-inner{display:flex;align-items:center;justify-content:space-between}
 .logo-row{display:flex;align-items:center;gap:10px}
-.logo-mark{width:36px;height:36px;flex-shrink:0;border-radius:10px;box-shadow:0 0 0 1px rgba(0,212,255,0.15)}
+.logo-mood-wrap{display:inline-flex;border-radius:10px;flex-shrink:0;transition:filter .45s ease,box-shadow .45s ease}
+.logo-mood-wrap img.logo-mark{width:36px;height:36px;display:block;border-radius:10px;box-shadow:0 0 0 1px rgba(0,212,255,0.15)}
+.logo-mood-fear img{filter:hue-rotate(200deg) saturate(1.4) brightness(1.06);box-shadow:0 0 14px rgba(0,180,255,0.28)}
+.logo-mood-greed img{filter:hue-rotate(-8deg) saturate(1.3) brightness(1.1);box-shadow:0 0 16px rgba(255,193,7,0.35)}
+.logo-mood-bull img,.logo-mood-bull-soft img{filter:hue-rotate(-18deg) saturate(1.2) brightness(1.05);box-shadow:0 0 12px rgba(0,230,118,0.22)}
+.logo-mood-bear img,.logo-mood-bear-soft img{filter:hue-rotate(135deg) saturate(1.15) brightness(0.9);box-shadow:0 0 12px rgba(255,71,87,0.22)}
+.logo-mood-neutral img{filter:saturate(0.92) brightness(1);box-shadow:0 0 0 1px rgba(0,212,255,0.15)}
 .logo-name{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:var(--accent);letter-spacing:1px}
 .logo-sub{font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase}
 .fg-badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid}
@@ -222,7 +228,9 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 <div class="header">
   <div class="header-inner">
     <div class="logo-row">
-      <img class="logo-mark" src="/icon-sun.svg" width="36" height="36" alt="">
+      <div class="logo-mood-wrap logo-mood-neutral" id="logo-mood-wrap" title="Piyasa modu">
+        <img class="logo-mark" src="/icon-sun.svg" width="36" height="36" alt="">
+      </div>
       <div>
         <div class="logo-name">SUNDAY/SUNNY</div>
         <div class="logo-sub">Kripto Sinyal Motoru</div>
@@ -684,6 +692,25 @@ function baslatCanliFiyat(){
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)fiyatGuncelle();});
 }
 
+function applyLogoMood(fg,signalList){
+  const wrap=document.getElementById('logo-mood-wrap');
+  if(!wrap)return;
+  const list=signalList||[];
+  const fresh=list.filter(s=>!s.absentThisScan);
+  const avgPc=fresh.length?fresh.reduce((a,s)=>a+(Number(s.priceChange24h)||0),0)/fresh.length:0;
+  let mood='neutral';
+  let tip='Nötr / bekleme';
+  if(fg<=28){mood='fear';tip='Aşırı korku (F&G düşük)';}
+  else if(fg<=40){mood='fear';tip='Korku bölgesi';}
+  else if(fg>=72){mood='greed';tip='Aşırı açgözlülük';}
+  else if(avgPc<=-2.2){mood='bear';tip='Liste ort. düşüş (ayı baskısı)';}
+  else if(avgPc>=2){mood='bull';tip='Liste ort. yükseliş (boğa)';}
+  else if(fg>=62){mood='greed';tip='İştah yüksek';}
+  else if(fg>=55){mood='bull-soft';tip='Hafif pozitif duyarlılık';}
+  else if(fg<=45){mood='bear-soft';tip='Temkin / zayıf duyarlılık';}
+  wrap.className='logo-mood-wrap logo-mood-'+mood;
+  wrap.title='Güneş rengi: '+tip+' · F&G '+fg;
+}
 function guncelle(){
   const fresh=sig.filter(s=>!s.absentThisScan);
   const t=sig.length,nadir=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=80).length,guclu=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=65).length;
@@ -709,6 +736,7 @@ function guncelle(){
   const b=document.getElementById('fg-badge');
   b.textContent='F&G: '+fg;
   b.className='fg-badge '+(fg<=40?'fg-fear':fg>=60?'fg-greed':'fg-neutral');
+  applyLogoMood(fg,sig);
   handleNadirOnlyAlert();
   pushBtnState();
   renderTop();renderSinyaller();renderPotansiyelPage();renderInvestAnchors();renderRapor();

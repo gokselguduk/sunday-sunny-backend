@@ -12,6 +12,7 @@ const nadirAlert = require('./services/nadirAlert');
 const binance = require('./services/binance');
 const btcPulse = require('./services/btcPulse');
 const marketContext = require('./services/marketContext');
+const pushAlerts = require('./services/pushAlerts');
 
 const app    = express();
 const server = http.createServer(app);
@@ -182,23 +183,29 @@ scanner.subscribe(async (data) => {
 
   const signals = (data.data || []).filter((s) => !s.absentThisScan);
   const nadirSigs = nadirAlert.pickNadirSignals(signals);
-  if (!signals.length || !nadirSigs.length) return;
-
-  const gate = await nadirAlert.shouldSendNadirPush();
-  if (!gate.ok) {
-    if (gate.reason === 'silent') console.log('Nadir push: gece sessiz modu (TR saati)');
-    else if (gate.reason === 'cooldown') console.log('Nadir push: 45 dk cooldown');
-    return;
+  if (signals.length && nadirSigs.length) {
+    const gate = await nadirAlert.shouldSendNadirPush();
+    if (!gate.ok) {
+      if (gate.reason === 'silent') console.log('Nadir push: gece sessiz modu (TR saati)');
+      else if (gate.reason === 'cooldown') console.log('Nadir push: 45 dk cooldown');
+    } else {
+      const msg = nadirAlert.buildNadirPushMessage(nadirSigs);
+      await notifier.sendPushToAll({
+        title: msg.title,
+        body: msg.body,
+        url: '/',
+        tag: 'ss-nadir',
+        vibrate: [300, 150, 300, 150, 500]
+      });
+      await nadirAlert.markNadirPushSent();
+    }
   }
 
-  const msg = nadirAlert.buildNadirPushMessage(nadirSigs);
-  await notifier.sendPushToAll({
-    title: msg.title,
-    body: msg.body,
-    url: '/',
-    vibrate: [300, 150, 300, 150, 500]
-  });
-  await nadirAlert.markNadirPushSent();
+  try {
+    await pushAlerts.processScanComplete(data.data || []);
+  } catch (e) {
+    console.error('pushAlerts:', e.message);
+  }
 });
 
 // ── BAŞLAT ──────────────────────────────────

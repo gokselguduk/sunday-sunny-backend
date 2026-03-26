@@ -17,7 +17,7 @@ self.addEventListener('push', (event) => {
     vibrate: data.vibrate || [200, 100, 200],
     data: { url: data.url || '/' },
     renotify: true,
-    tag: 'sunday-sunny-scan'
+    tag: data.tag || 'sunday-sunny-scan'
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
