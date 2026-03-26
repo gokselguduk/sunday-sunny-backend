@@ -38,19 +38,13 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .nav-btn span{font-size:9px;font-weight:500;line-height:1.15}
 .nav-badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px}
 .content{padding-top:60px;padding-bottom:calc(var(--nav-bar-h) + var(--ref-tool-h) + 28px + env(safe-area-inset-bottom,0px));min-height:100vh}
-body.has-ref-dock .content{padding-bottom:calc(var(--nav-bar-h) + var(--ref-tool-h) + 72px + env(safe-area-inset-bottom,0px))}
 .ref-toolbar{position:fixed;left:0;right:0;z-index:99;bottom:calc(var(--nav-bar-h) + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:center;padding:6px 12px;background:rgba(8,12,20,0.98);backdrop-filter:blur(16px);border-top:1px solid var(--border)}
 .ref-toolbar-btn{width:100%;max-width:420px;padding:10px 16px;border-radius:12px;border:1px solid rgba(0,212,255,0.25);background:var(--bg2);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
 .ref-toolbar-btn:active{transform:scale(0.99);background:var(--bg3)}
-.ref-dock{display:none;position:fixed;left:0;right:0;z-index:95;background:rgba(13,19,32,0.96);backdrop-filter:blur(16px);border-top:1px solid var(--border);padding:6px 0 max(4px,env(safe-area-inset-bottom));bottom:calc(var(--nav-bar-h) + var(--ref-tool-h) + env(safe-area-inset-bottom,0px))}
-.ref-dock.open{display:block}
-.ref-dock-inner{display:flex;align-items:center;gap:10px;padding:0 12px 0 14px;max-width:100%}
-.ref-dock-lbl{flex-shrink:0;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;writing-mode:vertical-rl;transform:rotate(180deg);max-height:40px;line-height:1.2}
-.ref-dock-scroll{display:flex;align-items:center;gap:8px;overflow-x:auto;flex:1;min-width:0;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:2px 0}
-.ref-dock-scroll::-webkit-scrollbar{display:none}
-.ref-pill{flex-shrink:0;display:inline-flex;align-items:center;gap:5px;padding:9px 14px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);color:var(--text1);font-family:'Space Mono',monospace;font-size:12px;font-weight:700;cursor:pointer;transition:border-color .15s,background .15s}
-.ref-pill:active{background:var(--bg3);border-color:var(--accent)}
-.ref-pill-sk{font-size:10px;font-weight:600;color:var(--text3);padding:1px 5px;border-radius:6px;background:var(--bg1);border:1px solid var(--border)}
+.invest-card-row{display:flex;align-items:flex-start;gap:10px}
+.invest-card-main{flex:1;min-width:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.invest-del-btn{flex-shrink:0;margin-top:2px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;touch-action:manipulation;position:relative;z-index:2}
+.invest-del-btn:active{background:var(--bg3);color:var(--red)}
 .invest-card-hdr button{cursor:pointer}
 .page{display:none}.page.active{display:block}
 .dash-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 16px}
@@ -169,8 +163,8 @@ body.has-ref-dock .content{padding-bottom:calc(var(--nav-bar-h) + var(--ref-tool
 .ctx-card-v{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;line-height:1.25}
 .ctx-card-s{font-size:10px;color:var(--text2);margin-top:6px;line-height:1.45}
 .refs-page-hdr{padding:12px 16px 0;display:flex;align-items:center;gap:10px}
-.invest-card{cursor:pointer;transition:border-color .15s,transform .12s;background:var(--bg1);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px}
-.invest-card:active{transform:scale(0.99)}
+.invest-card{transition:border-color .15s,transform .12s;background:var(--bg1);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px}
+.invest-card-main:active{opacity:0.92}
 .invest-card-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px}
 .invest-sym{font-family:'Space Mono',monospace;font-size:15px;font-weight:700}
 .invest-meta{font-size:10px;color:var(--text3);line-height:1.4;margin-top:4px}
@@ -304,7 +298,7 @@ body.has-ref-dock .content{padding-bottom:calc(var(--nav-bar-h) + var(--ref-tool
       <button type="button" class="filtre-btn" onclick="closeRefsPage()">← Geri</button>
     </div>
     <div class="section-hdr" style="padding-top:4px">📌 Yatırım referansım</div>
-    <p style="font-size:11px;color:var(--text3);padding:0 16px 10px;line-height:1.45">Karta dokun: coin detayı. Üstteki <strong>Ref</strong> şeridinden hızlı geçiş.</p>
+    <p style="font-size:11px;color:var(--text3);padding:0 16px 10px;line-height:1.45">Sol alana dokun: coin detayı. <strong>Sil</strong> yalnızca kaydı kaldırır.</p>
     <div class="invest-strip-wrap" id="refs-list"></div>
   </div>
 
@@ -326,8 +320,6 @@ body.has-ref-dock .content{padding-bottom:calc(var(--nav-bar-h) + var(--ref-tool
     </div>
   </div>
 </div>
-
-<div id="ref-dock" class="ref-dock" role="region" aria-label="Yatırım referansları hızlı erişim"></div>
 
 <div class="ref-toolbar">
   <button type="button" class="ref-toolbar-btn" onclick="openRefsPage()">📌 Referanslarım</button>
@@ -885,29 +877,6 @@ function gotoInvestRef(symbol){
   const short=sym.replace('USDT','');
   flashAppToast('<strong style="color:var(--accent)">Liste dışı</strong> · '+short+' bu tur sinyal listesinde yok. Tam tarama sonrası tekrar bak veya Sinyaller’de ara.');
 }
-function renderRefDock(){
-  const dock=document.getElementById('ref-dock');
-  if(!dock)return;
-  const A=loadInvestAnchors();
-  const syms=Object.keys(A);
-  if(!syms.length){
-    dock.innerHTML='';
-    dock.classList.remove('open');
-    document.body.classList.remove('has-ref-dock');
-    return;
-  }
-  document.body.classList.add('has-ref-dock');
-  dock.classList.add('open');
-  dock.innerHTML='<div class="ref-dock-inner"><span class="ref-dock-lbl">Ref</span><div class="ref-dock-scroll" role="toolbar">'+
-    syms.map(sym=>{
-      const short=sym.replace('USDT','');
-      const cur=sig.find(x=>x.symbol===sym);
-      const sk=cur?.firsatSkoru?.skor;
-      const skBadge=sk!=null?'<span class="ref-pill-sk">'+sk+'</span>':'';
-      return '<button type="button" class="ref-pill" onclick="gotoInvestRef('+JSON.stringify(sym)+')">'+short+skBadge+'</button>';
-    }).join('')+
-    '</div></div>';
-}
 function filtre(f,btn){aktifF=f;document.querySelectorAll('.filtre-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderSinyaller()}
 function ara(v){araM=v.trim().toUpperCase();renderSinyaller()}
 
@@ -925,12 +894,12 @@ function sabitleYatirimRef(idx){
   renderInvestAnchors();
 }
 function yatirimRefSil(symbol){
+  const sym=String(symbol||'').toUpperCase();
+  if(!sym)return;
   const o=loadInvestAnchors();
-  delete o[symbol];
+  delete o[sym];
   saveInvestAnchors(o);
   renderInvestAnchors();
-  const ix=sig.findIndex(x=>x.symbol===symbol);
-  if(ix>=0)modalAc(ix);
 }
 function utcTrLabel(h){
   const tr=(h+3)%24;
@@ -1030,7 +999,6 @@ function renderInvestAnchors(){
   const syms=Object.keys(A);
   if(!syms.length){
     el.innerHTML='<div class="dash-hint" style="margin:0">Giriş yaptığın coinde detayda <strong>«Bu anı referans olarak kaydet»</strong>. 45 dk taraması bunu silmez.</div>';
-    renderRefDock();
     return;
   }
   el.innerHTML=syms.map(sym=>{
@@ -1046,21 +1014,24 @@ function renderInvestAnchors(){
     const skTxt=nowSkor!=null?String(nowSkor):'—';
     const skCol=(dSk==null||!Number.isFinite(dSk))?'var(--text1)':(dSk>=0?'var(--green)':'var(--red)');
     const pxCol=(dPx==null||!Number.isFinite(dPx))?'var(--text1)':(dPx>=0?'var(--green)':'var(--red)');
-    return`<div class="invest-card" role="button" tabindex="0" onclick="gotoInvestRef(${JSON.stringify(sym)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();gotoInvestRef(${JSON.stringify(sym)})}">
-      <div class="invest-card-hdr">
-        <div>
-          <div class="invest-sym">${short}</div>
-          <div class="invest-meta">Kayıt: ${refDt} · giriş skor <strong>${ref.skor}</strong> · giriş $${f5(ref.usdt)}</div>
+    return`<div class="invest-card">
+      <div class="invest-card-row">
+        <div class="invest-card-main" role="button" tabindex="0" onclick="gotoInvestRef(${JSON.stringify(sym)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();gotoInvestRef(${JSON.stringify(sym)})}">
+          <div class="invest-card-hdr" style="margin-bottom:8px">
+            <div>
+              <div class="invest-sym">${short}</div>
+              <div class="invest-meta">Kayıt: ${refDt} · giriş skor <strong>${ref.skor}</strong> · giriş $${f5(ref.usdt)}</div>
+            </div>
+          </div>
+          <div class="invest-grid">
+            <div class="invest-cell"><div class="invest-cell-lbl">Şimdi skor</div><div class="invest-cell-val" style="color:${skCol}">${skTxt}${dSk!=null&&Number.isFinite(dSk)?' <span style="font-size:10px;opacity:0.9">('+((dSk>=0?'+':'')+Math.round(dSk))+')</span>':''}</div>${nowSkor==null?'<div style="font-size:9px;color:var(--text3);margin-top:2px">Bu tur listede yok</div>':''}</div>
+            <div class="invest-cell"><div class="invest-cell-lbl">Şimdi fiyat</div><div class="invest-cell-val" style="color:${pxCol}">$${f5(px)}</div>${dPx!=null&&Number.isFinite(dPx)?`<div style="font-size:9px;color:var(--text3);margin-top:2px">${dPx>=0?'+':''}${dPx.toFixed(2)}% vs giriş</div>`:''}</div>
+          </div>
         </div>
-        <button type="button" onclick="event.stopPropagation();yatirimRefSil(${JSON.stringify(sym)})" style="background:none;border:none;color:var(--text3);font-size:11px;padding:4px">Sil</button>
-      </div>
-      <div class="invest-grid">
-        <div class="invest-cell"><div class="invest-cell-lbl">Şimdi skor</div><div class="invest-cell-val" style="color:${skCol}">${skTxt}${dSk!=null&&Number.isFinite(dSk)?' <span style="font-size:10px;opacity:0.9">('+((dSk>=0?'+':'')+Math.round(dSk))+')</span>':''}</div>${nowSkor==null?'<div style="font-size:9px;color:var(--text3);margin-top:2px">Bu tur listede yok</div>':''}</div>
-        <div class="invest-cell"><div class="invest-cell-lbl">Şimdi fiyat</div><div class="invest-cell-val" style="color:${pxCol}">$${f5(px)}</div>${dPx!=null&&Number.isFinite(dPx)?`<div style="font-size:9px;color:var(--text3);margin-top:2px">${dPx>=0?'+':''}${dPx.toFixed(2)}% vs giriş</div>`:''}</div>
+        <button type="button" class="invest-del-btn" onclick="yatirimRefSil(${JSON.stringify(sym)})" aria-label="Referansı sil">Sil</button>
       </div>
     </div>`;
   }).join('');
-  renderRefDock();
 }
 
 function fList(){
