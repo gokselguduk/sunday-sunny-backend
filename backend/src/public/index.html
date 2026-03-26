@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Sunny">
 <meta name="theme-color" content="#080C14">
+<meta http-equiv="Cache-Control" content="no-store" />
 <meta name="application-name" content="Sunday/Sunny">
 <link rel="manifest" href="/site.webmanifest">
 <link rel="icon" href="/icon-sun.svg" type="image/svg+xml">
@@ -232,6 +233,9 @@ body.has-ref-dock .content{padding-bottom:138px}
 .gelir-analiz li{margin-bottom:7px;padding-left:2px}
 .gelir-analiz li::marker{color:var(--accent)}
 .gelir-card-foot{font-size:10px;color:var(--text3);padding:9px 14px;background:var(--bg2);text-align:center;letter-spacing:0.2px}
+body.page-btc-active .nav{display:none}
+body.page-btc-active .content{padding-bottom:20px}
+body.page-btc-active #page-btc.active iframe{height:calc(100vh - 56px - env(safe-area-inset-top,0px))}
 .gelir-card .kart-horizon{margin-left:14px;margin-right:14px}
 .gelir-chip{font-size:9px;font-weight:700;padding:3px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:0.4px}
 .dash-gelir-link{font-size:11px;color:var(--text3);padding:0 16px 12px;line-height:1.45}
@@ -266,6 +270,7 @@ body.has-ref-dock .content{padding-bottom:138px}
       <div class="stat-box"><div class="stat-num" id="s-nadir" style="color:var(--green)">—</div><div class="stat-lbl">🔥 Nadir</div></div>
       <div class="stat-box"><div class="stat-num" id="s-kur" style="color:var(--amber)">—</div><div class="stat-lbl">USD/TRY</div></div>
     </div>
+    <p id="board-hint" style="font-size:10px;color:var(--text3);text-align:center;padding:0 16px 10px;line-height:1.45"></p>
     <div class="fb-grid">
       <div class="firsat-banner fb-nadir" style="flex-direction:column;align-items:flex-start;gap:4px">
         <div style="font-size:10px;color:var(--text3)">🔥 Nadir Fırsat (80+)</div>
@@ -360,6 +365,10 @@ body.has-ref-dock .content{padding-bottom:138px}
   <div class="page" id="page-rapor">
     <div style="padding:12px 16px" id="rapor"></div>
   </div>
+
+  <div class="page" id="page-btc" style="padding:0;margin:0">
+    <iframe id="btc-iframe" title="Bitcoin canlı analiz" src="about:blank" style="width:100%;height:calc(100vh - 120px);border:0;display:block;background:var(--bg0)"></iframe>
+  </div>
 </div>
 
 <div id="ref-dock" class="ref-dock" role="region" aria-label="Yatırım referansları hızlı erişim"></div>
@@ -388,6 +397,10 @@ body.has-ref-dock .content{padding-bottom:138px}
   <button type="button" class="nav-btn" data-nav="rapor" onclick="sayfa('rapor',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     <span>Rapor</span>
+  </button>
+  <button type="button" class="nav-btn" data-nav="btc" onclick="sayfa('btc',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 8.5h4.5a2 2 0 0 1 0 4H9m0-4v7m0-7V6"/></svg>
+    <span>₿ BTC</span>
   </button>
 </div>
 
@@ -490,7 +503,15 @@ if(typeof io!=='undefined'){
     if(payload.nadirTrail)nadirTrail=payload.nadirTrail;
     if(payload.storage)storageHint=payload.storage;
     const arr=payload.data;
-    if(Array.isArray(arr)&&(arr.length>0||payload.type==='scan_complete')){
+    const t=payload.type;
+    const applyList=Array.isArray(arr)&&(
+      arr.length>0||
+      t==='scan_complete'||
+      t==='scan_progress'||
+      t==='signal_board_tick'||
+      t==='symbol_refreshed'
+    );
+    if(applyList){
       sig=arr.map((s,i)=>({...s,_idx:i}));
       if(sig.length>0)kur=sig[0].usdTryRate||kur;
     }
@@ -567,7 +588,8 @@ function baslatCanliFiyat(){
 }
 
 function guncelle(){
-  const t=sig.length,nadir=sig.filter(s=>(s.firsatSkoru?.skor||0)>=80).length,guclu=sig.filter(s=>(s.firsatSkoru?.skor||0)>=65).length;
+  const fresh=sig.filter(s=>!s.absentThisScan);
+  const t=sig.length,nadir=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=80).length,guclu=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=65).length;
   const fg=sig[0]?.sentiment?.value||14;
   document.getElementById('s-sinyal').textContent=t;
   document.getElementById('s-nadir').textContent=nadir;
@@ -575,6 +597,18 @@ function guncelle(){
   document.getElementById('s-badge').textContent=t;
   document.getElementById('b-nadir-sayi').textContent=nadir;
   document.getElementById('b-guclu-sayi').textContent=guclu;
+  const bh=document.getElementById('board-hint');
+  if(bh){
+    const sm=scanMeta||{};
+    const fq=sm.boardFresh,fst=sm.boardStale,q=sm.qualifiedThisScan;
+    if(t>0&&(fq!=null||fst!=null||q!=null)){
+      bh.textContent='Tahta '+t+' · Bu tur uygun: '+(q!=null?q:'—')+' · Güncel: '+(fq!=null?fq:'—')+' · Önceki tur verisi: '+(fst!=null?fst:'—');
+    }else if(t>0){
+      bh.textContent='Tahta '+t+' (tur istatistikleri tarama sonrası güncellenir)';
+    }else{
+      bh.textContent='';
+    }
+  }
   const b=document.getElementById('fg-badge');
   b.textContent='F&G: '+fg;
   b.className='fg-badge '+(fg<=40?'fg-fear':fg>=60?'fg-greed':'fg-neutral');
@@ -706,7 +740,12 @@ function sayfa(id,btn){
   if(pageEl)pageEl.classList.add('active');
   const navBtn=btn||document.querySelector('.nav-btn[data-nav="'+id+'"]');
   if(navBtn)navBtn.classList.add('active');
+  document.body.classList.toggle('page-btc-active',id==='btc');
   if(id==='ai')refreshAiStatus();
+  if(id==='btc'){
+    const fr=document.getElementById('btc-iframe');
+    if(fr&&!fr.dataset.loaded){fr.dataset.loaded='1';fr.src='/bitcoin.html?v=20250326&app='+Date.now();}
+  }
 }
 function goPage(pageId){
   const b=document.querySelector('.nav-btn[data-nav="'+pageId+'"]');
@@ -1020,6 +1059,19 @@ function kartHTML(s){
   if(s.footprint?.strongBull)bd.push('<span class="badge b-green">Delta ✓</span>');
   if(s.candlePatterns?.hasBullish)bd.push(`<span class="badge b-amber">${s.candlePatterns.patterns[0]?.name||'Formasyon'}</span>`);
   if(s.anomaly?.isAnomaly)bd.push('<span class="badge b-red">⚠ Anomali</span>');
+  if(s.absentThisScan)bd.push('<span class="badge b-amber" title="Son tam taramada eşik altı kaldı; veri önceki turdan">Önceki tur</span>');
+  const vps=s.vsPreviousScan;
+  let deltaHtml='';
+  if(vps&&!vps.isFirst){
+    const p=[];
+    if(vps.firsatDelta!=null)p.push('Fırsat '+(vps.firsatDelta>=0?'+':'')+vps.firsatDelta);
+    if(vps.scoreDelta!=null)p.push('Skor '+(vps.scoreDelta>=0?'+':'')+vps.scoreDelta);
+    if(vps.pricePctSinceLastScan!=null)p.push('Fiyat '+(vps.pricePctSinceLastScan>=0?'+':'')+parseFloat(vps.pricePctSinceLastScan).toFixed(2)+'%');
+    if(p.length)deltaHtml='<div style="font-size:10px;color:var(--text3);padding:0 12px 6px;line-height:1.35">Tarama farkı: '+p.join(' · ')+'</div>';
+  }
+  if(s.vsLastFullScanPricePct!=null&&Number.isFinite(s.vsLastFullScanPricePct)){
+    deltaHtml+='<div style="font-size:10px;color:var(--accent2);padding:0 12px 6px">Tam tarama sonrası fiyat: '+(s.vsLastFullScanPricePct>=0?'+':'')+parseFloat(s.vsLastFullScanPricePct).toFixed(2)+'%</div>';
+  }
   return `<div class="kart" onclick="modalAc(${s._idx})">
     <div class="kart-accent" style="background:${r}"></div>
     <div class="kart-ust">
@@ -1040,6 +1092,7 @@ function kartHTML(s){
       </div>
       <span class="fiyat-deg ${chg>=0?'deg-p':'deg-n'}">24s ${chg>=0?'+':''}${chg.toFixed(2)}%</span>
     </div>
+    ${deltaHtml}
     <div class="kart-hedefler">
       <div class="hedef"><div class="hedef-lbl">Stop</div><div class="hedef-pct" style="color:var(--red)">-${(s.atr?.stopLossPct||0).toFixed(2)}%</div><div class="hedef-try">${tryF(s.atr?.stopLoss)}</div></div>
       <div class="hedef"><div class="hedef-lbl">TP1</div><div class="hedef-pct" style="color:var(--green)">+${(s.atr?.tp1Pct||0).toFixed(2)}%</div><div class="hedef-try">${tryF(s.atr?.takeProfit1)}</div></div>
@@ -1128,7 +1181,19 @@ function modalAc(idx){
         </div>
       </div>
       <div class="firsat-bar"><div class="firsat-bar-fill" style="width:${fs}%;background:${r}"></div></div>
+      ${s.absentThisScan?'<p style="font-size:11px;color:var(--amber);margin-top:10px;line-height:1.45">Bu satır son tam taramada eşik altı kaldı; skor ve göstergeler önceki turdan. Yenileme için sunucuda tam tarama veya <code style=font-size:10px>POST /api/scan/symbol</code> kullanılır.</p>':''}
     </div>
+
+    ${(()=>{
+      const v=s.vsPreviousScan;
+      if(!v||v.isFirst)return'';
+      const bits=[];
+      if(v.firsatDelta!=null)bits.push('Fırsat '+(v.firsatDelta>=0?'+':'')+v.firsatDelta);
+      if(v.scoreDelta!=null)bits.push('Skor '+(v.scoreDelta>=0?'+':'')+v.scoreDelta);
+      if(v.pricePctSinceLastScan!=null)bits.push('Fiyat '+(v.pricePctSinceLastScan>=0?'+':'')+parseFloat(v.pricePctSinceLastScan).toFixed(2)+'%');
+      if(!bits.length)return'';
+      return`<div class="modal-sec"><div class="modal-sec-title">Önceki tarama ile fark</div><p style="font-size:12px;color:var(--text2);line-height:1.5">${bits.join(' · ')}</p>${v.previousScannedAt?'<p style="font-size:10px;color:var(--text3);margin-top:6px">Önceki tam tarama: '+new Date(v.previousScannedAt).toLocaleString('tr-TR')+'</p>':''}</div>`;
+    })()}
 
     <div class="modal-sec">
       <div class="modal-sec-title">Al / Sat Seviyeleri</div>

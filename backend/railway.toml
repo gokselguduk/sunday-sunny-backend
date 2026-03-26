@@ -1,0 +1,9 @@
+# Railway: Root Directory olarak bu klasörü (backend) seçin.
+# https://docs.railway.com/guides/monorepo
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npm start"
+restartPolicyType = "ON_FAILURE"

@@ -19,7 +19,16 @@ const io     = new socketio.Server(server, { cors: { origin: '*' } });
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(
+  express.static(path.join(__dirname, 'public'), {
+    setHeaders(res, filePath) {
+      const b = path.basename(filePath);
+      if (/\.html$/i.test(b) || b === 'sw.js') {
+        res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+      }
+    }
+  })
+);
 notifier.configurePush();
 
 // ── SAĞLIK ──────────────────────────────────
