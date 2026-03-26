@@ -11,6 +11,7 @@ const notifier = require('./services/notifier');
 const nadirAlert = require('./services/nadirAlert');
 const binance = require('./services/binance');
 const btcPulse = require('./services/btcPulse');
+const marketContext = require('./services/marketContext');
 
 const app    = express();
 const server = http.createServer(app);
@@ -47,6 +48,17 @@ app.post('/api/market/bitcoin/refresh', async (req, res) => {
     return res.status(502).json({ ok: false, error: r.error, data: btcPulse.getBtcSnapshot() });
   }
   res.json({ ok: true, data: btcPulse.getBtcSnapshot() });
+});
+
+/** Funding, OI, spot–perp baz, seans UTC profili, DXY karşılaştırması, BTC ağ ücreti; isteğe bağlı Coinglass */
+app.get('/api/market/context', async (req, res) => {
+  try {
+    const force = req.query.refresh === '1' || req.query.refresh === 'true';
+    const data = await marketContext.getMarketContext(force);
+    res.json(data);
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 // ── TARAMA ──────────────────────────────────

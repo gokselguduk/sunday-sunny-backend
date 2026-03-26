@@ -15,7 +15,7 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-:root{--bg0:#080C14;--bg1:#0D1320;--bg2:#131B2E;--bg3:#1A2540;--accent:#00D4FF;--accent2:#7B5CFF;--green:#00E676;--red:#FF4757;--amber:#FFB300;--text1:#E8F0FE;--text2:#8FA3C4;--text3:#4A5C7A;--border:#1E2D45}
+:root{--bg0:#080C14;--bg1:#0D1320;--bg2:#131B2E;--bg3:#1A2540;--accent:#00D4FF;--accent2:#7B5CFF;--green:#00E676;--red:#FF4757;--amber:#FFB300;--text1:#E8F0FE;--text2:#8FA3C4;--text3:#4A5C7A;--border:#1E2D45;--nav-bar-h:56px;--ref-tool-h:46px}
 body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
 .header{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(8,12,20,0.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:10px 16px}
 .header-inner{display:flex;align-items:center;justify-content:space-between}
@@ -31,15 +31,18 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .fg-neutral{background:rgba(255,179,0,0.1);color:var(--amber);border-color:rgba(255,179,0,0.3)}
 .scan-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
-.nav{display:flex;background:rgba(8,12,20,0.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.nav{display:flex;background:rgba(8,12,20,0.97);backdrop-filter:blur(20px);border-top:1px solid var(--border);position:fixed;bottom:0;left:0;right:0;z-index:100;padding-bottom:max(8px,env(safe-area-inset-bottom));min-height:var(--nav-bar-h)}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 6px;background:none;border:none;cursor:pointer;color:var(--text3);transition:color 0.2s;font-family:'DM Sans',sans-serif}
 .nav-btn.active{color:var(--accent)}
 .nav-btn svg{width:22px;height:22px}
 .nav-btn span{font-size:9px;font-weight:500;line-height:1.15}
 .nav-badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px}
-.content{padding-top:60px;padding-bottom:80px;min-height:100vh}
-body.has-ref-dock .content{padding-bottom:138px}
-.ref-dock{display:none;position:fixed;left:0;right:0;z-index:95;background:rgba(13,19,32,0.96);backdrop-filter:blur(16px);border-top:1px solid var(--border);padding:6px 0 max(4px,env(safe-area-inset-bottom));bottom:calc(54px + max(8px,env(safe-area-inset-bottom)))}
+.content{padding-top:60px;padding-bottom:calc(var(--nav-bar-h) + var(--ref-tool-h) + 28px + env(safe-area-inset-bottom,0px));min-height:100vh}
+body.has-ref-dock .content{padding-bottom:calc(var(--nav-bar-h) + var(--ref-tool-h) + 72px + env(safe-area-inset-bottom,0px))}
+.ref-toolbar{position:fixed;left:0;right:0;z-index:99;bottom:calc(var(--nav-bar-h) + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:center;padding:6px 12px;background:rgba(8,12,20,0.98);backdrop-filter:blur(16px);border-top:1px solid var(--border)}
+.ref-toolbar-btn{width:100%;max-width:420px;padding:10px 16px;border-radius:12px;border:1px solid rgba(0,212,255,0.25);background:var(--bg2);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+.ref-toolbar-btn:active{transform:scale(0.99);background:var(--bg3)}
+.ref-dock{display:none;position:fixed;left:0;right:0;z-index:95;background:rgba(13,19,32,0.96);backdrop-filter:blur(16px);border-top:1px solid var(--border);padding:6px 0 max(4px,env(safe-area-inset-bottom));bottom:calc(var(--nav-bar-h) + var(--ref-tool-h) + env(safe-area-inset-bottom,0px))}
 .ref-dock.open{display:block}
 .ref-dock-inner{display:flex;align-items:center;gap:10px;padding:0 12px 0 14px;max-width:100%}
 .ref-dock-lbl{flex-shrink:0;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;writing-mode:vertical-rl;transform:rotate(180deg);max-height:40px;line-height:1.2}
@@ -159,6 +162,13 @@ body.has-ref-dock .content{padding-bottom:138px}
 .kart-horizon{margin:0 12px 10px;padding:8px 10px;background:var(--bg2);border-radius:10px;font-size:10px;color:var(--text2);line-height:1.45;border:1px solid var(--border)}
 .kart-horizon strong{color:var(--accent);font-weight:600}
 .invest-strip-wrap{margin:0 16px 12px}
+.ctx-grid{display:grid;gap:8px}
+.ctx-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ctx-card{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.ctx-card-h{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.ctx-card-v{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;line-height:1.25}
+.ctx-card-s{font-size:10px;color:var(--text2);margin-top:6px;line-height:1.45}
+.refs-page-hdr{padding:12px 16px 0;display:flex;align-items:center;gap:10px}
 .invest-card{cursor:pointer;transition:border-color .15s,transform .12s;background:var(--bg1);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:8px}
 .invest-card:active{transform:scale(0.99)}
 .invest-card-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px}
@@ -213,7 +223,7 @@ body.has-ref-dock .content{padding-bottom:138px}
 .dash-gelir-link button{background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0}
 </style>
 </head>
-<body>
+<body class="has-ref-toolbar">
 
 <div class="header">
   <div class="header-inner">
@@ -252,9 +262,9 @@ body.has-ref-dock .content{padding-bottom:138px}
         <div class="fb-sayi" id="b-guclu-sayi" style="color:var(--accent)">0</div>
       </div>
     </div>
-    <div class="section-hdr">📌 Yatırım referansım</div>
-    <p style="font-size:11px;color:var(--text3);padding:0 16px 8px;line-height:1.45;margin-top:-4px">Karta dokun: coin detayı. Alttaki <strong>Referansım</strong> şeridinden her zaman tek dokunuşla aynı coin’e dön.</p>
-    <div class="invest-strip-wrap" id="invest-strip"></div>
+    <div class="section-hdr">🌐 Piyasa bağlamı (BTC)</div>
+    <p style="font-size:10px;color:var(--text3);padding:0 16px 8px;line-height:1.45">Funding, açık pozisyon, spot–perp baz, seans, DXY, taker akışı, ağ ücreti; tek başına sinyal değildir.</p>
+    <div id="market-context" style="padding:0 16px 12px"><div class="loading" style="padding:24px"><div class="spinner"></div></div></div>
     <div class="section-hdr">En İyi Fırsatlar</div>
     <div class="dash-gelir-link">💎 Günlük “sürpriz sıçrama” adayları (hacim + MTF + kıvılcım örüntüsü): <button type="button" onclick="goPage('gelir')">Gelir+</button></div>
     <div style="padding:0 16px" id="top-list"><div class="loading"><div class="spinner"></div></div></div>
@@ -289,6 +299,15 @@ body.has-ref-dock .content{padding-bottom:138px}
     <div style="padding:0 16px" id="gelir-liste"><div class="loading"><div class="spinner"></div></div></div>
   </div>
 
+  <div class="page" id="page-refs">
+    <div class="refs-page-hdr">
+      <button type="button" class="filtre-btn" onclick="closeRefsPage()">← Geri</button>
+    </div>
+    <div class="section-hdr" style="padding-top:4px">📌 Yatırım referansım</div>
+    <p style="font-size:11px;color:var(--text3);padding:0 16px 10px;line-height:1.45">Karta dokun: coin detayı. Üstteki <strong>Ref</strong> şeridinden hızlı geçiş.</p>
+    <div class="invest-strip-wrap" id="refs-list"></div>
+  </div>
+
   <div class="page" id="page-rapor">
     <div style="padding:12px 16px" id="rapor"></div>
   </div>
@@ -309,6 +328,10 @@ body.has-ref-dock .content{padding-bottom:138px}
 </div>
 
 <div id="ref-dock" class="ref-dock" role="region" aria-label="Yatırım referansları hızlı erişim"></div>
+
+<div class="ref-toolbar">
+  <button type="button" class="ref-toolbar-btn" onclick="openRefsPage()">📌 Referanslarım</button>
+</div>
 
 <div class="nav">
   <button type="button" class="nav-btn active" data-nav="dashboard" onclick="sayfa('dashboard',this)">
@@ -649,6 +672,7 @@ function veriCek(){
     schedulePoll();
     fiyatGuncelle();
     baslatCanliFiyat();
+    fetchMarketContext();
   }).catch(()=>{});
 }
 
@@ -659,7 +683,7 @@ async function fiyatGuncelle(){
     const res=await fetch(BASE_URL+'/api/prices/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:syms})});
     const j=await res.json();
     if(j.prices){livePrices=j.prices;livePricesAt=Date.now();}
-    renderTop();renderSinyaller();renderPotansiyelPage();renderInvestStrip();
+    renderTop();renderSinyaller();renderPotansiyelPage();renderInvestAnchors();
   }catch(e){}
 }
 function baslatCanliFiyat(){
@@ -695,7 +719,7 @@ function guncelle(){
   b.className='fg-badge '+(fg<=40?'fg-fear':fg>=60?'fg-greed':'fg-neutral');
   handleNadirOnlyAlert();
   pushBtnState();
-  renderTop();renderSinyaller();renderPotansiyelPage();renderInvestStrip();renderRapor();
+  renderTop();renderSinyaller();renderPotansiyelPage();renderInvestAnchors();renderRapor();
 }
 
 function pushBtnState(){
@@ -822,6 +846,19 @@ function sayfa(id,btn){
   const navBtn=btn||document.querySelector('.nav-btn[data-nav="'+id+'"]');
   if(navBtn)navBtn.classList.add('active');
   if(id==='btc')void loadBtcTab();
+  if(id==='dashboard')fetchMarketContext();
+}
+function openRefsPage(){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const p=document.getElementById('page-refs');
+  if(p)p.classList.add('active');
+  renderInvestAnchors();
+  window.scrollTo(0,0);
+}
+function closeRefsPage(){
+  const b=document.querySelector('.nav-btn[data-nav="dashboard"]');
+  sayfa('dashboard',b);
 }
 function goPage(pageId){
   const b=document.querySelector('.nav-btn[data-nav="'+pageId+'"]');
@@ -885,18 +922,109 @@ function sabitleYatirimRef(idx){
     at:new Date().toISOString()
   };
   saveInvestAnchors(o);
-  renderInvestStrip();
+  renderInvestAnchors();
 }
 function yatirimRefSil(symbol){
   const o=loadInvestAnchors();
   delete o[symbol];
   saveInvestAnchors(o);
-  renderInvestStrip();
+  renderInvestAnchors();
   const ix=sig.findIndex(x=>x.symbol===symbol);
   if(ix>=0)modalAc(ix);
 }
-function renderInvestStrip(){
-  const el=document.getElementById('invest-strip');
+function utcTrLabel(h){
+  const tr=(h+3)%24;
+  return h+':00 UTC (~'+tr+':00 TR)';
+}
+function fetchMarketContext(){
+  fetch(BASE_URL+'/api/market/context')
+    .then(r=>r.json())
+    .then(renderMarketContext)
+    .catch(()=>{
+      const el=document.getElementById('market-context');
+      if(el)el.innerHTML='<div class="dash-hint" style="margin:0">Piyasa bağlamı alınamadı.</div>';
+    });
+}
+function renderMarketContext(d){
+  const root=document.getElementById('market-context');
+  if(!root)return;
+  if(!d||d.ok===false){
+    root.innerHTML='<div class="dash-hint" style="margin:0">'+(d&&d.error?String(d.error):'Veri yok')+'</div>';
+    return;
+  }
+  const f=d.funding||{};
+  const oi=d.openInterest||{};
+  const b=d.basis||{};
+  const tf=d.takerFlow;
+  const sess=d.session;
+  const mac=d.macro||{};
+  const oc=d.onchainBtc||{};
+  const liq=d.liquidations||{};
+  const nar=mac.narrative;
+  const dxy=mac.dxy;
+  const fundStr=f.approxPctPerPeriod!=null?((f.approxPctPerPeriod>=0?'+':'')+f.approxPctPerPeriod.toFixed(4)+'%'):'—';
+  const nextFt=f.nextFundingTime?new Date(f.nextFundingTime).toLocaleString('tr-TR',{dateStyle:'short',timeStyle:'short'}):'—';
+  const volH=(sess?.volatileUtcHours||[]).map(x=>utcTrLabel(x.hourUtc)+' · ~'+x.avgRangePct+'% aralık').join('<br>')||'—';
+  const calmH=(sess?.calmUtcHours||[]).map(x=>utcTrLabel(x.hourUtc)+' · ~'+x.avgRangePct+'%').join('<br>')||'—';
+  let liqHtml=liq.note||'—';
+  if(liq.configured&&liq.summary)liqHtml=typeof liq.summary==='string'?liq.summary:JSON.stringify(liq.summary).slice(0,200)+'…';
+  if(liq.error)liqHtml=liq.error;
+  const narHtml=nar?('<div class="ctx-card-s">BTC 24s: '+fmtCtxPct(nar.btc24hPct)+' · DXY 1g: '+fmtCtxPct(nar.dxy1dPct)+'<br>'+nar.note+'</div>'):'';
+  root.innerHTML=`
+    <div class="ctx-grid">
+      <div class="ctx-grid2">
+        <div class="ctx-card">
+          <div class="ctx-card-h">Funding (≈8 saat)</div>
+          <div class="ctx-card-v">${fundStr}</div>
+          <div class="ctx-card-s">Sonraki: ${nextFt}<br>${f.note||''}</div>
+        </div>
+        <div class="ctx-card">
+          <div class="ctx-card-h">Açık pozisyon (OI)</div>
+          <div class="ctx-card-v">${oi.contracts!=null?Number(oi.contracts).toLocaleString('tr-TR',{maximumFractionDigits:3}):'—'}</div>
+          <div class="ctx-card-s">${oi.change1hPct!=null?'1 saat değişim: '+(oi.change1hPct>=0?'+':'')+oi.change1hPct.toFixed(2)+'%':'1 saat değişim: —'}<br>${oi.note||''}</div>
+        </div>
+      </div>
+      <div class="ctx-grid2">
+        <div class="ctx-card">
+          <div class="ctx-card-h">Spot ↔ Perp baz</div>
+          <div class="ctx-card-v">${b.spotPerpPremiumPct!=null?(b.spotPerpPremiumPct>=0?'+':'')+b.spotPerpPremiumPct.toFixed(2)+'%':'—'}</div>
+          <div class="ctx-card-s">Spot $${b.spotLast!=null?f5(b.spotLast):'—'} · Mark $${b.perpMark!=null?f5(b.perpMark):'—'}<br>${b.note||''}</div>
+        </div>
+        <div class="ctx-card">
+          <div class="ctx-card-h">Taker (1g)</div>
+          <div class="ctx-card-v">${tf&&tf.buySellRatio!=null?Number(tf.buySellRatio).toFixed(3):'—'}</div>
+          <div class="ctx-card-s">${tf&&tf.hint?tf.hint:'Alım/satım hacim oranı (Binance USDT-M)'}</div>
+        </div>
+      </div>
+      <div class="ctx-card">
+        <div class="ctx-card-h">Seans profili (7g, saatlik)</div>
+        <div class="ctx-card-s"><strong>Volatil UTC:</strong><br>${volH}<br><strong>Sakin UTC:</strong><br>${calmH}<br>${sess&&sess.hint?sess.hint:''}</div>
+      </div>
+      <div class="ctx-card">
+        <div class="ctx-card-h">Makro / DXY</div>
+        <div class="ctx-card-v">${dxy&&dxy.last!=null?Number(dxy.last).toFixed(2):'—'}</div>
+        ${narHtml||'<div class="ctx-card-s">DXY verisi yok.</div>'}
+      </div>
+      <div class="ctx-grid2">
+        <div class="ctx-card">
+          <div class="ctx-card-h">BTC ağı ücreti</div>
+          <div class="ctx-card-v">${oc.ok?((oc.fastestSatVb!=null?oc.fastestSatVb+' sat/vB':'—')):'—'}</div>
+          <div class="ctx-card-s">${oc.ok?(oc.note||''):(oc.note||'—')}</div>
+        </div>
+        <div class="ctx-card">
+          <div class="ctx-card-h">Likidasyon / küme</div>
+          <div class="ctx-card-s">${liqHtml}</div>
+        </div>
+      </div>
+      <div class="ctx-card-s" style="opacity:0.85;padding:0 4px">${d.cached?'Önbellek: ~'+Math.round((d.cacheAgeMs||0)/1000)+'s · ':''}${d.disclaimer||''}</div>
+    </div>`;
+}
+function fmtCtxPct(n){
+  if(n==null||!Number.isFinite(n))return'—';
+  return(n>=0?'+':'')+n.toFixed(2)+'%';
+}
+function renderInvestAnchors(){
+  const el=document.getElementById('refs-list');
   if(!el)return;
   const A=loadInvestAnchors();
   const syms=Object.keys(A);
@@ -1205,7 +1333,7 @@ function renderSinyaller(){
       const eta=scanMeta.etaSeconds?` ~${scanMeta.etaSeconds}s`:'';
       el.innerHTML=`<div class="bos">Filtrede henüz sonuç yok<br>Tarama sürüyor (${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0})${eta}</div>`;
     }else{
-      el.innerHTML=aktifF==='nadirhist'?'<div class="bos">Bu taramada geçmişte Nadir görülmüş coin yok<br>14 gün içinde 80+ olanlar burada listelenir</div>':aktifF==='anchor'?'<div class="bos">Referans kayıtlı coin bu taramada listede yok<br>Dashboard’daki «Yatırım referansım» yine görünür</div>':'<div class="bos">Bu filtrede sinyal yok</div>';
+      el.innerHTML=aktifF==='nadirhist'?'<div class="bos">Bu taramada geçmişte Nadir görülmüş coin yok<br>14 gün içinde 80+ olanlar burada listelenir</div>':aktifF==='anchor'?'<div class="bos">Referans kayıtlı coin bu taramada listede yok<br><strong>Referanslarım</strong> sayfasından takip edebilirsin</div>':'<div class="bos">Bu filtrede sinyal yok</div>';
     }
     return;
   }
