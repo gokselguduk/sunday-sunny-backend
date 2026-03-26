@@ -21,6 +21,13 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .header-inner{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:4px;min-height:96px;padding:6px 4px}
 .header-side-left{display:flex;align-items:center;justify-content:flex-start;min-width:0;padding-right:4px}
 .header-center{display:flex;align-items:center;justify-content:center;justify-self:center;min-width:0}
+.header-center-stack{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.piyasa-etiket{margin:0;font-size:9px;font-weight:600;line-height:1.25;text-align:center;max-width:min(220px,78vw);padding:0 6px;color:var(--text2);transition:color .35s ease}
+.piyasa-etiket.ton-fear{color:#7dd3fc}
+.piyasa-etiket.ton-greed{color:var(--amber)}
+.piyasa-etiket.ton-bull,.piyasa-etiket.ton-bull-soft{color:var(--green)}
+.piyasa-etiket.ton-bear,.piyasa-etiket.ton-bear-soft{color:#ff8a8a}
+.piyasa-etiket.ton-neutral{color:var(--text2)}
 .header-side-right{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:0;padding-left:4px}
 .header-side-right .fg-badge{flex-shrink:1;min-width:0;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;font-size:10px;padding:3px 7px;max-width:100%}
 .header-side-right .scan-dot{flex-shrink:0}
@@ -45,7 +52,7 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .nav-btn svg{width:22px;height:22px}
 .nav-btn span{font-size:9px;font-weight:500;line-height:1.15}
 .nav-badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px}
-.content{padding-top:calc(112px + env(safe-area-inset-top,0px));padding-bottom:calc(var(--nav-bar-h) + var(--ref-tool-h) + 28px + env(safe-area-inset-bottom,0px));min-height:100vh}
+.content{padding-top:calc(132px + env(safe-area-inset-top,0px));padding-bottom:calc(var(--nav-bar-h) + var(--ref-tool-h) + 28px + env(safe-area-inset-bottom,0px));min-height:100vh}
 .ref-toolbar{position:fixed;left:0;right:0;z-index:99;bottom:calc(var(--nav-bar-h) + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:center;padding:6px 12px;background:rgba(8,12,20,0.98);backdrop-filter:blur(16px);border-top:1px solid var(--border)}
 .ref-toolbar-btn{width:100%;max-width:420px;padding:10px 16px;border-radius:12px;border:1px solid rgba(0,212,255,0.25);background:var(--bg2);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
 .ref-toolbar-btn:active{transform:scale(0.99);background:var(--bg3)}
@@ -160,7 +167,7 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px;color:var(--text3)}
 .spinner{width:32px;height:32px;border:2px solid var(--bg3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite}
 .bos{text-align:center;padding:50px 20px;color:var(--text3);font-size:13px;line-height:1.8}
-.nadir-toast{display:none;position:fixed;top:calc(104px + env(safe-area-inset-top,0px));left:12px;right:12px;z-index:150;background:var(--bg2);border:1px solid rgba(0,230,118,0.35);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.45;box-shadow:0 10px 28px rgba(0,0,0,0.45);color:var(--text1)}
+.nadir-toast{display:none;position:fixed;top:calc(124px + env(safe-area-inset-top,0px));left:12px;right:12px;z-index:150;background:var(--bg2);border:1px solid rgba(0,230,118,0.35);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.45;box-shadow:0 10px 28px rgba(0,0,0,0.45);color:var(--text1)}
 .nadir-toast strong{color:var(--green)}
 .dash-hint{margin:0 16px 12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--bg1);font-size:11px;color:var(--text2);line-height:1.55}
 .dash-hint strong{color:var(--text1);font-weight:600}
@@ -239,8 +246,11 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
       <button type="button" class="push-btn" id="push-btn" onclick="togglePush()">Bildirim aç</button>
     </div>
     <div class="header-center">
-      <div class="logo-mood-wrap logo-mood-neutral" id="logo-mood-wrap" title="Piyasa modu · Sunday/Sunny">
-        <img class="logo-mark" src="/icon-sun.svg" width="96" height="96" alt="Sunday/Sunny">
+      <div class="header-center-stack">
+        <div class="logo-mood-wrap logo-mood-neutral" id="logo-mood-wrap" title="Kripto USDT sinyal tahtası · Sunday/Sunny">
+          <img class="logo-mark" src="/icon-sun.svg" width="96" height="96" alt="Sunday/Sunny">
+        </div>
+        <p class="piyasa-etiket ton-neutral" id="piyasa-etiket">Kripto USDT · veri bekleniyor…</p>
       </div>
     </div>
     <div class="header-side-right" aria-label="Fear and Greed ve tarama">
@@ -713,22 +723,27 @@ function baslatCanliFiyat(){
 
 function applyLogoMood(fg,signalList){
   const wrap=document.getElementById('logo-mood-wrap');
+  const tag=document.getElementById('piyasa-etiket');
   if(!wrap)return;
   const list=signalList||[];
   const fresh=list.filter(s=>!s.absentThisScan);
   const avgPc=fresh.length?fresh.reduce((a,s)=>a+(Number(s.priceChange24h)||0),0)/fresh.length:0;
   let mood='neutral';
-  let tip='Nötr / bekleme';
-  if(fg<=28){mood='fear';tip='Aşırı korku (F&G düşük)';}
-  else if(fg<=40){mood='fear';tip='Korku bölgesi';}
-  else if(fg>=72){mood='greed';tip='Aşırı açgözlülük';}
-  else if(avgPc<=-2.2){mood='bear';tip='Liste ort. düşüş (ayı baskısı)';}
-  else if(avgPc>=2){mood='bull';tip='Liste ort. yükseliş (boğa)';}
-  else if(fg>=62){mood='greed';tip='İştah yüksek';}
-  else if(fg>=55){mood='bull-soft';tip='Hafif pozitif duyarlılık';}
-  else if(fg<=45){mood='bear-soft';tip='Temkin / zayıf duyarlılık';}
+  let piyasa='Dengeli · yön aranıyor';
+  if(fg<=28){mood='fear';piyasa='Korku piyasası · F&G çok düşük';}
+  else if(fg<=40){mood='fear';piyasa='Temkinli piyasa · korku bölgesi';}
+  else if(fg>=72){mood='greed';piyasa='Aşırı açgözlülük · tükenme riski';}
+  else if(avgPc<=-2.2){mood='bear';piyasa='Ayı baskısı · tahta ort. düşüşte';}
+  else if(avgPc>=2){mood='bull';piyasa='Boğa eğilimi · tahta ort. yükselişte';}
+  else if(fg>=62){mood='greed';piyasa='İştahlı piyasa · F&G yüksek';}
+  else if(fg>=55){mood='bull-soft';piyasa='Hafif boğa · pozitif duyarlılık';}
+  else if(fg<=45){mood='bear-soft';piyasa='Ayımsı / temkinli piyasa';}
   wrap.className='logo-mood-wrap logo-mood-'+mood;
-  wrap.title='Güneş rengi: '+tip+' · F&G '+fg;
+  wrap.title='Kripto USDT · '+piyasa+' · F&G '+fg;
+  if(tag){
+    tag.textContent=piyasa;
+    tag.className='piyasa-etiket ton-'+mood;
+  }
 }
 function guncelle(){
   const fresh=sig.filter(s=>!s.absentThisScan);
