@@ -34,7 +34,7 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 4px 6px;background:none;border:none;cursor:pointer;color:var(--text3);transition:color 0.2s;font-family:'DM Sans',sans-serif}
 .nav-btn.active{color:var(--accent)}
 .nav-btn svg{width:22px;height:22px}
-.nav-btn span{font-size:10px;font-weight:500}
+.nav-btn span{font-size:9px;font-weight:500;line-height:1.15}
 .nav-badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px}
 .content{padding-top:60px;padding-bottom:80px;min-height:100vh}
 body.has-ref-dock .content{padding-bottom:138px}
@@ -224,6 +224,18 @@ body.has-ref-dock .content{padding-bottom:138px}
 .invest-out{color:var(--text3);font-size:10px;margin-top:6px}
 .btn-sabitle{width:100%;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
 .btn-sabitle.outline{background:var(--bg2);color:var(--accent);border:1px solid var(--accent);margin-top:8px}
+.gelir-card{background:var(--bg1);border:1px solid var(--border);border-radius:16px;margin-bottom:14px;overflow:hidden;cursor:pointer;transition:transform .12s,border-color .15s}
+.gelir-card:active{transform:scale(0.992)}
+.gelir-card-top{padding:12px 12px 12px 14px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border-bottom:1px solid var(--border)}
+.gelir-card-mid{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
+.gelir-analiz{margin:0;padding:12px 14px 12px 26px;font-size:12px;color:var(--text2);line-height:1.55;list-style:disc}
+.gelir-analiz li{margin-bottom:7px;padding-left:2px}
+.gelir-analiz li::marker{color:var(--accent)}
+.gelir-card-foot{font-size:10px;color:var(--text3);padding:9px 14px;background:var(--bg2);text-align:center;letter-spacing:0.2px}
+.gelir-card .kart-horizon{margin-left:14px;margin-right:14px}
+.gelir-chip{font-size:9px;font-weight:700;padding:3px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:0.4px}
+.dash-gelir-link{font-size:11px;color:var(--text3);padding:0 16px 12px;line-height:1.45}
+.dash-gelir-link button{background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0}
 </style>
 </head>
 <body>
@@ -267,6 +279,7 @@ body.has-ref-dock .content{padding-bottom:138px}
     <p style="font-size:11px;color:var(--text3);padding:0 16px 8px;line-height:1.45;margin-top:-4px">Karta dokun: coin detayı. Alttaki <strong>Referansım</strong> şeridinden her zaman tek dokunuşla aynı coin’e dön.</p>
     <div class="invest-strip-wrap" id="invest-strip"></div>
     <div class="section-hdr">En İyi Fırsatlar</div>
+    <div class="dash-gelir-link">💎 Yüksek gelir beklentisi özeti ve madde madde gerekçe: <button type="button" onclick="goPage('gelir')">Gelir+ sekmesi</button></div>
     <div style="padding:0 16px" id="top-list"><div class="loading"><div class="spinner"></div></div></div>
   </div>
 
@@ -288,6 +301,15 @@ body.has-ref-dock .content{padding-bottom:138px}
       <input class="arama-input" id="arama" placeholder="Coin ara... (örn: BTC)" oninput="ara(this.value)">
     </div>
     <div style="padding:12px 16px" id="sinyal-liste"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+
+  <div class="page" id="page-gelir">
+    <div class="section-hdr">Yüksek gelir potansiyeli</div>
+    <div style="padding:0 16px 10px">
+      <p style="font-size:12px;color:var(--text2);line-height:1.55">Burada yalnızca <strong>fırsat skoru</strong>, <strong>risk/ödül</strong>, <strong>hedef yüzdeleri</strong>, <strong>çoklu zaman dilimi</strong> ve <strong>AI etiketi</strong> birlikte anlamlı görünen pariteler listelenir. Aşağıdaki maddeler otomatik özetdir.</p>
+      <p style="font-size:10px;color:var(--text3);line-height:1.5;margin-top:8px"><strong>Yatırım tavsiyesi değildir.</strong> Kriter örneği: skor ≥60, R/R ≥1,15, manipülasyon riski &lt;7, «AL» veya «GÜÇLÜ AL» — veya çok yüksek skor + güçlü R/R birlikte.</p>
+    </div>
+    <div style="padding:0 16px" id="gelir-liste"><div class="loading"><div class="spinner"></div></div></div>
   </div>
 
   <div class="page" id="page-portfoy">
@@ -349,6 +371,10 @@ body.has-ref-dock .content{padding-bottom:138px}
   <button type="button" class="nav-btn" data-nav="sinyaller" onclick="sayfa('sinyaller',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     <span>Sinyaller <span class="nav-badge" id="s-badge">0</span></span>
+  </button>
+  <button type="button" class="nav-btn" data-nav="gelir" onclick="sayfa('gelir',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg>
+    <span>Gelir+</span>
   </button>
   <button type="button" class="nav-btn" data-nav="portfoy" onclick="sayfa('portfoy',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
@@ -530,7 +556,7 @@ async function fiyatGuncelle(){
     const res=await fetch(BASE_URL+'/api/prices/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:syms})});
     const j=await res.json();
     if(j.prices){livePrices=j.prices;livePricesAt=Date.now();}
-    renderTop();renderSinyaller();renderPortfoy();renderInvestStrip();
+    renderTop();renderSinyaller();renderPotansiyelPage();renderPortfoy();renderInvestStrip();
   }catch(e){}
 }
 function baslatCanliFiyat(){
@@ -553,7 +579,7 @@ function guncelle(){
   b.className='fg-badge '+(fg<=40?'fg-fear':fg>=60?'fg-greed':'fg-neutral');
   handleNadirOnlyAlert();
   pushBtnState();
-  renderTop();renderSinyaller();renderPortfoy();renderInvestStrip();renderRapor();
+  renderTop();renderSinyaller();renderPotansiyelPage();renderPortfoy();renderInvestStrip();renderRapor();
 }
 
 function pushBtnState(){
@@ -813,6 +839,105 @@ function fList(){
   }
   if(araM)l=l.filter(s=>s.symbol?.includes(araM));
   return l;
+}
+
+function isHighYieldCandidate(s){
+  const fs=s.firsatSkoru?.skor||0;
+  const rr=Number(s.atr?.riskReward);
+  if(!Number.isFinite(rr))return false;
+  const ai=s.ai?.verdict;
+  const mr=Number(s.ai?.manipulationRisk);
+  if(Number.isFinite(mr)&&mr>=7)return false;
+  if(s.anomaly?.signal==='MANIPULASYON')return false;
+  if(fs<60)return false;
+  if(rr<1.15)return false;
+  if(ai==='GÜÇLÜ AL'||ai==='AL')return true;
+  if(fs>=74&&rr>=1.45)return true;
+  if(fs>=68&&rr>=1.85)return true;
+  return false;
+}
+function gelirPotansiyelSkoru(s){
+  const fs=s.firsatSkoru?.skor||0;
+  const rr=Math.min(Number(s.atr?.riskReward)||0,5);
+  const tp3=Math.min(s.atr?.tp3Pct||0,30);
+  const aiW=s.ai?.verdict==='GÜÇLÜ AL'?22:(s.ai?.verdict==='AL'?14:0);
+  const mtf=s.mtfDetay?.allAligned?10:0;
+  return fs*1.2+rr*14+tp3*1.8+aiW+mtf;
+}
+function buildGelirAnalizBullets(s){
+  const out=[];
+  const fs=s.firsatSkoru?.skor||0;
+  out.push(`Çok faktörlü fırsat skoru <strong>${fs}</strong> (${s.firsatSkoru?.seviye||'—'}); teknik, MTF, formasyon, AI ve piyasa duygusu katmanlarının birleşimi.`);
+  const rr=s.atr?.riskReward;
+  if(Number.isFinite(rr))out.push(`ATR tabanlı risk/ödül ≈ <strong>1:${rr}</strong> — stopa göre tanımlı TP’lere göre teorik ödül/stop oranı.`);
+  const tp3=s.atr?.tp3Pct;
+  if(Number.isFinite(tp3)&&tp3>0)out.push(`Üçüncü hedef senaryosu yaklaşık <strong>+%${tp3.toFixed(1)}</strong> (volatiliteyle değişir; kesin kazanç değildir).`);
+  if(s.mtfDetay?.allAligned)out.push(`Dört zaman dilimi aynı yönde; güçlü trend uyumu yüksek hedef senaryolarında sık aranan koşul.`);
+  else if(s.mtfKonfirm)out.push(`Birden fazla zaman diliminde onay (MTF) mevcut.`);
+  if(s.divergence?.bullish)out.push(`Yükselişe eğilimli <strong>divergence</strong> işaretlendi.`);
+  else if(s.divergence?.hidden_bullish)out.push(`<strong>Gizli</strong> yükseliş divergence özetleniyor.`);
+  if(s.fvg?.inBullishFVG)out.push(`Boşluk (FVG) ile uyumlu yapı.`);
+  if(s.arbitraj?.isOpportunity)out.push(`Arbitraj modülü <strong>borsalar arası fiyat farkı</strong> fırsatı gösteriyor.`);
+  if(s.footprint?.strongBull)out.push(`Emir defteri / delta tarafında güçlü alıcı baskısı özeti.`);
+  const v=s.ai?.verdict;
+  if(v)out.push(`Yapay zeka etiketi: <strong>${v}</strong> (yatırım tavsiyesi değil).`);
+  if(s.anomaly?.isAnomaly)out.push(`<span style="color:var(--amber)">Anomali / dikkat bayrağı açık — pozisyon boyutunu sınırlamak için ek kontrol önerilir.</span>`);
+  out.push(`<span style="color:var(--text3)">Uyarı:</span> Geçmiş performans veya skor gelecek getiriyi garanti etmez; likidite ve haber riski dışarıdadır.`);
+  return out;
+}
+function gelirKartHTML(s){
+  const idx=s._idx;
+  const sym=s.symbol?.replace('USDT','')||'';
+  const fs=s.firsatSkoru?.skor||0;
+  const r=renk(fs);
+  const px=pxFor(s);
+  const chg=s.priceChange24h||0;
+  const rr=s.atr?.riskReward;
+  const isFav=favs.includes(s.symbol);
+  const bullets=buildGelirAnalizBullets(s);
+  const li=bullets.map(b=>`<li>${b}</li>`).join('');
+  const rrTxt=Number.isFinite(rr)?String(rr):'—';
+  const hz=horizonKartHTML(s);
+  return`<div class="gelir-card" style="border-left:3px solid ${r}" onclick="modalAc(${idx})">
+    <div class="gelir-card-top">
+      <div style="min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="kart-symbol">${sym}</span>
+          <span class="gelir-chip" style="background:rgba(0,212,255,0.12);color:var(--accent);border:1px solid rgba(0,212,255,0.25)">Potansiyel</span>
+          <span class="gelir-chip" style="background:var(--bg2);color:${r};border:1px solid var(--border)">Skor ${fs}</span>
+          <span class="gelir-chip" style="background:var(--bg2);color:var(--text2);border:1px solid var(--border)">R/R 1:${rrTxt}</span>
+        </div>
+        <div class="gelir-card-mid">
+          <span class="fiyat-usdt" style="color:${r};font-family:'Space Mono',monospace;font-size:15px;font-weight:700">$${f5(px)}</span>
+          <span style="font-size:11px;color:var(--text2)">${tryF(px)}</span>
+          <span class="fiyat-deg ${chg>=0?'deg-p':'deg-n'}" style="font-size:11px">24s ${chg>=0?'+':''}${chg.toFixed(2)}%</span>
+        </div>
+      </div>
+      <button class="fav-btn ${isFav?'active':''}" onclick="fav(event,'${s.symbol}')">${isFav?'★':'☆'}</button>
+    </div>
+    ${hz}
+    <ul class="gelir-analiz">${li}</ul>
+    <div class="gelir-card-foot">Dokun — tam kart, SL/TP, destek-direnç ve AI detayı</div>
+  </div>`;
+}
+function renderPotansiyelPage(){
+  const el=document.getElementById('gelir-liste');
+  if(!el)return;
+  if(!sig.length){
+    if(scanMeta?.isScanning){
+      const pct=scanMeta.totalCoins?Math.round((scanMeta.scannedCoins/scanMeta.totalCoins)*100):0;
+      el.innerHTML=`<div class="bos">Tarama sürüyor… ${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0} (%${pct})<br>Gelir+ listesi sinyaller geldikçe dolar</div>`;
+    }else{
+      el.innerHTML='<div class="bos">Henüz sinyal yok<br>Tarama sonrası burada görünecek</div>';
+    }
+    return;
+  }
+  const candidates=sig.filter(isHighYieldCandidate).sort((a,b)=>gelirPotansiyelSkoru(b)-gelirPotansiyelSkoru(a));
+  if(!candidates.length){
+    el.innerHTML='<div class="bos">Şu an «yüksek gelir potansiyeli» filtresine uyan parite yok.<br>Skor, R/R ve AI etiketi birlikte ele alınıyor; <strong>Sinyaller</strong> sekmesinde daha geniş liste var.</div>';
+    return;
+  }
+  el.innerHTML=candidates.map(gelirKartHTML).join('')+'<div style="height:24px"></div>';
 }
 
 function horizonKartHTML(s){
@@ -1273,7 +1398,7 @@ function fav(e,symbol){
   if(i===-1){favs.push(symbol);const s=sig.find(s=>s.symbol===symbol);if(s){const px=pxFor(s);const f=JSON.parse(localStorage.getItem('ss_ff')||'{}');f[symbol]={usdt:px,try:px*kur,t:new Date().toISOString()};localStorage.setItem('ss_ff',JSON.stringify(f))}}
   else favs.splice(i,1);
   localStorage.setItem('ss_fav',JSON.stringify(favs));
-  renderSinyaller();renderTop();
+  renderSinyaller();renderTop();renderPotansiyelPage();
 }
 
 function pozAc(){document.getElementById('poz-modal').classList.add('open')}
