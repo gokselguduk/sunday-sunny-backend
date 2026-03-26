@@ -11,6 +11,7 @@ const notifier = require('./services/notifier');
 const nadirAlert = require('./services/nadirAlert');
 const coinAdvisor = require('./services/coinAdvisor');
 const binance = require('./services/binance');
+const btcPulse = require('./services/btcPulse');
 
 const app    = express();
 const server = http.createServer(app);
@@ -24,6 +25,19 @@ notifier.configurePush();
 // ── SAĞLIK ──────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+// ── BITCOIN PİYASA NABZI (7/24 arka plan) ───
+app.get('/api/market/bitcoin', (req, res) => {
+  res.json(btcPulse.getBtcSnapshot());
+});
+
+app.post('/api/market/bitcoin/refresh', async (req, res) => {
+  const r = await btcPulse.refreshBtcPulse();
+  if (!r.ok) {
+    return res.status(502).json({ ok: false, error: r.error, data: btcPulse.getBtcSnapshot() });
+  }
+  res.json({ ok: true, data: btcPulse.getBtcSnapshot() });
 });
 
 // ── TARAMA ──────────────────────────────────
@@ -243,6 +257,11 @@ io.on('connection', async (socket) => {
     nadirTrail,
     storage: memory.getStorageInfo()
   });
+  socket.emit('btc_pulse', {
+    type: 'btc_pulse',
+    data: btcPulse.getBtcSnapshot(),
+    time: new Date().toISOString()
+  });
   socket.on('disconnect', () => {});
 });
 
@@ -287,4 +306,5 @@ scanner.startAutoScan();
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Sunucu calisiyor: http://localhost:${PORT}`);
+  btcPulse.startBtcPulse(io);
 });

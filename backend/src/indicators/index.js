@@ -190,7 +190,7 @@ function calcFirsatSkoru(signal) {
   // MTF Confluence (max 20)
   if (s.mtfDetay?.allAligned)   skor += 20;
   else if (s.mtfKonfirm)        skor += 12;
-  else if (s.score4h > 0)       skor += 6;
+  else if (s.mtfDetay?.dir4h > 0) skor += 6;
 
   // Divergence (max 15)
   if (s.divergence?.bullish)        skor += 15;

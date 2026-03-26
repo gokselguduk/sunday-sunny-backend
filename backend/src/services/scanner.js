@@ -55,17 +55,18 @@ async function scanSingle(coin, sentiment) {
     const orderBook      = analyzeOrderBook(depth);
     const priceChange24h = ticker ? parseFloat(ticker.priceChangePercent) : 0;
     const diagnostics    = buildDiagnostics({ tf, orderBook });
+    const usdTryRate     = await binance.getUSDTRY();
 
     // Arbitraj (sadece BTC, ETH, BNB, SOL için — rate limit koruması)
     const majorCoins = ['BTC','ETH','BNB','SOL','XRP','ADA','AVAX','DOT'];
     let arbitraj = null;
     if (majorCoins.includes(coin.symbol)) {
-      arbitraj = await calcArbitraj(coin.pair, tf.h1.lastClose, await binance.getUSDTRY());
+      arbitraj = await calcArbitraj(coin.pair, tf.h1.lastClose, usdTryRate);
     }
 
     // Rejim
     const { regime, regimeScore } = resolveRegime(tf, priceChange24h);
-    let extraScore = calculateExtraScore({ sentiment, dirs, tf, footprint, arbitraj, orderBook, regimeScore });
+    let extraScore = calculateExtraScore({ sentiment, dirs, footprint, arbitraj, orderBook, regimeScore });
 
     // Anomali cezası
     const anomalyAdjusted = applyAnomalyPenalty(tf, extraScore);
@@ -116,6 +117,7 @@ async function scanSingle(coin, sentiment) {
       diagnostics,
       isHighPotential: (tf.h1.atr?.tp3Pct||0) >= 5,
       learningData,
+      usdTryRate,
       scannedAt: new Date().toISOString()
     };
 
@@ -141,7 +143,6 @@ async function scanSingle(coin, sentiment) {
     const firsatSkoru = calcFirsatSkoru(signal);
     signal.firsatSkoru = firsatSkoru;
     signal.runnerPotential = computeRunnerPotential(signal);
-    signal.usdTryRate  = await binance.getUSDTRY();
 
     if (firsatSkoru.skor < CONFIG.MIN_FIRSAT) return null;
 

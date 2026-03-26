@@ -5,6 +5,23 @@
 const axios  = require('axios');
 const memory = require('./memory');
 
+function formatTryApprox(signal) {
+  const rate = Number(signal.usdTryRate);
+  if (!Number.isFinite(rate) || rate <= 0) {
+    return 'TL karşılığı: kur bilgisi yok (yalnızca USDT fiyatları geçerlidir).';
+  }
+  const usdt = (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '—';
+    return `${(n * rate).toFixed(2)} TL (yaklaşık)`;
+  };
+  return [
+    `USDT/TRY referans: ~${rate.toFixed(4)} (yaklaşık).`,
+    `Son fiyat TL karşılığı: ~${usdt(signal.lastClose)}`,
+    `SL TL: ~${usdt(signal.atr?.stopLoss)} | TP1 TL: ~${usdt(signal.atr?.takeProfit1)} | TP2 TL: ~${usdt(signal.atr?.takeProfit2)} | TP3 TL: ~${usdt(signal.atr?.takeProfit3)}`
+  ].join('\n');
+}
+
 async function analyzeSignal(signal, learningData) {
   try {
     if (!process.env.ANTHROPIC_API_KEY ||
@@ -19,17 +36,19 @@ async function analyzeSignal(signal, learningData) {
 
     const prompt = `Sen bir kripto para analisti yapay zekasısın. Aşağıdaki teknik analiz verisini değerlendirip sinyal kalitesi ve manipülasyon riski hakkında yorum yap.
 
-COIN: ${signal.symbol} (Binance TR - TRY)
-FIYAT: ${signal.lastClose} TRY
-SKOR: ${signal.score}
+PARİTE: ${signal.symbol} — Binance USDT-M (linear) perpetual; tüm fiyat seviyeleri USDT cinsindendir (TRY değildir).
+SON FİYAT (USDT): ${signal.lastClose}
+NET SKOR (sistem): ${signal.score}
 
-TEKNİK VERİ:
+${formatTryApprox(signal)}
+
+TEKNİK VERİ (USDT):
 - RSI: ${signal.rsi}
 - MACD Histogram: ${signal.macd?.histogram?.toFixed(4)}
 - Trend: ${signal.trend?.trend}
 - Bollinger: Fiyat ${signal.bollinger ? (signal.lastClose < signal.bollinger.lower ? 'ALT bantta' : signal.lastClose > signal.bollinger.upper ? 'ÜST bantta' : 'ORTA bantta') : 'bilinmiyor'}
 - VWAP: Fiyat VWAP'ın ${signal.vwap?.priceVsVWAP === 'ABOVE' ? 'üstünde' : 'altında'} (%${signal.vwap?.distancePct})
-- Hacim Profili POC: ${signal.volumeProfile?.poc} TRY (${signal.volumeProfile?.pocDistance}% uzakta)
+- Hacim Profili POC: ${signal.volumeProfile?.poc} USDT (${signal.volumeProfile?.pocDistance}% uzakta)
 
 MUM FORMASYONLARI:
 ${signal.candlePatterns?.patterns?.map(p => `- ${p.name}: ${p.desc}`).join('\n') || 'Belirgin formasyon yok'}
@@ -51,11 +70,11 @@ DUYARLILIK: Fear&Greed ${signal.sentiment?.value} (${signal.sentiment?.label})
 
 GEÇMİŞ PERFORMANS: ${pastPerformance}
 
-TP/SL SEVİYELERİ (TRY):
-- Stop Loss: ${signal.atr?.stopLoss} TRY (-%${signal.atr?.stopLossPct})
-- TP1: ${signal.atr?.takeProfit1} TRY (+%${signal.atr?.tp1Pct})
-- TP2: ${signal.atr?.takeProfit2} TRY (+%${signal.atr?.tp2Pct})
-- TP3: ${signal.atr?.takeProfit3} TRY (+%${signal.atr?.tp3Pct})
+TP/SL SEVİYELERİ (USDT):
+- Stop Loss: ${signal.atr?.stopLoss} (-%${signal.atr?.stopLossPct})
+- TP1: ${signal.atr?.takeProfit1} (+%${signal.atr?.tp1Pct})
+- TP2: ${signal.atr?.takeProfit2} (+%${signal.atr?.tp2Pct})
+- TP3: ${signal.atr?.takeProfit3} (+%${signal.atr?.tp3Pct})
 
 Lütfen şunları değerlendir:
 1. Bu sinyal gerçek mi yoksa manipülasyon mu? (0-10 arası manipülasyon riski)

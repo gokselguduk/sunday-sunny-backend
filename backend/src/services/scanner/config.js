@@ -15,10 +15,13 @@ const OHLCV_LIMITS = {
   '1d': ohlcvLimit('OHLCV_LIMIT_1D', 1500)
 };
 
+const minScoreEnv = parseInt(process.env.MIN_SCORE, 10);
+
 const CONFIG = {
   SCAN_DELAY_MS: 1000,
   SCAN_INTERVAL_MS: 45 * 60 * 1000,
-  MIN_SCORE: 2,
+  /** 1h skor + MTF + ek katkılar; çift sayım kaldırıldı — çok az sinyal kalırsa .env ile MIN_SCORE=1 deneyin */
+  MIN_SCORE: Number.isFinite(minScoreEnv) ? Math.min(15, Math.max(0, minScoreEnv)) : 2,
   MIN_FIRSAT: 35,
   OHLCV_LIMITS,
   /** İki kline isteği arası (ms); rate limit + daha büyük yanıtlar için hafif artırıldı */
