@@ -373,10 +373,24 @@ let sig=[],favs=JSON.parse(localStorage.getItem('ss_fav')||'[]');
 let btcPanelData=null;
 const INVEST_ANCHOR_KEY='ss_invest_anchors';
 function loadInvestAnchors(){
-  try{ return JSON.parse(localStorage.getItem(INVEST_ANCHOR_KEY)||'{}'); }
-  catch(e){ return {}; }
+  try{
+    const j=JSON.parse(localStorage.getItem(INVEST_ANCHOR_KEY)||'{}');
+    const o={};
+    let changed=false;
+    for(const [k,v] of Object.entries(j)){
+      const u=String(k).toUpperCase();
+      if(u!==k)changed=true;
+      o[u]=v;
+    }
+    if(changed)saveInvestAnchors(o);
+    return o;
+  }catch(e){ return {}; }
 }
 function saveInvestAnchors(obj){ localStorage.setItem(INVEST_ANCHOR_KEY, JSON.stringify(obj)); }
+/** HTML onclick içinde güvenli tek tırnaklı JS string */
+function jsQuote(sym){
+  return String(sym||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
 let aktifF='tum',araM='',kur=38,aktifModal=null;
 let scanMeta=null;
 let perfMeta=null;
@@ -947,10 +961,14 @@ function sabitleYatirimRef(idx){
 function yatirimRefSil(symbol){
   const sym=String(symbol||'').toUpperCase();
   if(!sym)return;
+  if(!confirm('Bu referans kaydını silmek istiyor musun?'))return;
   const o=loadInvestAnchors();
   delete o[sym];
   saveInvestAnchors(o);
   renderInvestAnchors();
+  document.getElementById('modal')?.classList.remove('open');
+  aktifModal=null;
+  if(aktifF==='anchor')renderSinyaller();
 }
 function utcTrLabel(h){
   const tr=(h+3)%24;
@@ -1079,7 +1097,7 @@ function renderInvestAnchors(){
             <div class="invest-cell"><div class="invest-cell-lbl">Şimdi fiyat</div><div class="invest-cell-val" style="color:${pxCol}">$${f5(px)}</div>${dPx!=null&&Number.isFinite(dPx)?`<div style="font-size:9px;color:var(--text3);margin-top:2px">${dPx>=0?'+':''}${dPx.toFixed(2)}% vs giriş</div>`:''}</div>
           </div>
         </div>
-        <button type="button" class="invest-del-btn" onclick="yatirimRefSil(${JSON.stringify(sym)})" aria-label="Referansı sil">Sil</button>
+        <button type="button" class="invest-del-btn" onclick="yatirimRefSil('${jsQuote(sym)}')" aria-label="Referansı sil">Sil</button>
       </div>
     </div>`;
   }).join('');
@@ -1375,7 +1393,7 @@ function modalAc(idx){
         <div class="modal-sec-title">Yatırım referansı</div>
         <p style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:10px">Kayıtlı: skor <strong>${invRef.skor}</strong>, $${f5(invRef.usdt)} — ${new Date(invRef.at).toLocaleString('tr-TR',{dateStyle:'short',timeStyle:'short'})}</p>
         <button type="button" class="btn-sabitle" onclick="event.stopPropagation();sabitleYatirimRef(${idx});document.getElementById('modal').classList.remove('open');">Şu anki skor + fiyatla güncelle</button>
-        <button type="button" class="btn-sabitle outline" onclick="event.stopPropagation();yatirimRefSil(${JSON.stringify(s.symbol)})">Referansı sil</button>
+        <button type="button" class="btn-sabitle outline" onclick="event.stopPropagation();yatirimRefSil('${jsQuote(s.symbol)}')">Referansı sil</button>
       </div>`
     :`<div class="modal-sec">
         <div class="modal-sec-title">Yatırım referansı</div>
