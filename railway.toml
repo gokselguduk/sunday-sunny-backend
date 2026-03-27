@@ -1,0 +1,8 @@
+# Railway → Service → Settings:
+# - Root Directory: boş veya "." (repo kökü). "backend" seçilirse bu dosya + Dockerfile göz ardı edilir.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+restartPolicyType = "ON_FAILURE"

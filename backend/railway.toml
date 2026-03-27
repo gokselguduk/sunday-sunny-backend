@@ -1,4 +1,5 @@
-# Railway: Root Directory olarak bu klasörü (backend) seçin.
+# Sadece Railway'de Root Directory = "backend" ise geçerli.
+# Öneri: Root'u repo kökü bırakıp kökteki Dockerfile ile deploy (daha tutarlı).
 # https://docs.railway.com/guides/monorepo
 
 [build]
