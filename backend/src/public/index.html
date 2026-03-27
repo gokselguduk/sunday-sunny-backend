@@ -310,6 +310,12 @@ html[data-theme="light"] .btc-alloc{border-color:rgba(0,136,170,0.45);box-shadow
 .hm-metric-btn{font-size:10px;font-weight:600;padding:7px 11px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif}
 .hm-metric-btn.active{border-color:rgba(0,212,255,0.45);color:var(--accent);background:rgba(0,212,255,0.1)}
 html[data-theme="light"] .hm-metric-btn.active{border-color:rgba(0,136,170,0.45);color:var(--accent);background:rgba(0,136,170,0.08)}
+.hm-source-btn{font-size:10px;font-weight:700;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg1);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif}
+.hm-source-btn.active{border-color:rgba(0,212,255,0.5);color:var(--accent);background:rgba(0,212,255,0.12);box-shadow:0 0 0 1px rgba(0,212,255,0.15)}
+html[data-theme="light"] .hm-source-btn.active{border-color:rgba(0,136,170,0.45);background:rgba(0,136,170,0.1)}
+.hm-metric-rows{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.hm-market-meta{font-size:10px;color:var(--text3);margin:-4px 0 10px;line-height:1.4}
+.hm-market-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:8px}
 .hm-filter-row{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--text2);margin-bottom:12px;user-select:none}
 .hm-filter-row input{width:16px;height:16px;accent-color:var(--accent)}
 .hm-count{font-size:10px;color:var(--text3);margin-bottom:8px}
@@ -449,12 +455,25 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
   <div class="page" id="page-isiharitasi">
     <div class="hm-page">
       <div class="section-hdr">Isı haritası</div>
-      <p class="hm-hint">Tüm USDT pariteleri tek bakışta. Renk seçili metriğe göre; kareye dokununca özet açılır. Yatırım tavsiyesi değildir.</p>
-      <div class="hm-toolbar" role="group" aria-label="Isı haritası metriği">
-        <button type="button" class="hm-metric-btn active" data-metric="firsat" onclick="setHmMetric('firsat')">Fırsat skoru</button>
-        <button type="button" class="hm-metric-btn" data-metric="pct24" onclick="setHmMetric('pct24')">24s %</button>
-        <button type="button" class="hm-metric-btn" data-metric="score" onclick="setHmMetric('score')">Motor skoru</button>
+      <p class="hm-hint">Tahta: motor / tarama metrikleri. <strong>Piyasa</strong>: Binance USDT-M gerçek zamanlı 24s borsa verisi (tarama dışı). Kareye dokununca özet açılır. Yatırım tavsiyesi değildir.</p>
+      <div class="hm-toolbar" role="group" aria-label="Isı haritası veri kaynağı">
+        <button type="button" class="hm-source-btn active" data-hm-source="motor" onclick="setHmDataSource('motor')">Tahta / motor</button>
+        <button type="button" class="hm-source-btn" data-hm-source="piyasa" onclick="setHmDataSource('piyasa')">Piyasa (Binance)</button>
       </div>
+      <div id="hm-metrics-motor" class="hm-metric-rows" role="group" aria-label="Motor metrikleri">
+        <button type="button" class="hm-metric-btn active" data-hm-motor-metric="firsat" onclick="setHmMetric('firsat')">Fırsat skoru</button>
+        <button type="button" class="hm-metric-btn" data-hm-motor-metric="pct24" onclick="setHmMetric('pct24')">24s % (tarama)</button>
+        <button type="button" class="hm-metric-btn" data-hm-motor-metric="score" onclick="setHmMetric('score')">Motor skoru</button>
+      </div>
+      <div id="hm-metrics-piyasa" class="hm-metric-rows" style="display:none" role="group" aria-label="Borsa metrikleri">
+        <button type="button" class="hm-metric-btn active" data-hm-piyasa-metric="mkt_pct" onclick="setHmMetric('mkt_pct')">Borsa 24s %</button>
+        <button type="button" class="hm-metric-btn" data-hm-piyasa-metric="mkt_vol" onclick="setHmMetric('mkt_vol')">24s hacim (USDT)</button>
+        <button type="button" class="hm-metric-btn" data-hm-piyasa-metric="mkt_rng" onclick="setHmMetric('mkt_rng')">Gün içi aralık %</button>
+      </div>
+      <div class="hm-market-actions" id="hm-piyasa-actions" style="display:none">
+        <button type="button" class="filtre-btn" id="hm-btn-refresh-mkt" onclick="loadMarketTickers24h(true)">Borsa verisini yenile</button>
+      </div>
+      <p class="hm-market-meta" id="hm-market-meta" style="display:none"></p>
       <label class="hm-filter-row"><input type="checkbox" id="hm-board-only" onchange="toggleHmBoard(this.checked)"><span>Yalnız tahtadaki coinler (sinyal tahtasında olanlar)</span></label>
       <div class="hm-count" id="hm-count">—</div>
       <div class="hm-grid" id="heatmap-grid"><div class="bos" style="grid-column:1/-1">Liste yükleniyor…</div></div>
@@ -575,8 +594,14 @@ function jsQuote(sym){
 }
 let aktifF='tum',araM='',kur=38,aktifModal=null;
 let coinList=[];
-let hmMetric=(function(){try{var x=localStorage.getItem('ss_hm_metric');return x==='pct24'||x==='score'?x:'firsat';}catch(e){return'firsat';}})();
+let hmMetricMotor=(function(){try{var x=localStorage.getItem('ss_hm_mm')||localStorage.getItem('ss_hm_metric');return x==='pct24'||x==='score'?x:'firsat';}catch(e){return'firsat';}})();
+let hmMetricPiyasa=(function(){try{var x=localStorage.getItem('ss_hm_mp');return x==='mkt_vol'||x==='mkt_rng'?x:'mkt_pct';}catch(e){return'mkt_pct';}})();
+let hmDataSource=(function(){try{return localStorage.getItem('ss_hm_ds')==='piyasa'?'piyasa':'motor';}catch(e){return'motor';}})();
+let hmMarketTickers={};
+let hmMarketUpdated=null;
+let hmMarketError=null;
 let hmBoardOnly=(function(){try{return localStorage.getItem('ss_hm_board')==='1';}catch(e){return false;}})();
+function hmActiveMetric(){return hmDataSource==='piyasa'?hmMetricPiyasa:hmMetricMotor;}
 let scanMeta=null;
 let perfMeta=null;
 let pushConfig=null;
@@ -662,10 +687,86 @@ function renk(fs){return fs>=80?'var(--green)':fs>=65?'var(--accent)':fs>=50?'va
 function isThemeLight(){return document.documentElement.getAttribute('data-theme')==='light';}
 function hmEscAttr(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 function setHmMetric(m){
-  if(m!=='firsat'&&m!=='pct24'&&m!=='score')return;
-  hmMetric=m;
-  try{localStorage.setItem('ss_hm_metric',m);}catch(e){}
-  document.querySelectorAll('#page-isiharitasi .hm-metric-btn').forEach(function(b){b.classList.toggle('active',b.dataset.metric===m);});
+  if(hmDataSource==='piyasa'){
+    if(m!=='mkt_pct'&&m!=='mkt_vol'&&m!=='mkt_rng')return;
+    hmMetricPiyasa=m;
+    try{localStorage.setItem('ss_hm_mp',m);}catch(e){}
+  }else{
+    if(m!=='firsat'&&m!=='pct24'&&m!=='score')return;
+    hmMetricMotor=m;
+    try{localStorage.setItem('ss_hm_mm',m);localStorage.setItem('ss_hm_metric',m);}catch(e){}
+  }
+  syncHmMetricButtonStyles();
+  renderHeatmap();
+}
+function setHmDataSource(ds){
+  if(ds!=='motor'&&ds!=='piyasa')return;
+  hmDataSource=ds;
+  try{localStorage.setItem('ss_hm_ds',ds);}catch(e){}
+  document.querySelectorAll('#page-isiharitasi .hm-source-btn').forEach(function(b){b.classList.toggle('active',b.dataset.hmSource===ds);});
+  var m=document.getElementById('hm-metrics-motor');
+  var p=document.getElementById('hm-metrics-piyasa');
+  var act=document.getElementById('hm-piyasa-actions');
+  var meta=document.getElementById('hm-market-meta');
+  if(m)m.style.display=ds==='motor'?'flex':'none';
+  if(p)p.style.display=ds==='piyasa'?'flex':'none';
+  if(act)act.style.display=ds==='piyasa'?'flex':'none';
+  if(meta)meta.style.display=ds==='piyasa'?'block':'none';
+  syncHmMetricButtonStyles();
+  if(ds==='piyasa'){
+    renderHeatmap();
+    loadMarketTickers24h(false);
+  }else{
+    hmMarketError=null;
+    renderHeatmap();
+  }
+}
+function syncHmMetricButtonStyles(){
+  var mm=hmMetricMotor,mp=hmMetricPiyasa;
+  document.querySelectorAll('#hm-metrics-motor .hm-metric-btn').forEach(function(b){
+    b.classList.toggle('active',b.dataset.hmMotorMetric===mm);
+  });
+  document.querySelectorAll('#hm-metrics-piyasa .hm-metric-btn').forEach(function(b){
+    b.classList.toggle('active',b.dataset.hmPiyasaMetric===mp);
+  });
+}
+function hmGetTicker(fullSym){
+  if(!fullSym||!hmMarketTickers)return null;
+  var u=String(fullSym).toUpperCase();
+  return hmMarketTickers[u]||null;
+}
+function hmMktRangePct(t){
+  if(!t||t.lastPrice==null||t.lastPrice<=0)return null;
+  var h=t.highPrice,l=t.lowPrice;
+  if(h==null||l==null||!Number.isFinite(h)||!Number.isFinite(l))return null;
+  return((h-l)/t.lastPrice)*100;
+}
+async function loadMarketTickers24h(force){
+  if(hmDataSource!=='piyasa')return;
+  var meta=document.getElementById('hm-market-meta');
+  var btn=document.getElementById('hm-btn-refresh-mkt');
+  if(btn)btn.disabled=true;
+  hmMarketError=null;
+  if(meta&&!force)meta.textContent='Binance verisi y\u00FCkleniyor\u2026';
+  try{
+    var r=await fetch(BASE_URL+'/api/market/futures-24h');
+    var j=await r.json();
+    if(!j.ok){
+      hmMarketError=j.error||'Ticker al\u0131namad\u0131';
+      hmMarketTickers={};
+      if(meta)meta.textContent=hmMarketError;
+      renderHeatmap();
+      return;
+    }
+    hmMarketTickers=j.tickers&&typeof j.tickers==='object'?j.tickers:{};
+    hmMarketUpdated=j.updatedAt||null;
+    var n=Object.keys(hmMarketTickers).length;
+    if(meta)meta.textContent='Kaynak: Binance USDT-M perpetual \u00B7 '+n+' sembol \u00B7 g\u00FCncelleme: '+(hmMarketUpdated?new Date(hmMarketUpdated).toLocaleString('tr-TR',{dateStyle:'short',timeStyle:'medium'}):'\u2014');
+  }catch(e){
+    hmMarketError=e&&e.message?String(e.message):'A\u011F hatas\u0131';
+    if(meta)meta.textContent=hmMarketError;
+  }
+  if(btn)btn.disabled=false;
   renderHeatmap();
 }
 function toggleHmBoard(on){
@@ -674,31 +775,65 @@ function toggleHmBoard(on){
   renderHeatmap();
 }
 function syncHmToolbar(){
-  document.querySelectorAll('#page-isiharitasi .hm-metric-btn').forEach(function(b){b.classList.toggle('active',b.dataset.metric===hmMetric);});
+  document.querySelectorAll('#page-isiharitasi .hm-source-btn').forEach(function(b){b.classList.toggle('active',b.dataset.hmSource===hmDataSource);});
+  var m=document.getElementById('hm-metrics-motor');
+  var p=document.getElementById('hm-metrics-piyasa');
+  var act=document.getElementById('hm-piyasa-actions');
+  var meta=document.getElementById('hm-market-meta');
+  if(m)m.style.display=hmDataSource==='motor'?'flex':'none';
+  if(p)p.style.display=hmDataSource==='piyasa'?'flex':'none';
+  if(act)act.style.display=hmDataSource==='piyasa'?'flex':'none';
+  if(meta)meta.style.display=hmDataSource==='piyasa'?'block':'none';
+  syncHmMetricButtonStyles();
   var c=document.getElementById('hm-board-only');
   if(c)c.checked=hmBoardOnly;
 }
 function hmCellBg(metric,numVal){
   var L=isThemeLight();
+  var neu=L?'hsl(220,12%,90%)':'hsl(220,14%,24%)';
   if(metric==='firsat'){
-    if(numVal==null||!Number.isFinite(numVal))return L?'hsl(220,12%,90%)':'hsl(220,14%,24%)';
+    if(numVal==null||!Number.isFinite(numVal))return neu;
     var t=Math.max(0,Math.min(1,numVal/100));
     if(L)return 'hsl('+(212-t*77)+','+(28+t*52)+'%,'+(92-t*34)+'%)';
     return 'hsl('+(218-t*78)+','+(18+t*48)+'%,'+(22+t*20)+'%)';
   }
-  if(metric==='pct24'){
-    if(numVal==null||!Number.isFinite(numVal))return L?'hsl(220,12%,90%)':'hsl(220,14%,24%)';
+  if(metric==='pct24'||metric==='mkt_pct'){
+    if(numVal==null||!Number.isFinite(numVal))return neu;
     var t2=Math.max(0,Math.min(1,(numVal+15)/30));
     if(L)return 'hsl('+(12+t2*132)+','+(32+t2*40)+'%,'+(Math.max(72,88-Math.abs(numVal)*1.2))+'%)';
     return 'hsl('+(8+t2*128)+','+(35+t2*35)+'%,'+(26+Math.min(12,Math.abs(numVal)*0.9))+'%)';
   }
   if(metric==='score'){
-    if(numVal==null||!Number.isFinite(numVal))return L?'hsl(220,12%,90%)':'hsl(220,14%,24%)';
+    if(numVal==null||!Number.isFinite(numVal))return neu;
     var t3=Math.max(0,Math.min(1,(numVal+45)/90));
     if(L)return 'hsl('+(8+t3*130)+','+(30+t3*38)+'%,'+(90-t3*40)+'%)';
     return 'hsl('+(5+t3*128)+','+(28+t3*40)+'%,'+(24+t3*18)+'%)';
   }
-  return L?'hsl(220,12%,90%)':'hsl(220,14%,24%)';
+  if(metric==='mkt_vol'){
+    if(numVal==null||!Number.isFinite(numVal))return neu;
+    var tv=Math.max(0,Math.min(1,numVal));
+    if(L)return 'hsl('+(195-tv*95)+','+(25+tv*35)+'%,'+(88-tv*38)+'%)';
+    return 'hsl('+(200-tv*100)+','+(22+tv*38)+'%,'+(26+tv*24)+'%)';
+  }
+  if(metric==='mkt_rng'){
+    if(numVal==null||!Number.isFinite(numVal))return neu;
+    var t4=Math.max(0,Math.min(1,numVal/18));
+    if(L)return 'hsl('+(38+t4*25)+','+(40+t4*30)+'%,'+(85-t4*40)+'%)';
+    return 'hsl('+(35+t4*30)+','+(45+t4*35)+'%,'+(32+t4*20)+'%)';
+  }
+  return neu;
+}
+function hmRowFullSym(row){
+  var sym=row.symbol?String(row.symbol).toUpperCase():'';
+  return sym&&(sym.endsWith('USDT')?sym:sym+'USDT')||'';
+}
+function hmFmtQuoteVol(v){
+  if(v==null||!Number.isFinite(Number(v)))return'\u2014';
+  var n=Number(v);
+  if(n>=1e9)return(n/1e9).toFixed(2)+'B';
+  if(n>=1e6)return(n/1e6).toFixed(2)+'M';
+  if(n>=1e3)return(n/1e3).toFixed(1)+'K';
+  return String(Math.round(n));
 }
 function hmSortVal(metric,row){
   if(metric==='firsat'){
@@ -716,9 +851,26 @@ function hmSortVal(metric,row){
     if(sc!=null&&Number.isFinite(Number(sc)))return Number(sc);
     return -9999;
   }
+  if(metric==='mkt_pct'){
+    var tk1=hmGetTicker(hmRowFullSym(row));
+    if(tk1&&tk1.priceChangePercent!=null&&Number.isFinite(Number(tk1.priceChangePercent)))return Number(tk1.priceChangePercent);
+    return -9999;
+  }
+  if(metric==='mkt_vol'){
+    var tk2=hmGetTicker(hmRowFullSym(row));
+    if(tk2&&tk2.quoteVolume!=null&&Number.isFinite(Number(tk2.quoteVolume))&&tk2.quoteVolume>0)return Number(tk2.quoteVolume);
+    return -9999;
+  }
+  if(metric==='mkt_rng'){
+    var tk3=hmGetTicker(hmRowFullSym(row));
+    var rg=hmMktRangePct(tk3);
+    if(rg!=null&&Number.isFinite(rg))return rg;
+    return -9999;
+  }
   return 0;
 }
 function hmValDisplay(metric,row){
+  var tk=hmGetTicker(hmRowFullSym(row));
   if(metric==='firsat'){
     if(row.firsatSkor==null||!Number.isFinite(Number(row.firsatSkor)))return'\u2014';
     return String(Math.round(Number(row.firsatSkor)));
@@ -733,12 +885,27 @@ function hmValDisplay(metric,row){
     var n2=Number(row.score);
     return(n2>=0?'+':'')+n2.toFixed(0);
   }
+  if(metric==='mkt_pct'){
+    if(!tk||tk.priceChangePercent==null||!Number.isFinite(Number(tk.priceChangePercent)))return'\u2014';
+    var mp=Number(tk.priceChangePercent);
+    return(mp>=0?'+':'')+mp.toFixed(2)+'%';
+  }
+  if(metric==='mkt_vol')return hmFmtQuoteVol(tk&&tk.quoteVolume);
+  if(metric==='mkt_rng'){
+    var rg=hmMktRangePct(tk);
+    if(rg==null||!Number.isFinite(rg))return'\u2014';
+    return rg.toFixed(1)+'%';
+  }
   return'\u2014';
 }
 function hmNumericForColor(metric,row){
+  var tk=hmGetTicker(hmRowFullSym(row));
   if(metric==='firsat')return row.firsatSkor!=null&&Number.isFinite(Number(row.firsatSkor))?Number(row.firsatSkor):null;
   if(metric==='pct24')return row.priceChange24h!=null&&Number.isFinite(Number(row.priceChange24h))?Number(row.priceChange24h):null;
   if(metric==='score')return row.score!=null&&Number.isFinite(Number(row.score))?Number(row.score):null;
+  if(metric==='mkt_pct')return tk&&tk.priceChangePercent!=null&&Number.isFinite(Number(tk.priceChangePercent))?Number(tk.priceChangePercent):null;
+  if(metric==='mkt_vol')return tk&&tk.quoteVolume!=null&&Number.isFinite(Number(tk.quoteVolume))&&tk.quoteVolume>0?Number(tk.quoteVolume):null;
+  if(metric==='mkt_rng')return hmMktRangePct(tk);
   return null;
 }
 function renderHeatmap(){
@@ -748,22 +915,44 @@ function renderHeatmap(){
   var cntEl=document.getElementById('hm-count');
   var leg=document.getElementById('hm-legend-bar');
   if(!root)return;
+  var mk=hmActiveMetric();
   var rows=coinList.length?coinList.slice():[];
   if(hmBoardOnly)rows=rows.filter(function(r){return r.onBoard;});
+  if(hmDataSource==='piyasa'){
+    if(hmMarketError){
+      root.innerHTML='<div class="bos" style="grid-column:1/-1">'+hmEscAttr(hmMarketError)+'</div>';
+      if(cntEl)cntEl.textContent='Hata';
+      return;
+    }
+    if(!Object.keys(hmMarketTickers).length){
+      root.innerHTML='<div class="bos" style="grid-column:1/-1">Binance 24s ticker y\u00FCkleniyor\u2026</div>';
+      if(cntEl)cntEl.textContent='\u2014';
+      return;
+    }
+  }
   rows.sort(function(a,b){
-    var va=hmSortVal(hmMetric,a),vb=hmSortVal(hmMetric,b);
+    var va=hmSortVal(mk,a),vb=hmSortVal(mk,b);
     if(vb!==va)return vb-va;
     return String(a.base||a.symbol||'').localeCompare(String(b.base||b.symbol||''),'tr');
   });
-  if(cntEl)cntEl.textContent=rows.length?rows.length+' parite'+(hmBoardOnly?' \u00B7 tahta':' \u00B7 t\u00FCm liste'):'Sonu\u00E7 yok';
+  var cntSuffix=(hmBoardOnly?' \u00B7 tahta':' \u00B7 t\u00FCm liste')+(hmDataSource==='piyasa'?' \u00B7 borsa':'');
+  if(cntEl)cntEl.textContent=rows.length?rows.length+' parite'+cntSuffix:'Sonu\u00E7 yok';
   if(leg){
-    if(hmMetric==='firsat')leg.style.background=isThemeLight()
+    if(mk==='firsat')leg.style.background=isThemeLight()
       ?'linear-gradient(90deg,hsl(212,28%,88%),hsl(165,62%,42%))'
       :'linear-gradient(90deg,hsl(218,18%,22%),hsl(175,60%,32%))';
-    else if(hmMetric==='pct24'){
+    else if(mk==='pct24'||mk==='mkt_pct'){
       leg.style.background=isThemeLight()
         ?'linear-gradient(90deg,hsl(12,45%,76%),hsl(220,25%,88%),hsl(140,45%,78%))'
         :'linear-gradient(90deg,hsl(8,55%,30%),hsl(218,22%,26%),hsl(145,50%,32%))';
+    }else if(mk==='mkt_vol'){
+      leg.style.background=isThemeLight()
+        ?'linear-gradient(90deg,hsl(195,30%,88%),hsl(280,35%,78%))'
+        :'linear-gradient(90deg,hsl(200,28%,28%),hsl(270,38%,36%))';
+    }else if(mk==='mkt_rng'){
+      leg.style.background=isThemeLight()
+        ?'linear-gradient(90deg,hsl(200,25%,88%),hsl(38,55%,72%))'
+        :'linear-gradient(90deg,hsl(218,22%,26%),hsl(35,50%,34%))';
     }else{
       leg.style.background=isThemeLight()
         ?'linear-gradient(90deg,hsl(8,40%,80%),hsl(220,20%,88%),hsl(138,42%,78%))'
@@ -776,16 +965,29 @@ function renderHeatmap(){
       :'<div class="bos" style="grid-column:1/-1">'+(hmBoardOnly?'Tahtada coin yok veya liste hen\u00FCz gelmedi.':'Hen\u00FCz liste verisi yok')+'</div>';
     return;
   }
-  var lab={firsat:'F\u0131rsat',pct24:'24s',score:'Skor'};
+  var volNorm=null;
+  if(mk==='mkt_vol'){
+    var logs=[];
+    rows.forEach(function(r){
+      var t=hmGetTicker(hmRowFullSym(r));
+      if(t&&t.quoteVolume>0)logs.push(Math.log10(t.quoteVolume));
+    });
+    if(logs.length)volNorm={min:Math.min.apply(null,logs),max:Math.max.apply(null,logs)};
+  }
+  var lab={firsat:'F\u0131rsat',pct24:'24s (motor)',score:'Skor',mkt_pct:'Borsa 24s',mkt_vol:'Hacim USDT',mkt_rng:'Aral\u0131k %'};
   root.innerHTML=rows.map(function(row){
     var base=String((row.base||(row.symbol||'').replace(/USDT$/i,'')||'?')).toUpperCase();
     var sym=row.symbol?String(row.symbol).toUpperCase():'';
     var fullSym=sym&&(sym.endsWith('USDT')?sym:sym+'USDT');
-    var dim=row.empty===true;
-    var num=hmNumericForColor(hmMetric,row);
-    var bg=hmCellBg(hmMetric,dim?null:num);
-    var val=hmValDisplay(hmMetric,row);
-    var title=base+' \u00B7 '+fullSym+' \u00B7 '+(lab[hmMetric]||'')+': '+val;
+    var dim=hmDataSource==='motor'&&row.empty===true;
+    var num=hmNumericForColor(mk,row);
+    var bgNum=num;
+    if(mk==='mkt_vol'&&num!=null&&volNorm&&volNorm.max-volNorm.min>1e-9)
+      bgNum=(Math.log10(num)-volNorm.min)/(volNorm.max-volNorm.min);
+    else if(mk==='mkt_vol')bgNum=null;
+    var bg=hmCellBg(mk,dim?null:bgNum);
+    var val=hmValDisplay(mk,row);
+    var title=base+' \u00B7 '+fullSym+' \u00B7 '+(lab[mk]||mk)+': '+val;
     var cls='hm-cell'+(dim?' dim':'');
     return'<button type="button" class="'+cls+'" style="background:'+bg+'" title="'+hmEscAttr(title)+'" onclick="modalListeAc('+JSON.stringify(fullSym)+')"><span class="hm-cell-sym">'+hmEscAttr(base)+'</span><span class="hm-cell-val">'+hmEscAttr(val)+'</span></button>';
   }).join('');
@@ -1444,7 +1646,13 @@ function sayfa(id,btn){
   if(navBtn)navBtn.classList.add('active');
   if(id==='btc')void loadBtcTab();
   if(id==='nakit')void loadNakitTab();
-  if(id==='isiharitasi'){syncHmToolbar();renderHeatmap();}
+  if(id==='isiharitasi'){
+    syncHmToolbar();
+    if(hmDataSource==='piyasa'){
+      renderHeatmap();
+      loadMarketTickers24h(false);
+    }else renderHeatmap();
+  }
 }
 function openRefsPage(){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));

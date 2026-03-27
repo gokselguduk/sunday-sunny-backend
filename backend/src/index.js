@@ -72,6 +72,30 @@ app.get('/api/market/context', async (req, res) => {
   }
 });
 
+const FUTURES24H_CACHE_MS = 40000;
+let futures24hCache = { tickers: null, at: 0 };
+
+/** Binance USDT-M tüm pariteler 24s ticker (önbellekli); ısı haritası piyasa modu */
+app.get('/api/market/futures-24h', async (req, res) => {
+  try {
+    const now = Date.now();
+    if (!futures24hCache.tickers || now - futures24hCache.at > FUTURES24H_CACHE_MS) {
+      futures24hCache.tickers = await binance.getAllFutures24hTickers();
+      futures24hCache.at = now;
+    }
+    res.setHeader('Cache-Control', 'private, max-age=25');
+    res.json({
+      ok: true,
+      source: 'binance_futures_usdm',
+      updatedAt: new Date(futures24hCache.at).toISOString(),
+      count: Object.keys(futures24hCache.tickers).length,
+      tickers: futures24hCache.tickers
+    });
+  } catch (e) {
+    res.status(502).json({ ok: false, error: e.message || 'Binance ticker alınamadı' });
+  }
+});
+
 // ── TARAMA ──────────────────────────────────
 app.get('/api/scan/latest', async (req, res) => {
   const lastNadirPushAt = await memory.getNadirPushLastAt();

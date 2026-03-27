@@ -105,6 +105,34 @@ async function get24hTicker(symbol) {
   }
 }
 
+/**
+ * Tüm USDT-M perpetual 24s ticker (tek istek). Isı haritası / piyasa özeti için.
+ * @returns {Record<string, { lastPrice: number, priceChangePercent: number|null, quoteVolume: number|null, highPrice: number|null, lowPrice: number|null }>}
+ */
+async function getAllFutures24hTickers() {
+  const res = await axios.get(`${BASE}/ticker/24hr`, { timeout: 22000 });
+  const arr = Array.isArray(res.data) ? res.data : [];
+  const out = {};
+  for (const t of arr) {
+    const sym = t.symbol;
+    if (!sym || typeof sym !== 'string' || !sym.endsWith('USDT')) continue;
+    const last = parseFloat(t.lastPrice);
+    if (!Number.isFinite(last) || last <= 0) continue;
+    const pct = parseFloat(t.priceChangePercent);
+    const qv = parseFloat(t.quoteVolume);
+    const high = parseFloat(t.highPrice);
+    const low = parseFloat(t.lowPrice);
+    out[sym] = {
+      lastPrice: last,
+      priceChangePercent: Number.isFinite(pct) ? pct : null,
+      quoteVolume: Number.isFinite(qv) && qv >= 0 ? qv : null,
+      highPrice: Number.isFinite(high) ? high : null,
+      lowPrice: Number.isFinite(low) ? low : null
+    };
+  }
+  return out;
+}
+
 /** Taramalar arası hafif canlı fiyat (USDT-M işlem fiyatı), rate limit için sıralı + kısa bekleme */
 async function getMarkPricesBulk(symbols, delayMs = 55) {
   const uniq = [...new Set((symbols || []).map((s) => String(s).toUpperCase()))]
@@ -160,6 +188,7 @@ module.exports = {
   getTRYCoins,
   getOHLCV,
   get24hTicker,
+  getAllFutures24hTickers,
   getMarkPricesBulk,
   getOrderBook,
   getFearGreed,
