@@ -38,8 +38,6 @@ html[data-theme="light"]{
 body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
 .header{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--header-bg);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:max(4px,env(safe-area-inset-top,0px)) 10px 6px}
 .header-inner{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:4px;min-height:96px;padding:6px 4px}
-.deploy-stamp-wrap{text-align:center;font-size:9px;color:var(--text3);padding:4px 10px 8px;border-top:1px solid var(--border);line-height:1.35;max-width:100%}
-.deploy-stamp-wrap[hidden]{display:none!important}
 .header-side-left{display:flex;align-items:center;justify-content:flex-start;min-width:0;padding-right:4px}
 .header-center{display:flex;align-items:center;justify-content:center;justify-self:center;min-width:0}
 .header-center-stack{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
@@ -75,7 +73,7 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .nav-btn svg{width:22px;height:22px}
 .nav-btn span{font-size:9px;font-weight:500;line-height:1.15}
 .nav-badge{background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:8px;margin-left:3px}
-.content{padding-top:calc(132px + env(safe-area-inset-top,0px));padding-bottom:calc(var(--nav-bar-h) + var(--ref-tool-h) + 28px + env(safe-area-inset-bottom,0px));min-height:100vh}
+.content{padding-top:calc(204px + env(safe-area-inset-top,0px));padding-bottom:calc(var(--nav-bar-h) + var(--ref-tool-h) + 28px + env(safe-area-inset-bottom,0px));min-height:100vh}
 .ref-toolbar{position:fixed;left:0;right:0;z-index:99;bottom:calc(var(--nav-bar-h) + env(safe-area-inset-bottom,0px));display:flex;align-items:center;justify-content:center;padding:6px 12px;background:var(--ref-toolbar-bg);backdrop-filter:blur(16px);border-top:1px solid var(--border)}
 .ref-toolbar-btn{width:100%;max-width:420px;padding:10px 16px;border-radius:12px;border:1px solid rgba(0,212,255,0.25);background:var(--bg2);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
 .ref-toolbar-btn:active{transform:scale(0.99);background:var(--bg3)}
@@ -190,7 +188,7 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:14px;color:var(--text3)}
 .spinner{width:32px;height:32px;border:2px solid var(--bg3);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite}
 .bos{text-align:center;padding:50px 20px;color:var(--text3);font-size:13px;line-height:1.8}
-.nadir-toast{display:none;position:fixed;top:calc(124px + env(safe-area-inset-top,0px));left:12px;right:12px;z-index:150;background:var(--bg2);border:1px solid rgba(0,230,118,0.35);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.45;box-shadow:var(--toast-shadow);color:var(--text1)}
+.nadir-toast{display:none;position:fixed;top:calc(192px + env(safe-area-inset-top,0px));left:12px;right:12px;z-index:150;background:var(--bg2);border:1px solid rgba(0,230,118,0.35);border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.45;box-shadow:var(--toast-shadow);color:var(--text1)}
 .nadir-toast strong{color:var(--green)}
 .dash-hint{margin:0 16px 12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--bg1);font-size:11px;color:var(--text2);line-height:1.55}
 .dash-hint strong{color:var(--text1);font-weight:600}
@@ -277,6 +275,30 @@ html[data-theme="light"] .btc-alloc{border-color:rgba(0,136,170,0.45);box-shadow
 .btc-alloc-neu{color:var(--text3);white-space:nowrap}
 .btc-alloc-uyari{font-size:10px;line-height:1.45;color:var(--amber);margin:14px 0 0;padding-top:12px;border-top:1px dashed var(--border)}
 .btc-alloc-meta{font-size:10px;color:var(--text3);margin-top:8px}
+.nakit-page{padding:12px 16px 28px;max-width:560px;margin:0 auto}
+.nakit-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.nakit-hero{border-radius:16px;padding:16px;margin-bottom:12px;border:2px solid var(--border);background:var(--bg1)}
+.nakit-don-green{border-color:rgba(0,230,118,0.45);background:linear-gradient(165deg,rgba(0,230,118,0.08),var(--bg1))}
+.nakit-don-red{border-color:rgba(255,71,87,0.45);background:linear-gradient(165deg,rgba(255,71,87,0.07),var(--bg1))}
+.nakit-don-amber{border-color:rgba(255,179,0,0.4);background:linear-gradient(165deg,rgba(255,179,0,0.08),var(--bg1))}
+.nakit-don-accent{border-color:rgba(0,212,255,0.45);background:linear-gradient(165deg,rgba(0,212,255,0.1),var(--bg1))}
+.nakit-don-h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);margin-bottom:6px}
+.nakit-don-t{font-size:17px;font-weight:700;color:var(--text1);line-height:1.3;margin-bottom:8px}
+.nakit-don-p{font-size:12px;color:var(--text2);line-height:1.55}
+.nakit-grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.nakit-kart{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:12px}
+.nakit-kart-h{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.nakit-kart-v{font-family:'Space Mono',monospace;font-size:20px;font-weight:800;color:var(--text1)}
+.nakit-kart-s{font-size:11px;color:var(--text2);margin-top:8px;line-height:1.45}
+.nakit-bar-wrap{margin-top:10px}
+.nakit-bar-row{display:flex;height:32px;border-radius:10px;overflow:hidden;font-size:10px;font-weight:700}
+.nakit-bar-btc{background:linear-gradient(90deg,#f7931a,#ffb347);color:#1a0a00}
+.nakit-bar-alt{background:linear-gradient(90deg,var(--accent2),#9b7aff);color:#fff}
+.nakit-bar-stab{background:linear-gradient(90deg,var(--text3),var(--border));color:var(--text1)}
+.nakit-bar-seg{display:flex;align-items:center;justify-content:center;min-width:2.2em;padding:0 4px}
+.nakit-split-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:11px;color:var(--text2)}
+.nakit-split-legend span{font-family:'Space Mono',monospace;font-weight:700;color:var(--text1)}
+.nakit-sec{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin:16px 0 8px}
 .gelir-card .kart-horizon{margin-left:14px;margin-right:14px}
 .gelir-chip{font-size:9px;font-weight:700;padding:3px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:0.4px}
 .dash-gelir-link{font-size:11px;color:var(--text3);padding:0 16px 12px;line-height:1.45}
@@ -314,9 +336,6 @@ html[data-theme="light"] .btc-alloc{border-color:rgba(0,136,170,0.45);box-shadow
       <span class="fg-badge fg-fear" id="fg-badge">F&G: —</span>
       <div class="scan-dot" title="Tarama canlı"></div>
     </div>
-    <div class="deploy-stamp-wrap" id="deploy-stamp-wrap" hidden>
-      <span id="deploy-stamp">—</span>
-    </div>
   </div>
 </div>
 <div class="nadir-toast" id="nadir-toast" role="status"></div>
@@ -329,7 +348,7 @@ html[data-theme="light"] .btc-alloc{border-color:rgba(0,136,170,0.45);box-shadow
       <div class="stat-box"><div class="stat-num" id="s-kur" style="color:var(--amber)">—</div><div class="stat-lbl">USD/TRY</div></div>
     </div>
     <p id="board-hint" style="font-size:10px;color:var(--text3);text-align:center;padding:0 16px 10px;line-height:1.45"></p>
-    <p style="font-size:11px;color:var(--text2);text-align:center;padding:0 16px 12px;line-height:1.45"><button type="button" onclick="goPage('btc')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">₿ BTC sekmesi</button> — nakit ayırım rehberi (turkuaz kutu) · sol üst <strong style="color:var(--text1)">☀️/🌙</strong> ile tema</p>
+    <p style="font-size:11px;color:var(--text2);text-align:center;padding:0 16px 12px;line-height:1.45"><button type="button" onclick="goPage('nakit')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Nakit rehberi</button> · <button type="button" onclick="goPage('btc')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">₿ BTC</button> · sol üst <strong style="color:var(--text1)">☀️/🌙</strong> tema</p>
     <div class="fb-grid">
       <div class="firsat-banner fb-nadir stat-go" role="button" tabindex="0" title="Nadir listesine git" style="flex-direction:column;align-items:flex-start;gap:4px" onclick="goSinyallerFiltre('nadir')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('nadir')}">
         <div style="font-size:10px;color:var(--text3)">🔥 Nadir Fırsat (80+)</div>
@@ -340,9 +359,6 @@ html[data-theme="light"] .btc-alloc{border-color:rgba(0,136,170,0.45);box-shadow
         <div class="fb-sayi" id="b-guclu-sayi" style="color:var(--accent)">0</div>
       </div>
     </div>
-    <div class="section-hdr">🌐 Piyasa bağlamı (BTC)</div>
-    <p style="font-size:10px;color:var(--text3);padding:0 16px 8px;line-height:1.45">Funding, açık pozisyon, spot–perp baz, seans, DXY, taker akışı, ağ ücreti; tek başına sinyal değildir.</p>
-    <div id="market-context" style="padding:0 16px 12px"><div class="loading" style="padding:24px"><div class="spinner"></div></div></div>
     <div class="section-hdr">En İyi Fırsatlar</div>
     <div class="dash-gelir-link">💎 Günlük “sürpriz sıçrama” adayları (hacim + MTF + kıvılcım örüntüsü): <button type="button" onclick="goPage('gelir')">Gelir+</button></div>
     <div style="padding:0 16px" id="top-list"><div class="loading"><div class="spinner"></div></div></div>
@@ -391,11 +407,28 @@ html[data-theme="light"] .btc-alloc{border-color:rgba(0,136,170,0.45);box-shadow
     <div style="padding:12px 16px" id="rapor"></div>
   </div>
 
+  <div class="page" id="page-nakit">
+    <div class="nakit-page">
+      <div class="section-hdr">Nakit &amp; dönem</div>
+      <p style="font-size:11px;color:var(--text3);padding:0 0 10px;line-height:1.45">BTC (USDT-M) nabzına göre <strong>piyasa dönemi</strong>, <strong>nakitte kalma</strong> ve <strong>kripto dilimi içi örnek dağılım</strong>. Yatırım tavsiyesi değildir.</p>
+      <div class="nakit-toolbar">
+        <span class="btc-live" id="nakit-live-pill"><span class="btc-live-dot"></span> <span id="nakit-live-txt">—</span></span>
+        <button type="button" class="filtre-btn" id="nakit-btn-refresh" onclick="nakitTamAnaliz()">Veriyi yenile</button>
+      </div>
+      <div class="section-hdr" style="margin-top:4px">🌐 Piyasa bağlamı (BTC)</div>
+      <p style="font-size:10px;color:var(--text3);padding:0 0 8px;line-height:1.45">Funding, açık pozisyon, spot–perp baz, seans, DXY, taker akışı, ağ ücreti; tek başına sinyal değildir.</p>
+      <div id="market-context" style="padding:0 0 14px"><div class="loading" style="padding:16px 0"><div class="spinner"></div></div></div>
+      <div class="btc-err" id="nakit-err-banner" style="display:none;margin-bottom:10px"></div>
+      <div class="loading" id="nakit-loading" style="padding:32px 16px"><div class="spinner"></div><span>Veri yükleniyor…</span></div>
+      <div id="nakit-main" style="display:none"></div>
+    </div>
+  </div>
+
   <div class="page" id="page-btc">
     <div class="btc-page">
       <div class="section-hdr">Bitcoin · USDT-M</div>
       <p style="font-size:11px;color:var(--text3);padding:0 0 10px;line-height:1.45">Piyasa özeti; sunucu periyodik analiz + canlı fiyat tick. Yatırım tavsiyesi değildir.</p>
-      <p style="font-size:12px;color:var(--text2);padding:0 0 12px;line-height:1.55;border-left:3px solid var(--accent);padding-left:12px;margin-left:2px"><strong style="color:var(--text1)">💰 Nakit ayırım rehberi</strong> — Fiyat kartının hemen altında, <strong>kalın turkuaz çerçeveli</strong> kutuda: piyasaya göre cebindeki nakitin yaklaşık <strong>yüzde kaçını</strong> riske açabileceğine dair model + faktör föyü. Görünmüyorsa <strong>«Tam analiz yenile»</strong>ye bas veya sayfayı yenile (sunucu son sürümde olmalı).</p>
+      <p style="font-size:11px;color:var(--text2);padding:0 0 12px;line-height:1.45">Nakit / portföy çerçevesi için <button type="button" onclick="goPage('nakit')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0"><strong>Nakit</strong></button> sekmesine geç.</p>
       <div class="btc-toolbar">
         <span class="btc-live" id="btc-live-pill"><span class="btc-live-dot"></span> <span id="btc-live-txt">—</span></span>
         <button type="button" class="filtre-btn" id="btc-btn-refresh" onclick="btcTamAnaliz()">Tam analiz yenile</button>
@@ -427,6 +460,10 @@ html[data-theme="light"] .btc-alloc{border-color:rgba(0,136,170,0.45);box-shadow
   <button type="button" class="nav-btn" data-nav="rapor" onclick="sayfa('rapor',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
     <span>Rapor</span>
+  </button>
+  <button type="button" class="nav-btn" data-nav="nakit" onclick="sayfa('nakit',this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M7 10h2M7 14h5"/><circle cx="16" cy="13" r="1.5" fill="currentColor"/></svg>
+    <span>Nakit</span>
   </button>
   <button type="button" class="nav-btn" data-nav="btc" onclick="sayfa('btc',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9 8.5h4.5a2 2 0 0 1 0 4H9m0-4v7m0-7V6"/></svg>
@@ -511,10 +548,14 @@ function btcNormPayload(p){
   return null;
 }
 function setBtcLive(on,txt){
-  const pill=document.getElementById('btc-live-pill');
-  const ltxt=document.getElementById('btc-live-txt');
-  if(pill)pill.classList.toggle('on',!!on);
-  if(ltxt&&txt!=null)ltxt.textContent=txt;
+  ['btc-live-pill','nakit-live-pill'].forEach(function(id){
+    const pill=document.getElementById(id);
+    if(pill)pill.classList.toggle('on',!!on);
+  });
+  ['btc-live-txt','nakit-live-txt'].forEach(function(id){
+    const el=document.getElementById(id);
+    if(el&&txt!=null)el.textContent=txt;
+  });
 }
 if(typeof io!=='undefined'){
   const socket=io(BASE_URL,{transports:['websocket','polling']});
@@ -548,6 +589,7 @@ if(typeof io!=='undefined'){
     if(!d)return;
     btcPanelData=d;
     if(document.getElementById('page-btc')?.classList.contains('active'))renderBtcPanel(d);
+    if(document.getElementById('page-nakit')?.classList.contains('active'))renderNakitPanel(d);
   });
 }
 
@@ -680,7 +722,6 @@ function renderBtcPanel(d){
         ${m.mtfKonfirm?'<span class="btc-mini" style="border-color:rgba(0,212,255,0.3);color:var(--accent2)">MTF onay</span>':''}
       </div>
     </div>
-    ${buildBtcAllocSection(d)}
     <div class="btc-grid2">
       <div class="btc-card">
         <div class="btc-card-h">Fear & Greed</div>
@@ -760,6 +801,109 @@ function renderBtcPanel(d){
     }
   }
 }
+function nakitDonemClass(renk){
+  if(renk==='green')return'nakit-don-green';
+  if(renk==='red')return'nakit-don-red';
+  if(renk==='accent')return'nakit-don-accent';
+  return'nakit-don-amber';
+}
+function renderNakitPanel(d){
+  const main=document.getElementById('nakit-main');
+  const loadEl=document.getElementById('nakit-loading');
+  const errBanner=document.getElementById('nakit-err-banner');
+  if(!main||!loadEl)return;
+  if(!d||(!d.ok&&d.lastPrice==null)){
+    main.innerHTML='<div class="nakit-kart"><div class="nakit-kart-h">Durum</div><div class="nakit-kart-s">'+(d&&(d.message||d.lastError)||'Veri yok')+'</div></div>';
+    loadEl.style.display='none';
+    main.style.display='block';
+    return;
+  }
+  const g=d.portfolioGuide;
+  const a=d.cashAllocation;
+  if(!g||!a){
+    main.innerHTML='<div class="nakit-hero nakit-don-amber"><div class="nakit-don-h">Bekleme</div><div class="nakit-don-p">Rehber verisi gelmedi; sunucuyu güncelleyin veya bir süre sonra tekrar deneyin.</div><button type="button" class="filtre-btn" style="margin-top:12px" onclick="nakitTamAnaliz()">Veriyi yenile</button></div>';
+    loadEl.style.display='none';
+    main.style.display='block';
+    if(errBanner)errBanner.style.display='none';
+    return;
+  }
+  const pd=g.piyasaDonemi;
+  const dc=nakitDonemClass(pd.renk);
+  const nk=g.nakit;
+  const kr=g.kriptoRiskBand;
+  const barSegs=(g.kriptoIcinde||[]).map(function(x){
+    var cls=x.kod==='btc'?'nakit-bar-btc':x.kod==='alt'?'nakit-bar-alt':'nakit-bar-stab';
+    return'<div class="nakit-bar-seg '+cls+'" style="flex:'+x.pct+'">'+x.pct+'%</div>';
+  }).join('');
+  const leg=(g.kriptoIcinde||[]).map(function(x){
+    return'<div><strong>'+x.label+'</strong> \u2192 <span>'+x.pct+'%</span></div>';
+  }).join('');
+  const notlar=(g.kriptoIcinde||[]).map(function(x){
+    return'<p class="nakit-kart-s" style="margin-top:8px"><strong>'+x.label+':</strong> '+x.not+'</p>';
+  }).join('');
+  const faktorBlock=buildBtcAllocSection(d);
+  const pc24=btcPct24(d.priceChange24h);
+  main.innerHTML='<div class="nakit-hero '+dc+'"><div class="nakit-don-h">Piyasa d\u00F6nemi</div><div class="nakit-don-t">'+pd.baslik+'</div><div class="nakit-don-p">'+pd.ozet+'</div></div><div class="nakit-grid2"><div class="nakit-kart"><div class="nakit-kart-h">Nakit &amp; g\u00FCvende tut</div><div class="nakit-kart-v">%'+nk.minPct+'\u2013'+nk.maxPct+'</div><div class="nakit-kart-s">Merkez ~%'+nk.ortaPct+' \u00B7 '+nk.aciklama+'</div></div><div class="nakit-kart"><div class="nakit-kart-h">Kripto risk band\u0131</div><div class="nakit-kart-v">%'+kr.minPct+'\u2013'+kr.maxPct+'</div><div class="nakit-kart-s">Serbest likiditen bu pay\u0131 riske (kripto) a\u00E7ma \u00E7er\u00E7evesi; merkez ~%'+kr.ortaPct+'.</div></div></div><div class="nakit-kart" style="margin-bottom:12px"><div class="nakit-kart-h">Kriptoya ay\u0131rd\u0131\u011F\u0131n her 100 birim i\u00E7inde (\u00F6rnek)</div><p class="nakit-kart-s" style="margin-top:0;margin-bottom:0">A\u015Fa\u011F\u0131daki \u015Ferit, <strong>yaln\u0131zca kripto taraf\u0131na gidecek</strong> tutar\u0131n nas\u0131l b\u00F6l\u00FCnebilece\u011Fine dair sezgisel \u00F6rnektir.</p><div class="nakit-bar-wrap"><div class="nakit-bar-row">'+barSegs+'</div></div><div class="nakit-split-legend">'+leg+'</div>'+notlar+'</div><div class="nakit-kart" style="margin-bottom:12px;border-color:rgba(0,212,255,0.25)"><div class="nakit-kart-h">Genel \u00F6zet</div><p class="nakit-kart-s" style="margin-top:0">'+g.genelOzet+'</p><p class="nakit-kart-s">'+g.stratejiNotu+'</p><p class="nakit-kart-s" style="color:var(--amber)">'+(g.uyari||'')+'</p></div><div class="nakit-sec">Model fakt\u00F6rleri (BTC rejimi)</div>'+faktorBlock+'<p class="nakit-kart-s" style="margin-top:12px">BTC fiyat: <strong>'+btcFmtNum(d.lastPrice)+'</strong> USDT \u00B7 24s <span class="'+pc24.cls+'">'+pc24.html+'</span> \u00B7 G\u00FCncelleme '+btcFmtTime(d.updatedAt)+'</p>';
+  loadEl.style.display='none';
+  main.style.display='block';
+  if(errBanner){
+    if(d.pulseError||d.lastError){
+      errBanner.style.display='block';
+      errBanner.textContent=d.pulseError||d.lastError||'';
+    }else{
+      errBanner.style.display='none';
+    }
+  }
+}
+async function loadNakitTab(){
+  fetchMarketContext();
+  const loadEl=document.getElementById('nakit-loading');
+  const mainEl=document.getElementById('nakit-main');
+  if(!loadEl||!mainEl)return;
+  if(btcPanelData){
+    renderNakitPanel(btcPanelData);
+    loadEl.style.display='none';
+    mainEl.style.display='block';
+    return;
+  }
+  loadEl.innerHTML='<div class="spinner"></div><span>Veri y\u00FCkleniyor\u2026</span>';
+  loadEl.style.display='flex';
+  mainEl.style.display='none';
+  try{
+    const r=await fetch(BASE_URL+'/api/market/bitcoin');
+    const j=await r.json();
+    btcPanelData=j;
+    renderNakitPanel(j);
+  }catch(_){
+    loadEl.innerHTML='<div class="spinner"></div><span>API eri\u015Filemedi.</span>';
+  }
+}
+async function nakitTamAnaliz(){
+  const btn=document.getElementById('nakit-btn-refresh');
+  if(btn)btn.disabled=true;
+  try{
+    const r=await fetch(BASE_URL+'/api/market/bitcoin/refresh',{method:'POST',headers:{'Content-Type':'application/json'}});
+    const j=await r.json();
+    if(j.data){
+      btcPanelData=j.data;
+      if(document.getElementById('page-btc')?.classList.contains('active'))renderBtcPanel(j.data);
+      if(document.getElementById('page-nakit')?.classList.contains('active'))renderNakitPanel(j.data);
+    }
+    const ebb=document.getElementById('btc-err-banner');
+    const ebn=document.getElementById('nakit-err-banner');
+    if(j.error){
+      if(ebb){ebb.style.display='block';ebb.textContent=j.error;}
+      if(ebn){ebn.style.display='block';ebn.textContent=j.error;}
+    }else{
+      if(ebb)ebb.style.display='none';
+      if(ebn)ebn.style.display='none';
+    }
+  }catch(e){
+    const ebn=document.getElementById('nakit-err-banner');
+    if(ebn){ebn.style.display='block';ebn.textContent=e.message||'Yenileme ba\u015Far\u0131s\u0131z';}
+  }
+  if(btn)btn.disabled=false;
+}
 async function loadBtcTab(){
   const loadEl=document.getElementById('btc-loading');
   const mainEl=document.getElementById('btc-main');
@@ -789,12 +933,23 @@ async function btcTamAnaliz(){
     if(j.data){
       btcPanelData=j.data;
       renderBtcPanel(j.data);
+      if(document.getElementById('page-nakit')?.classList.contains('active'))renderNakitPanel(j.data);
     }
-    const eb=document.getElementById('btc-err-banner');
-    if(eb&&j.error){eb.style.display='block';eb.textContent=j.error;}
+    const ebb=document.getElementById('btc-err-banner');
+    const ebn=document.getElementById('nakit-err-banner');
+    if(j.error){
+      if(ebb){ebb.style.display='block';ebb.textContent=j.error;}
+      if(ebn){ebn.style.display='block';ebn.textContent=j.error;}
+    }else{
+      if(ebb)ebb.style.display='none';
+      if(ebn)ebn.style.display='none';
+    }
   }catch(e){
-    const eb=document.getElementById('btc-err-banner');
-    if(eb){eb.style.display='block';eb.textContent=e.message||'Yenileme başarısız';}
+    const msg=e.message||'Yenileme başarısız';
+    const ebb=document.getElementById('btc-err-banner');
+    const ebn=document.getElementById('nakit-err-banner');
+    if(ebb){ebb.style.display='block';ebb.textContent=msg;}
+    if(ebn){ebn.style.display='block';ebn.textContent=msg;}
   }
   if(btn)btn.disabled=false;
 }
@@ -822,7 +977,6 @@ function veriCek(){
     schedulePoll();
     fiyatGuncelle();
     baslatCanliFiyat();
-    fetchMarketContext();
   }).catch(()=>{});
 }
 
@@ -1100,7 +1254,7 @@ function sayfa(id,btn){
   const navBtn=btn||document.querySelector('.nav-btn[data-nav="'+id+'"]');
   if(navBtn)navBtn.classList.add('active');
   if(id==='btc')void loadBtcTab();
-  if(id==='dashboard')fetchMarketContext();
+  if(id==='nakit')void loadNakitTab();
 }
 function openRefsPage(){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -1968,24 +2122,6 @@ function renderRapor(){
 }
 
 syncThemeToggleButton();
-function loadBuildStamp(){
-  const wrap=document.getElementById('deploy-stamp-wrap');
-  const el=document.getElementById('deploy-stamp');
-  if(!wrap||!el)return;
-  fetch(BASE_URL+'/api/build',{cache:'no-store'}).then(function(r){
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    return r.json();
-  }).then(function(j){
-    el.textContent=j.commit
-      ?'Sunucu: '+String(j.commit).slice(0,7)+(j.service?' · '+j.service:'')
-      :'Sunucu canlı (commit yok — yerel veya eski image)';
-    wrap.removeAttribute('hidden');
-  }).catch(function(){
-    el.textContent='Bu adreste /api/build yok veya ağ hatası — muhtemelen eski sürüm. CTRL+Shift+R veya Railway deploy kontrol.';
-    wrap.removeAttribute('hidden');
-  });
-}
-loadBuildStamp();
 veriCek();
 schedulePoll();
 </script>

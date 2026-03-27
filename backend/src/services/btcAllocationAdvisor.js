@@ -295,4 +295,186 @@ function computeCashAllocation(snap) {
   };
 }
 
-module.exports = { computeCashAllocation };
+/**
+ * Piyasa dönemi + nakitte kal + kripto dilimi içi dağılım (BTC nabzı verisine dayalı, eğitim amaçlı).
+ * @param {object} snap
+ * @param {object|null} alloc computeCashAllocation çıktısı
+ */
+function computePortfolioGuide(snap, alloc) {
+  if (!snap?.ok || !alloc) return null;
+
+  const m = snap.mtf || {};
+  const sent = snap.sentiment || {};
+  const reg = snap.regime || {};
+  const h1 = snap.h1 || {};
+  const an = h1.anomaly || {};
+  const pc24 = Number(snap.priceChange24h);
+  const fg = sent.value != null ? Number(sent.value) : null;
+
+  /** @type {{ kod: string, baslik: string, ozet: string, renk: 'green'|'red'|'amber'|'accent' }} */
+  let donem = {
+    kod: 'notr_denge',
+    baslik: 'Dengeli / yön ayrışmıyor',
+    ozet:
+      'Fear & Greed ve zaman dilimleri tek yönde değil; ani büyük hamle yerine küçük adımlar ve sabır genelde daha güvenli çerçeve olarak okunur.',
+    renk: 'amber'
+  };
+
+  if (an.signal === 'MANIPULASYON') {
+    donem = {
+      kod: 'manip_ihtiyat',
+      baslik: 'Olağandışı piyasa davranışı',
+      ozet:
+        'Manipülasyon / olağandışı hareket bayrağı açık. Bu dönemlerde likidite kırılgan olur; büyük pozisyon ve kaldıraç yerine gözlem ve nakit ağırlığı öne çıkar.',
+      renk: 'red'
+    };
+  } else if (an.isAnomaly && an.signal === 'ASIRI_VOLATILITE') {
+    donem = {
+      kod: 'vol_firtina',
+      baslik: 'Yüksek volatilite dönemi',
+      ozet:
+        'Geniş mum aralıkları ve sürpriz hareket olasılığı artar. Pozisyonları küçültmek, stop mesafelerini gerçekçi tutmak ve “tek seferde all-in”den kaçınmak modelin mesajıdır.',
+      renk: 'amber'
+    };
+  } else if (m.allAligned && (m.dir1h || 0) > 0 && fg != null && fg < 65) {
+    donem = {
+      kod: 'risk_on_yapi',
+      baslik: 'Risk-on yapı (trend uyumu)',
+      ozet:
+        'Kısa–orta–uzun vade aynı yönde ve duygu henüz aşırı değil. Bu tip ortamlarda trend takipçileri için kademeli ekleme konuşulur; yine de teknik bozulmada çıkış planı şart.',
+      renk: 'green'
+    };
+  } else if (fg != null && fg <= 22 && (m.dir1h || 0) >= 0) {
+    donem = {
+      kod: 'korku_contra',
+      baslik: 'Derin korku / olası dip bölgesi',
+      ozet:
+        'Duygu çok düşük; tarihte bazen dönüş öncesi görülür ama “düşen bıçak” riski her zaman vardır. DCA veya çok küçük tranche ile deneme, tam pozisyonu tek mumda açmama yaklaşımı önerilir.',
+      renk: 'accent'
+    };
+  } else if (fg != null && fg >= 78) {
+    donem = {
+      kod: 'asiri_hirs',
+      baslik: 'Aşırı açgözlülük / konsolidasyon riski',
+      ozet:
+        'Geniş kitlenin FOMO ile girdiği dönemlerde düzeltme ihtimali artar. Kâr realizasyonu, yeni girişleri küçültme ve nakit/stabil oranını artırma model tarafından desteklenir.',
+      renk: 'red'
+    };
+  } else if ((m.dir1h || 0) < 0 && (m.dir4h || 0) < 0) {
+    donem = {
+      kod: 'risk_off_trend',
+      baslik: 'Risk-off eğilim (aşağı trend)',
+      ozet:
+        '1H ve 4H aşağı hizalı; savunmacı duruş ve nakit birikimi öne çıkar. Altcoin avcılığı yerine BTC/ETH gibi likiditesi yüksek çekirdek veya tamamen bekleme düşünülebilir.',
+      renk: 'red'
+    };
+  } else if (reg.type === 'RANGE') {
+    donem = {
+      kod: 'yatay_bant',
+      baslik: 'Yatay bant / sıkışma',
+      ozet:
+        'Kırılım öncesi sıkışma dönemleri whipsaw üretir; kenarları kovalamak yerine net kırılım veya destek/direnç teyidi beklemek ve pozisyonu sınırlı tutmak mantıklıdır.',
+      renk: 'amber'
+    };
+  } else if (reg.type === 'BREAKOUT' && pc24 > 5) {
+    donem = {
+      kod: 'kirilim_momentum',
+      baslik: 'Kırılım + momentum',
+      ozet:
+        'Volatilite ve hızlı hareket artmış olabilir; fırsat gibi görünse de geri çekilme (fakeout) riskine karşı kademeli giriş ve stop disiplini önemlidir.',
+      renk: 'green'
+    };
+  }
+
+  const nakitMin = Math.round(Math.max(0, 100 - alloc.maxPct));
+  const nakitMax = Math.round(Math.min(100, 100 - alloc.minPct));
+  const nakitOrta = Math.round(100 - alloc.ortaPct);
+
+  let btc = 46;
+  let alt = 34;
+  let stab = 20;
+
+  if (donem.kod === 'manip_ihtiyat' || donem.kod === 'risk_off_trend') {
+    btc = 62;
+    alt = 18;
+    stab = 20;
+  } else if (donem.kod === 'risk_on_yapi' || donem.kod === 'kirilim_momentum') {
+    btc = 40;
+    alt = 42;
+    stab = 18;
+  } else if (donem.kod === 'korku_contra') {
+    btc = 48;
+    alt = 28;
+    stab = 24;
+  } else if (donem.kod === 'asiri_hirs') {
+    btc = 52;
+    alt = 23;
+    stab = 25;
+  } else if (donem.kod === 'vol_firtina') {
+    btc = 50;
+    alt = 25;
+    stab = 25;
+  } else if (donem.kod === 'yatay_bant') {
+    btc = 44;
+    alt = 36;
+    stab = 20;
+  }
+
+  if (alloc.profil === 'temkinli') {
+    stab += 8;
+    alt -= 4;
+    btc -= 4;
+  } else if (alloc.profil === 'agresif') {
+    alt += 6;
+    stab -= 6;
+  }
+
+  const s = btc + alt + stab;
+  btc = Math.round((btc / s) * 100);
+  alt = Math.round((alt / s) * 100);
+  stab = 100 - btc - alt;
+
+  const kriptoIcinde = [
+    {
+      kod: 'btc',
+      label: 'BTC (çekirdek / likidite)',
+      pct: btc,
+      not: 'Piyasa beta’sı ve likidite omurgası olarak model, riskli kısımda BTC payını referans alır; bu bir “sadece BTC al” tavsiyesi değildir.'
+    },
+    {
+      kod: 'alt',
+      label: 'Altcoin (seçici, yüksek risk)',
+      pct: alt,
+      not: 'Tahta / haber / volatilite riski yüksek; bu uygulamadaki skorları filtre olarak kullanıp sayıyı sınırlı tutmak genelde daha sürdürülebilir.'
+    },
+    {
+      kod: 'stable',
+      label: 'USDT / nakit bekleyiş',
+      pct: stab,
+      not: 'Fırsat, düzeltme veya DCA için sürtünmesiz bekleme alanı; “tamamen işleme gir” yerine esnek tampon.'
+    }
+  ];
+
+  const genelOzet = `Özet çerçeve (tüm örnek serbest likiditenizi 100 birim varsayar — kira, borç, acil fon ayrı tutulmalıdır): ~%${nakitMin}–%${nakitMax} civarı kripto dışı / güvende kalabilir; ~%${alloc.minPct}–%${alloc.maxPct} bandı ise kripto riskine ayrılabilecek pay olarak okunur. Kriptoya ayırdığınız her 100 birim içinde kabaca %${btc} BTC · %${alt} seçici alt · %${stab} USDT/bekleyiş dağılımı bu rejime göre örneklenmiştir.`;
+
+  const nakitAciklama =
+    '“Nakitte kal” = acil ihtiyaç + kısa vadeli yükümlülük + psikolojik güven payı. Model, kriptoya girmeyen kısmı geniş tutmanızı volatilite ve ani haber riski nedeniyle destekler.';
+
+  return {
+    piyasaDonemi: donem,
+    nakit: {
+      minPct: nakitMin,
+      maxPct: nakitMax,
+      ortaPct: nakitOrta,
+      aciklama: nakitAciklama
+    },
+    kriptoRiskBand: { minPct: alloc.minPct, maxPct: alloc.maxPct, ortaPct: alloc.ortaPct },
+    kriptoIcinde,
+    genelOzet,
+    stratejiNotu:
+      'Borçla kripto almayın; tek pozisyonda portföyünüzün tamamını riske atmayın. Bu sekme BTC (USDT-M) verisiyle güncellenir; altcoin gerçekliği daha çarpıcı olabilir.',
+    uyari: alloc.uyari
+  };
+}
+
+module.exports = { computeCashAllocation, computePortfolioGuide };

@@ -9,7 +9,7 @@ const indicators = require('../indicators');
 const { getMultiTimeframe, getTimeframeDirections } = require('./scanner/timeframes');
 const { resolveRegime } = require('./scanner/scoring');
 const { analyzeOrderBook } = require('./scanner/orderBook');
-const { computeCashAllocation } = require('./btcAllocationAdvisor');
+const { computeCashAllocation, computePortfolioGuide } = require('./btcAllocationAdvisor');
 
 const BTC_PAIR = 'BTCUSDT';
 
@@ -146,6 +146,7 @@ async function refreshBtcPulse() {
       pulseErrorAt: null
     };
     snapshot.cashAllocation = computeCashAllocation(snapshot);
+    snapshot.portfolioGuide = computePortfolioGuide(snapshot, snapshot.cashAllocation);
     lastError = null;
     broadcast();
     return { ok: true };
