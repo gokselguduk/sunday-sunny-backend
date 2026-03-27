@@ -232,6 +232,25 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .btc-mtf-t{font-size:9px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
 .btc-mtf-d{font-family:'Space Mono',monospace;font-size:12px;font-weight:700}
 .btc-dir-bull{color:var(--green)}.btc-dir-bear{color:var(--red)}.btc-dir-neu{color:var(--text3)}
+.btc-alloc{margin:14px 0 16px;padding:16px;border-radius:16px;border:1px solid rgba(0,212,255,0.22);background:linear-gradient(145deg,rgba(0,212,255,0.07),rgba(247,147,26,0.05),var(--bg1))}
+.btc-alloc-ribbon{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--accent2);margin-bottom:10px}
+.btc-alloc-range-row{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px}
+.btc-alloc-range-big{font-family:'Space Mono',monospace;font-size:clamp(26px,8vw,34px);font-weight:800;color:var(--text1);letter-spacing:-0.02em}
+.btc-alloc-range-sub{font-size:12px;color:var(--text2)}
+.btc-alloc-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.btc-alloc-tag{font-size:10px;font-weight:600;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:var(--bg2);color:var(--text2)}
+.btc-alloc-tag.dim{opacity:0.85}
+.btc-alloc-lead{font-size:13px;line-height:1.55;color:var(--text2);margin:0 0 10px}
+.btc-alloc-yontem{font-size:11px;line-height:1.5;color:var(--text3);margin:0 0 12px}
+.btc-alloc-sec{font-size:10px;text-transform:uppercase;letter-spacing:0.7px;color:var(--text3);margin:12px 0 8px}
+.btc-alloc-faktor{border-left:3px solid var(--border);padding:8px 0 8px 12px;margin-bottom:8px;background:rgba(0,0,0,0.12);border-radius:0 10px 10px 0}
+.btc-alloc-faktor-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;font-size:12px;font-weight:600;color:var(--text1);margin-bottom:4px}
+.btc-alloc-faktor-t{font-size:11px;line-height:1.5;color:var(--text2)}
+.btc-alloc-pos{color:var(--green);white-space:nowrap}
+.btc-alloc-neg{color:var(--red);white-space:nowrap}
+.btc-alloc-neu{color:var(--text3);white-space:nowrap}
+.btc-alloc-uyari{font-size:10px;line-height:1.45;color:var(--amber);margin:14px 0 0;padding-top:12px;border-top:1px dashed var(--border)}
+.btc-alloc-meta{font-size:10px;color:var(--text3);margin-top:8px}
 .gelir-card .kart-horizon{margin-left:14px;margin-right:14px}
 .gelir-chip{font-size:9px;font-weight:700;padding:3px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:0.4px}
 .dash-gelir-link{font-size:11px;color:var(--text3);padding:0 16px 12px;line-height:1.45}
@@ -514,6 +533,28 @@ function btcFmtTime(iso){
   try{return new Date(iso).toLocaleString('tr-TR',{dateStyle:'short',timeStyle:'medium'});}
   catch(_){return iso;}
 }
+function btcAllocKatkiClass(k){
+  const n=Number(k);
+  if(!Number.isFinite(n))return'btc-alloc-neu';
+  if(n>0.4)return'btc-alloc-pos';
+  if(n<-0.4)return'btc-alloc-neg';
+  return'btc-alloc-neu';
+}
+function btcAllocKatkiFmt(k){
+  const n=Number(k);
+  if(!Number.isFinite(n))return'0';
+  const s=(n>0?'+':'')+n.toFixed(1);
+  return s+' puan';
+}
+function buildBtcAllocSection(d){
+  const a=d.cashAllocation;
+  if(!a)return'';
+  const faktorHtml=(a.faktorler||[]).map(function(f){
+    const cls=btcAllocKatkiClass(f.katki);
+    return'<div class="btc-alloc-faktor"><div class="btc-alloc-faktor-h"><span>'+f.baslik+'</span><span class="'+cls+'">'+btcAllocKatkiFmt(f.katki)+'</span></div><div class="btc-alloc-faktor-t">'+(f.aciklama||'')+'</div></div>';
+  }).join('');
+  return'<div class="btc-alloc"><div class="btc-alloc-ribbon">Nakit ayırım rehberi · BTC rejimi</div><div class="btc-alloc-range-row"><div class="btc-alloc-range-big">%'+a.minPct+' – %'+a.maxPct+'</div><div class="btc-alloc-range-sub">Önerilen merkez ~<strong>%'+a.ortaPct+'</strong> (serbest nakit)</div></div><div class="btc-alloc-tags"><span class="btc-alloc-tag">'+a.profilLabel+'</span><span class="btc-alloc-tag dim">Faktör uyumu: '+a.guvenLabel+'</span></div><p class="btc-alloc-lead">'+(a.ozet||'')+'</p><p class="btc-alloc-yontem">'+(a.yontem||'')+'</p><div class="btc-alloc-sec">Faktör föyü — her biri modele nasıl yansıdı</div>'+faktorHtml+'<div class="btc-alloc-meta">Toplam ayar (iç skor): <strong>'+(a.toplamAyarlama!=null?a.toplamAyarlama:'—')+'</strong> · Düşük/ yüksek uçlar volatiliteye göre genişler.</div><p class="btc-alloc-uyari">'+(a.uyari||'')+'</p></div>';
+}
 function renderBtcPanel(d){
   const main=document.getElementById('btc-main');
   const loadEl=document.getElementById('btc-loading');
@@ -564,6 +605,7 @@ function renderBtcPanel(d){
         ${m.mtfKonfirm?'<span class="btc-mini" style="border-color:rgba(0,212,255,0.3);color:var(--accent2)">MTF onay</span>':''}
       </div>
     </div>
+    ${buildBtcAllocSection(d)}
     <div class="btc-grid2">
       <div class="btc-card">
         <div class="btc-card-h">Fear & Greed</div>

@@ -9,6 +9,7 @@ const indicators = require('../indicators');
 const { getMultiTimeframe, getTimeframeDirections } = require('./scanner/timeframes');
 const { resolveRegime } = require('./scanner/scoring');
 const { analyzeOrderBook } = require('./scanner/orderBook');
+const { computeCashAllocation } = require('./btcAllocationAdvisor');
 
 const BTC_PAIR = 'BTCUSDT';
 
@@ -144,6 +145,7 @@ async function refreshBtcPulse() {
       pulseError: null,
       pulseErrorAt: null
     };
+    snapshot.cashAllocation = computeCashAllocation(snapshot);
     lastError = null;
     broadcast();
     return { ok: true };
