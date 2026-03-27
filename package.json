@@ -1,0 +1,11 @@
+{
+  "name": "sunday-sunny-monorepo",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "postinstall": "npm install --prefix ./backend",
+    "start": "npm start --prefix ./backend"
+  }
+}

@@ -38,6 +38,16 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
+/** Canlı sürüm doğrulama (Railway otomatik env); önbellek yok */
+app.get('/api/build', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.json({
+    commit: process.env.RAILWAY_GIT_COMMIT_SHA || null,
+    service: process.env.RAILWAY_SERVICE_NAME || null,
+    time: new Date().toISOString()
+  });
+});
+
 // ── BITCOIN PİYASA NABZI (7/24 arka plan) ───
 app.get('/api/market/bitcoin', (req, res) => {
   res.json(btcPulse.getBtcSnapshot());
