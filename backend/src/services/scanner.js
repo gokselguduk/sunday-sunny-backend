@@ -376,6 +376,11 @@ async function scanMarket() {
     phase: 'starting'
   };
 
+  const preResolve = await autoResolver.resolvePendingSignals();
+  if (preResolve.resolved > 0) {
+    console.log(`AutoResolver (baslangic): ${preResolve.resolved}/${preResolve.checked} sinyal kapatildi`);
+  }
+
   markEntireBoardAbsentThisScan();
   const preBoard = buildSortedBoard();
   liveSignals = preBoard;

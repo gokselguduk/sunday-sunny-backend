@@ -1798,7 +1798,7 @@ function renderRapor(){
         <span>Bekleyen: ${p.pending||0}</span>
         <span>SL: ${sl==='—'?'—':'%'+sl}</span>
       </div>
-      ${res===0?'<p style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.4">TP istatistiği için geçmiş sinyallerin TP/SL ile sonuçlanması gerekir (<code style=font-size:9px>POST /api/signal/resolve</code>).</p>':''}
+      ${res===0?'<p style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.4">Sonuçlanan sayısı: her tam taramada (başta ve sonda) canlı fiyat ATR TP/SL seviyelerini kestiğinde kayıt otomatik kapanır. Burada hâlâ 0 ise ya henüz fiyat o seviyelere gelmedi ya da <strong>Redis yok</strong> (veri istekler arası tutulmuyordu; düzeltildi — yine de kalıcılık için REDIS_URL önerilir). Manuel: <code style=font-size:9px>POST /api/signal/resolve</code>.</p>':''}
     </div>`;
   };
   const stR=storageHint||{};

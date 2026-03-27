@@ -27,7 +27,10 @@ async function resolvePendingSignals() {
   for (const signal of pending) {
     try {
       const ticker = await binance.get24hTicker(signal.symbol);
-      const currentPrice = parseFloat(ticker?.lastPrice || ticker?.last || 0);
+      const currentPrice = parseFloat(
+        ticker?.lastPrice ?? ticker?.last ?? ticker?.close ?? 0
+      );
+      if (!Number.isFinite(currentPrice) || currentPrice <= 0) continue;
       const result = resolveResult(signal, currentPrice);
       if (!result) continue;
       await memory.updateSignalResult(signal.key, result, currentPrice);

@@ -5,42 +5,55 @@ const Redis = require('ioredis');
 
 let redis = null;
 
+function createInMemoryRedis() {
+  const cache = new Map();
+  return {
+    get: async (k) => cache.get(k) || null,
+    set: async (k, v) => {
+      cache.set(k, v);
+      return 'OK';
+    },
+    lpush: async (k, v) => {
+      const arr = cache.get(k) || [];
+      arr.unshift(v);
+      cache.set(k, arr);
+      return arr.length;
+    },
+    lrange: async (k, start, stop) => {
+      const arr = cache.get(k) || [];
+      const s = Number.isFinite(start) ? start : 0;
+      const e = Number.isFinite(stop) ? stop : arr.length - 1;
+      return arr.slice(s, e + 1);
+    },
+    incr: async (k) => {
+      const v = (parseInt(cache.get(k), 10) || 0) + 1;
+      cache.set(k, String(v));
+      return v;
+    },
+    sadd: async (k, v) => {
+      const set = cache.get(k) || new Set();
+      set.add(v);
+      cache.set(k, set);
+      return set.size;
+    },
+    srem: async (k, v) => {
+      const set = cache.get(k) || new Set();
+      set.delete(v);
+      cache.set(k, set);
+      return 1;
+    },
+    smembers: async (k) => {
+      const set = cache.get(k) || new Set();
+      return [...set];
+    }
+  };
+}
+
 function getRedis() {
   if (!redis) {
-    if (process.env.REDIS_URL) {
-      redis = new Redis(process.env.REDIS_URL);
-    } else {
-      // Redis yoksa hafıza içi basit cache
-      const cache = new Map();
-      return {
-        get:    async (k)    => cache.get(k) || null,
-        set:    async (k, v) => { cache.set(k, v); return 'OK'; },
-        lpush:  async (k, v) => { const arr = cache.get(k) || []; arr.unshift(v); cache.set(k, arr); return arr.length; },
-        lrange: async (k, start, stop) => {
-          const arr = cache.get(k) || [];
-          const s = Number.isFinite(start) ? start : 0;
-          const e = Number.isFinite(stop) ? stop : arr.length - 1;
-          return arr.slice(s, e + 1);
-        },
-        incr:   async (k)    => { const v = (parseInt(cache.get(k)) || 0) + 1; cache.set(k, v); return v; },
-        sadd:   async (k, v) => {
-          const set = cache.get(k) || new Set();
-          set.add(v);
-          cache.set(k, set);
-          return set.size;
-        },
-        srem:   async (k, v) => {
-          const set = cache.get(k) || new Set();
-          set.delete(v);
-          cache.set(k, set);
-          return 1;
-        },
-        smembers: async (k) => {
-          const set = cache.get(k) || new Set();
-          return [...set];
-        }
-      };
-    }
+    redis = process.env.REDIS_URL
+      ? new Redis(process.env.REDIS_URL)
+      : createInMemoryRedis();
   }
   return redis;
 }
