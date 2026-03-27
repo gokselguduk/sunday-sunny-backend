@@ -24,6 +24,8 @@ const { estimateTargetHorizon } = require('../indicators/targetHorizon');
 
 /** Parite → son tam tarama sinyali (taramalar arası birleşik tahta) */
 const signalRegistry = new Map();
+/** Her USDT paritesi için son analiz özeti (eşik altı dahil); tarama turu arasında silinmez */
+const listRegistry = new Map();
 
 let lastSignals = [];
 let liveSignals = [];
@@ -81,13 +83,61 @@ function sortBoard(list) {
 }
 
 function buildSortedBoard() {
-  const maxMiss = CONFIG.REGISTRY_MAX_MISSED_SCANS;
-  const list = [];
+  return sortBoard([...signalRegistry.values()]);
+}
+
+function markEntireBoardAbsentThisScan() {
   for (const s of signalRegistry.values()) {
-    if ((s.missedScanCount || 0) >= maxMiss) continue;
-    list.push(s);
+    s.absentThisScan = true;
   }
-  return sortBoard(list);
+}
+
+function purgeAbsentFromSignalRegistry() {
+  for (const [pair, s] of [...signalRegistry.entries()]) {
+    if (s.absentThisScan) signalRegistry.delete(pair);
+  }
+}
+
+function buildCoinListSlim() {
+  if (!allCoins.length) return [];
+  return allCoins.map((c) => {
+    const pair = c.pair;
+    const row = listRegistry.get(pair);
+    const onBoard = signalRegistry.has(pair);
+    const base = c.symbol;
+    if (!row || row.empty) {
+      return {
+        symbol: pair,
+        base,
+        onBoard,
+        empty: true,
+        lastClose: null,
+        score: null,
+        firsatSkor: null,
+        overallSignal: null,
+        priceChange24h: null,
+        scannedAt: null,
+        listReason: row?.listReason || null
+      };
+    }
+    const detail = row.listDetail || row;
+    return {
+      symbol: pair,
+      base,
+      onBoard,
+      empty: false,
+      lastClose: detail.lastClose ?? null,
+      score: detail.score ?? null,
+      firsatSkor: detail.firsatSkoru?.skor ?? null,
+      overallSignal: detail.overallSignal ?? null,
+      signalStrength: detail.signalStrength ?? null,
+      priceChange24h: detail.priceChange24h ?? null,
+      scannedAt: detail.scannedAt || row.scannedAt || null,
+      listReason: row.listReason || null,
+      aiVerdict: detail.ai?.verdict ?? null,
+      hasListDetail: !!(row.listDetail && !onBoard)
+    };
+  });
 }
 
 function boardStats(board) {
@@ -106,14 +156,40 @@ function normalizeScanPair(raw) {
   return x.endsWith('USDT') ? x : `${x}USDT`;
 }
 
+function baseSnapshot(coin, partial = {}) {
+  return {
+    symbol: coin.pair,
+    base: coin.symbol,
+    scannedAt: new Date().toISOString(),
+    ...partial
+  };
+}
+
 async function scanSingle(coin, sentiment, opts = {}) {
   const saveHistory = opts.saveHistory !== false;
   try {
     const tf = await getMultiTimeframe(coin.pair, { binance, indicators });
-    if (!tf.h1 || !tf.h4) return null;
+    if (!tf.h1 || !tf.h4) {
+      return {
+        qualified: false,
+        snapshot: baseSnapshot(coin, { listReason: 'MUM_VERI', lastClose: tf?.h1?.lastClose ?? null })
+      };
+    }
 
     const dirs = getTimeframeDirections(tf);
-    if (hasDirectionConflict(dirs)) return null;
+    if (hasDirectionConflict(dirs)) {
+      return {
+        qualified: false,
+        snapshot: baseSnapshot(coin, {
+          listReason: 'MTF_CELISKI',
+          lastClose: tf.h1.lastClose,
+          score1h: tf.h1.score,
+          overallSignal: tf.h1.overallSignal,
+          signalStrength: tf.h1.signalStrength,
+          priceChange24h: 0
+        })
+      };
+    }
 
     const [depth, ticker, footprint] = await Promise.all([
       binance.getOrderBook(coin.pair),
@@ -138,12 +214,35 @@ async function scanSingle(coin, sentiment, opts = {}) {
     const anomalyAdjusted = applyAnomalyPenalty(tf, extraScore);
     if (anomalyAdjusted.reject) {
       console.log(`ANOMALİ [MANIP] ${coin.pair}: Z=${tf.h1.anomaly.zScore}`);
-      return null;
+      return {
+        qualified: false,
+        snapshot: baseSnapshot(coin, {
+          listReason: 'MANIP_REDDI',
+          lastClose: tf.h1.lastClose,
+          score1h: tf.h1.score,
+          overallSignal: tf.h1.overallSignal,
+          signalStrength: tf.h1.signalStrength,
+          priceChange24h
+        })
+      };
     }
     extraScore = anomalyAdjusted.extraScore;
 
     const netScore = (tf.h1.score||0) + dirs.mtfScore + extraScore + dirs.momentumBoost;
-    if (netScore < CONFIG.MIN_SCORE) return null;
+    if (netScore < CONFIG.MIN_SCORE) {
+      return {
+        qualified: false,
+        snapshot: baseSnapshot(coin, {
+          listReason: 'DUSUK_SKOR',
+          lastClose: tf.h1.lastClose,
+          score: netScore,
+          score1h: tf.h1.score,
+          overallSignal: tf.h1.overallSignal,
+          signalStrength: tf.h1.signalStrength,
+          priceChange24h
+        })
+      };
+    }
 
     const learningData = await memory.getLearningData(coin.symbol);
 
@@ -202,14 +301,28 @@ async function scanSingle(coin, sentiment, opts = {}) {
 
     if (aiResult.manipulationRisk >= 8) {
       console.log(`AI MANİP [${coin.pair}]: ${aiResult.manipulationRisk}/10`);
-      return null;
+      return {
+        qualified: false,
+        snapshot: {
+          ...baseSnapshot(coin, { listReason: 'AI_MANIP' }),
+          listDetail: signal
+        }
+      };
     }
 
     const firsatSkoru = calcFirsatSkoru(signal);
     signal.firsatSkoru = firsatSkoru;
     signal.runnerPotential = computeRunnerPotential(signal);
 
-    if (firsatSkoru.skor < CONFIG.MIN_FIRSAT) return null;
+    if (firsatSkoru.skor < CONFIG.MIN_FIRSAT) {
+      return {
+        qualified: false,
+        snapshot: {
+          ...baseSnapshot(coin, { listReason: 'FIRSAT_ESIK' }),
+          listDetail: signal
+        }
+      };
+    }
 
     if (saveHistory) {
       const signalKey = await memory.saveSignal(signal);
@@ -220,11 +333,14 @@ async function scanSingle(coin, sentiment, opts = {}) {
     }
 
     console.log(`✅ ${coin.pair}: Skor=${netScore} Fırsat=${firsatSkoru.skor} ${firsatSkoru.emoji} ${firsatSkoru.seviye}${saveHistory ? '' : ' (tahta güncelleme)'}`);
-    return signal;
+    return { qualified: true, signal };
 
   } catch (err) {
     console.log(`HATA ${coin.pair}: ${err.message}`);
-    return null;
+    return {
+      qualified: false,
+      snapshot: baseSnapshot(coin, { listReason: 'HATA', listNote: err.message })
+    };
   }
 }
 
@@ -232,21 +348,12 @@ function mergeQualifiedSignal(result) {
   const prev = signalRegistry.get(result.symbol);
   result.vsPreviousScan = computeVsPreviousScan(prev, result);
   result.absentThisScan = false;
-  result.missedScanCount = 0;
   result.fullScanCount = (prev?.fullScanCount || 0) + 1;
   result.firstSeenAt = prev?.firstSeenAt || result.scannedAt;
   result.anchorCloseLastFullScan = result.lastClose;
   delete result.vsLastFullScanPricePct;
   delete result.lastPriceTickAt;
   signalRegistry.set(result.symbol, result);
-}
-
-function markMissedDuringScan(pair) {
-  if (!signalRegistry.has(pair)) return;
-  const ex = signalRegistry.get(pair);
-  ex.absentThisScan = true;
-  ex.missedScanCount = (ex.missedScanCount || 0) + 1;
-  ex.lastFailedScanAt = new Date().toISOString();
 }
 
 async function scanMarket() {
@@ -269,6 +376,7 @@ async function scanMarket() {
     phase: 'starting'
   };
 
+  markEntireBoardAbsentThisScan();
   const preBoard = buildSortedBoard();
   liveSignals = preBoard;
   const bs = boardStats(preBoard);
@@ -290,11 +398,11 @@ async function scanMarket() {
   for (let i = 0; i < allCoins.length; i++) {
     const coin = allCoins[i];
     const result = await scanSingle(coin, sentiment);
-    if (result) {
+    if (result?.snapshot) listRegistry.set(coin.pair, result.snapshot);
+    if (result?.qualified) {
       qualifiedThisScanRun += 1;
-      mergeQualifiedSignal(result);
-    } else {
-      markMissedDuringScan(coin.pair);
+      mergeQualifiedSignal(result.signal);
+      listRegistry.set(coin.pair, signalRegistry.get(coin.pair));
     }
 
     scanState.scannedCoins = i + 1;
@@ -317,7 +425,7 @@ async function scanMarket() {
       );
       broadcast({
         type: 'scan_progress',
-        data: board.slice(0, 100),
+        data: board,
         scan: { ...scanState },
         time: new Date().toISOString()
       });
@@ -325,6 +433,7 @@ async function scanMarket() {
     await binance.bekle(CONFIG.SCAN_DELAY_MS);
   }
 
+  purgeAbsentFromSignalRegistry();
   const board = buildSortedBoard();
   lastSignals = board;
   liveSignals = board;
@@ -367,7 +476,7 @@ async function tickRegistryPrices() {
   const syms = [...signalRegistry.keys()];
   for (const sym of syms) {
     const s = signalRegistry.get(sym);
-    if (!s || (s.missedScanCount || 0) >= CONFIG.REGISTRY_MAX_MISSED_SCANS) continue;
+    if (!s) continue;
     try {
       const ticker = await binance.get24hTicker(sym);
       const price = parseFloat(ticker?.lastPrice);
@@ -396,7 +505,7 @@ async function tickRegistryPrices() {
   scanState.updatedAt = new Date().toISOString();
   broadcast({
     type: 'signal_board_tick',
-    data: lastSignals.slice(0, 100),
+    data: lastSignals,
     scan: { ...scanState },
     time: new Date().toISOString()
   });
@@ -418,26 +527,34 @@ async function refreshSymbol(rawSymbol) {
   }
 
   const sentiment = await binance.getFearGreed();
-  const result = await scanSingle(coin, sentiment, { saveHistory: false });
-  if (!result) {
-    markMissedDuringScan(pair);
+  const out = await scanSingle(coin, sentiment, { saveHistory: false });
+  if (out?.snapshot) listRegistry.set(pair, out.snapshot);
+  if (out?.qualified) {
+    mergeQualifiedSignal(out.signal);
+    listRegistry.set(pair, signalRegistry.get(pair));
     lastSignals = buildSortedBoard();
     liveSignals = lastSignals;
-    return { ok: false, error: 'Bu tur eşiklerden geçmedi veya veri yok', symbol: pair, board: lastSignals };
+    broadcast({
+      type: 'symbol_refreshed',
+      data: lastSignals,
+      scan: { ...getScanState() },
+      refreshed: pair,
+      time: new Date().toISOString()
+    });
+    return { ok: true, symbol: pair, signal: out.signal, board: lastSignals };
   }
 
-  mergeQualifiedSignal(result);
+  if (signalRegistry.has(pair)) signalRegistry.delete(pair);
   lastSignals = buildSortedBoard();
   liveSignals = lastSignals;
   broadcast({
     type: 'symbol_refreshed',
-    data: lastSignals.slice(0, 100),
+    data: lastSignals,
     scan: { ...getScanState() },
     refreshed: pair,
     time: new Date().toISOString()
   });
-
-  return { ok: true, symbol: pair, signal: result, board: lastSignals };
+  return { ok: false, error: 'Bu tur eşiklerden geçmedi veya veri yok', symbol: pair, board: lastSignals };
 }
 
 function startRegistryPriceRefresh() {
@@ -457,10 +574,20 @@ async function startAutoScan() {
 }
 
 function subscribe(cb)    { subscribers.push(cb); }
-function broadcast(data)  { subscribers.forEach(cb => cb(data)); }
+function broadcast(data) {
+  const payload = { ...data, coinList: buildCoinListSlim() };
+  subscribers.forEach((cb) => cb(payload));
+}
 function getLastSignals() { return lastSignals; }
 function getLatestSignals() { return isScanning ? liveSignals : lastSignals; }
 function getScanState() { return { ...scanState }; }
+function getCoinList() { return buildCoinListSlim(); }
+
+function getListSnapshot(rawSymbol) {
+  const pair = normalizeScanPair(rawSymbol);
+  if (!pair) return null;
+  return listRegistry.get(pair) || null;
+}
 
 module.exports = {
   scanMarket,
@@ -468,6 +595,8 @@ module.exports = {
   getLastSignals,
   getLatestSignals,
   getScanState,
+  getCoinList,
+  getListSnapshot,
   startAutoScan,
   subscribe
 };

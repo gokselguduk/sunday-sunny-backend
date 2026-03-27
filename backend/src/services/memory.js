@@ -153,15 +153,24 @@ async function updateSignalResult(key, result, exitPrice) {
   }
 }
 
+function historyKeyPrefixForSymbol(symbol) {
+  const u = String(symbol || '').trim().toUpperCase().replace(/\s+/g, '');
+  if (!u) return '';
+  const pair = u.endsWith('USDT') ? u : `${u}USDT`;
+  return `signal:${pair}:`;
+}
+
 // ── ÖĞRENME VERİSİ ÇEK ──────────────────────
 async function getLearningData(symbol) {
   try {
     const r       = getRedis();
     const keys    = await r.lrange('signals:history', 0, 200);
     const history = [];
+    const prefix  = historyKeyPrefixForSymbol(symbol);
+    if (!prefix) return { history: [], successRate: null, total: 0, success: 0, fail: 0 };
 
     for (const key of keys) {
-      if (!key.includes(`:${symbol}:`)) continue;
+      if (!key.startsWith(prefix)) continue;
       const data = await r.get(key);
       if (data) history.push(JSON.parse(data));
     }

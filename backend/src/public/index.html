@@ -289,6 +289,7 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 
   <div class="page" id="page-sinyaller">
     <div class="filtre-wrap">
+      <button type="button" class="filtre-btn" data-filtre="liste" onclick="filtre('liste',this)">Liste</button>
       <button type="button" class="filtre-btn active" data-filtre="tum" onclick="filtre('tum',this)">Tümü</button>
       <button type="button" class="filtre-btn" data-filtre="nadir" onclick="filtre('nadir',this)">🔥 Nadir</button>
       <button type="button" class="filtre-btn" data-filtre="nadirhist" onclick="filtre('nadirhist',this)">⭐ Geçmiş Nadir</button>
@@ -401,6 +402,7 @@ function jsQuote(sym){
   return String(sym||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 }
 let aktifF='tum',araM='',kur=38,aktifModal=null;
+let coinList=[];
 let scanMeta=null;
 let perfMeta=null;
 let pushConfig=null;
@@ -449,6 +451,7 @@ if(typeof io!=='undefined'){
       sig=arr.map((s,i)=>({...s,_idx:i}));
       if(sig.length>0)kur=sig[0].usdTryRate||kur;
     }
+    if(Array.isArray(payload.coinList))coinList=payload.coinList;
     guncelle();
     schedulePoll();
     fiyatGuncelle();
@@ -696,6 +699,7 @@ function veriCek(){
     nadirTrail=scanData?.nadirTrail||{};
     storageHint=scanData?.storage||{};
     sig=(scanData?.signals||[]).map((s,i)=>({...s,_idx:i}));
+    coinList=Array.isArray(scanData?.coinList)?scanData.coinList:[];
     if(sig.length>0)kur=sig[0].usdTryRate||38;
     guncelle();
     schedulePoll();
@@ -706,7 +710,9 @@ function veriCek(){
 }
 
 async function fiyatGuncelle(){
-  const syms=[...new Set(sig.map(s=>s.symbol).filter(Boolean))].slice(0,30);
+  const a=sig.map(s=>s.symbol).filter(Boolean);
+  const b=coinList.map(r=>r.symbol).filter(Boolean);
+  const syms=[...new Set([...a,...b])].slice(0,400);
   if(!syms.length)return;
   try{
     const res=await fetch(BASE_URL+'/api/prices/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:syms})});
@@ -1019,14 +1025,11 @@ function flashAppToast(html){
 function gotoInvestRef(symbol){
   const sym=String(symbol||'').toUpperCase();
   if(!sym)return;
-  const ix=sig.findIndex(x=>x.symbol===sym);
-  if(ix>=0){
-    goPage('sinyaller');
-    setTimeout(()=>modalAc(ix),30);
-    return;
-  }
-  const short=sym.replace('USDT','');
-  flashAppToast('<strong style="color:var(--accent)">Liste dışı</strong> · '+short+' bu tur sinyal listesinde yok. Tam tarama sonrası tekrar bak veya Sinyaller’de ara.');
+  const full=sym.endsWith('USDT')?sym:sym+'USDT';
+  const ix=sig.findIndex(x=>x.symbol===full);
+  goPage('sinyaller');
+  if(ix>=0)setTimeout(()=>modalAc(ix),30);
+  else setTimeout(()=>modalListeAc(full),30);
 }
 function filtre(f,btn){
   aktifF=f;
@@ -1036,8 +1039,8 @@ function filtre(f,btn){
 }
 function ara(v){araM=v.trim().toUpperCase();renderSinyaller()}
 
-function sabitleYatirimRef(idx){
-  const s=sig[idx];
+function sabitleYatirimFromModal(){
+  const s=aktifModal;
   if(!s||!s.symbol)return;
   const o=loadInvestAnchors();
   o[s.symbol]={
@@ -1048,6 +1051,12 @@ function sabitleYatirimRef(idx){
   };
   saveInvestAnchors(o);
   renderInvestAnchors();
+}
+function sabitleYatirimRef(idx){
+  const s=sig[idx];
+  if(!s)return;
+  aktifModal=s;
+  sabitleYatirimFromModal();
 }
 function yatirimRefSil(symbol){
   const sym=String(symbol||'').toUpperCase();
@@ -1458,7 +1467,22 @@ function renderTop(){
   el.innerHTML=sig.slice(0,5).map(kartHTML).join('');
 }
 function renderSinyaller(){
-  const el=document.getElementById('sinyal-liste'),l=fList();
+  const el=document.getElementById('sinyal-liste');
+  if(!el)return;
+  if(aktifF==='liste'){
+    let rows=coinList.length?coinList.slice():[];
+    if(araM)rows=rows.filter(r=>((r.base||'')+(r.symbol||'')).toUpperCase().includes(araM));
+    rows.sort((a,b)=>(a.base||a.symbol||'').localeCompare(b.base||b.symbol||'','tr'));
+    if(!rows.length){
+      el.innerHTML=scanMeta?.isScanning
+        ?`<div class="bos">Tüm coin listesi tarama ile doluyor… ${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0}</div>`
+        :'<div class="bos">Henüz liste verisi yok<br>Sunucu taraması tamamlanınca tüm pariteler burada görünür</div>';
+      return;
+    }
+    el.innerHTML=rows.map(listeKartHTML).join('')+'<div style="height:20px"></div>';
+    return;
+  }
+  const l=fList();
   if(!l.length){
     if(scanMeta?.isScanning){
       const eta=scanMeta.etaSeconds?` ~${scanMeta.etaSeconds}s`:'';
@@ -1471,8 +1495,8 @@ function renderSinyaller(){
   el.innerHTML=l.map(kartHTML).join('')+'<div style="height:20px"></div>';
 }
 
-function modalAc(idx){
-  const s=sig[idx];if(!s)return;
+function openSignalModal(s){
+  if(!s||!s.symbol)return;
   aktifModal=s;
   const px=pxFor(s),sym=s.symbol?.replace('USDT','')||'',fs=s.firsatSkoru?.skor||0,r=renk(fs);
   const ai=s.ai||{},sr=s.supportResistance||{},fib=s.fibonacci||{};
@@ -1483,13 +1507,13 @@ function modalAc(idx){
     ?`<div class="modal-sec">
         <div class="modal-sec-title">Yatırım referansı</div>
         <p style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:10px">Kayıtlı: skor <strong>${invRef.skor}</strong>, $${f5(invRef.usdt)} — ${new Date(invRef.at).toLocaleString('tr-TR',{dateStyle:'short',timeStyle:'short'})}</p>
-        <button type="button" class="btn-sabitle" onclick="event.stopPropagation();sabitleYatirimRef(${idx});document.getElementById('modal').classList.remove('open');">Şu anki skor + fiyatla güncelle</button>
+        <button type="button" class="btn-sabitle" onclick="event.stopPropagation();sabitleYatirimFromModal();document.getElementById('modal').classList.remove('open');">Şu anki skor + fiyatla güncelle</button>
         <button type="button" class="btn-sabitle outline" onclick="event.stopPropagation();yatirimRefSil('${jsQuote(s.symbol)}')">Referansı sil</button>
       </div>`
     :`<div class="modal-sec">
         <div class="modal-sec-title">Yatırım referansı</div>
         <p style="font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:10px">45 dk’da bir liste yenilenir; bu kayıt <strong>telefonda kalır</strong>, Rapor’daki başarı istatistiklerine karışmaz.</p>
-        <button type="button" class="btn-sabitle" onclick="event.stopPropagation();sabitleYatirimRef(${idx});document.getElementById('modal').classList.remove('open');">📌 Bu anı referans olarak kaydet</button>
+        <button type="button" class="btn-sabitle" onclick="event.stopPropagation();sabitleYatirimFromModal();document.getElementById('modal').classList.remove('open');">📌 Bu anı referans olarak kaydet</button>
       </div>`;
 
   document.getElementById('modal-ic').innerHTML=`
@@ -1674,6 +1698,65 @@ function modalAc(idx){
   document.getElementById('modal').classList.add('open');
   document.getElementById('modal-ic').scrollTop=0;
 }
+function modalAc(idx){
+  openSignalModal(sig[idx]);
+}
+function listeReasonTr(code){
+  const m={
+    MUM_VERI:'Mum / veri eksik',
+    MTF_CELISKI:'Zaman dilimleri çelişiyor',
+    MANIP_REDDI:'Manipülasyon / anomali',
+    DUSUK_SKOR:'Teknik skor eşik altı',
+    AI_MANIP:'AI manipülasyon riski',
+    FIRSAT_ESIK:'Fırsat skoru eşik altı',
+    HATA:'Tarama hatası'
+  };
+  return m[code]||code||'—';
+}
+function listeKartHTML(row){
+  const sym=(row.base||row.symbol||'').replace(/USDT$/i,'')||'—';
+  const fullSym=row.symbol&&(row.symbol.endsWith('USDT')?row.symbol:row.symbol+'USDT');
+  const fs=row.firsatSkor!=null?row.firsatSkor:'—';
+  const r=typeof fs==='number'?renk(fs):'var(--text3)';
+  const px=row.lastClose!=null?row.lastClose:0;
+  const lp=fullSym&&livePrices[fullSym]!=null?livePrices[fullSym]:null;
+  const pxShow=lp!=null?lp:px;
+  const chg=row.priceChange24h!=null?row.priceChange24h:0;
+  const st=row.onBoard?'<span class="badge b-green">Tahtada</span>':'<span class="badge b-amber">Eşik altı</span>';
+  const ai=row.aiVerdict?`<span class="badge b-blue">${row.aiVerdict}</span>`:'';
+  return`<div class="kart" onclick="modalListeAc(${JSON.stringify(fullSym||'')})" style="cursor:pointer">
+    <div class="kart-accent" style="background:${r}"></div>
+    <div class="kart-ust">
+      <div><div><span class="kart-symbol">${sym}</span><span class="kart-pair">${fullSym||''}</span></div>
+        <div class="kart-badges">${st}${ai}${row.listReason?`<span class="badge b-amber" title="${listeReasonTr(row.listReason)}">${listeReasonTr(row.listReason)}</span>`:''}</div>
+      </div>
+      <div class="kart-sag"><span style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:${r}">${fs}</span><div style="font-size:9px;color:var(--text3)">Fırsat</div></div>
+    </div>
+    <div class="kart-fiyat">
+      <div class="fiyat-row"><span class="fiyat-usdt" style="color:${r}">$${f5(pxShow)}</span><span class="fiyat-try">${tryF(pxShow)}</span>${lp!=null?'<span class="fiyat-canli">canlı</span>':''}</div>
+      <span class="fiyat-deg ${chg>=0?'deg-p':'deg-n'}">24s ${typeof chg==='number'?(chg>=0?'+':'')+chg.toFixed(2)+'%':'—'}</span>
+    </div>
+    <div style="font-size:10px;color:var(--text3);padding:8px 12px 12px;line-height:1.4">Skor: ${row.score!=null?row.score:'—'} · ${row.overallSignal||'—'} · ${row.scannedAt?new Date(row.scannedAt).toLocaleString('tr-TR',{dateStyle:'short',timeStyle:'short'}):'—'}</div>
+  </div>`;
+}
+function modalListeAc(fullSym){
+  const sym=String(fullSym||'').toUpperCase();
+  if(!sym)return;
+  const ix=sig.findIndex(s=>s.symbol===sym);
+  if(ix>=0){modalAc(ix);return;}
+  const short=sym.replace(/USDT$/,'');
+  fetch(BASE_URL+'/api/coin/snapshot/'+encodeURIComponent(short))
+    .then(r=>r.json())
+    .then(j=>{
+      if(!j.ok||!j.snapshot){flashAppToast('<strong style="color:var(--amber)">Özet yok</strong> · '+short+' — tam tarama bekleyin');return;}
+      const snap=j.snapshot;
+      let s=snap.listDetail;
+      if(!s||typeof s!=='object')s={symbol:sym,lastClose:snap.lastClose,score:snap.score,score1h:snap.score1h,overallSignal:snap.overallSignal,signalStrength:snap.signalStrength,priceChange24h:snap.priceChange24h,scannedAt:snap.scannedAt,firsatSkoru:null};
+      if(!s.symbol)s.symbol=sym;
+      openSignalModal(s);
+    })
+    .catch(()=>flashAppToast('Analiz özeti alınamadı'));
+}
 
 function fav(e,symbol){
   e.stopPropagation();
@@ -1696,19 +1779,28 @@ function renderRapor(){
   const nadirPerf=pTiers.nadir||{};
   const gucluPerf=pTiers.guclu||{};
   const iyiPerf=pTiers.iyi||{};
-  const perfBox=(name,p,color)=>`<div class="rapor-kart">
+  const pctOrDash=(v,resolved)=>((resolved||0)>0&&Number.isFinite(Number(v))?Number(v).toFixed(1):'—');
+  const perfBox=(name,p,color)=>{
+    const res=p.resolved||0;
+    const tp1=pctOrDash(p.tp1Rate,res);
+    const tp2=pctOrDash(p.tp2Rate,res);
+    const tp3=pctOrDash(p.tp3Rate,res);
+    const sl=pctOrDash(p.slRate,res);
+    return`<div class="rapor-kart">
       <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">${name} Başarı Oranı</div>
       <div class="rapor-grid">
-        <div class="rapor-item"><div class="rapor-sayi" style="color:${color}">%${(p.tp1Rate||0).toFixed(1)}</div><div class="rapor-lbl">TP1</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:${color}">%${(p.tp2Rate||0).toFixed(1)}</div><div class="rapor-lbl">TP2</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:${color}">%${(p.tp3Rate||0).toFixed(1)}</div><div class="rapor-lbl">TP3</div></div>
+        <div class="rapor-item"><div class="rapor-sayi" style="color:${color}">${tp1==='—'?'—':'%'+tp1}</div><div class="rapor-lbl">TP1</div></div>
+        <div class="rapor-item"><div class="rapor-sayi" style="color:${color}">${tp2==='—'?'—':'%'+tp2}</div><div class="rapor-lbl">TP2</div></div>
+        <div class="rapor-item"><div class="rapor-sayi" style="color:${color}">${tp3==='—'?'—':'%'+tp3}</div><div class="rapor-lbl">TP3</div></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--text3)">
-        <span>Sonuçlanan: ${p.resolved||0}</span>
+        <span>Sonuçlanan: ${res}</span>
         <span>Bekleyen: ${p.pending||0}</span>
-        <span>SL: %${(p.slRate||0).toFixed(1)}</span>
+        <span>SL: ${sl==='—'?'—':'%'+sl}</span>
       </div>
+      ${res===0?'<p style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.4">TP istatistiği için geçmiş sinyallerin TP/SL ile sonuçlanması gerekir (<code style=font-size:9px>POST /api/signal/resolve</code>).</p>':''}
     </div>`;
+  };
   const stR=storageHint||{};
   const raporUyari=stR.persistent===false
     ?`<div class="dash-hint" style="margin-bottom:12px"><strong>Kalıcılık uyarısı:</strong> Sunucuda Redis yok; başarı sayaçları RAM’de tutuluyor ve <strong>deploy/restart’ta sıfırlanır</strong>. Kalıcı istatistik için Railway’e Redis ekle ve REDIS_URL ortam değişkenini tanımla.</div>`

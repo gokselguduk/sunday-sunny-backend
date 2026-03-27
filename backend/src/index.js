@@ -68,11 +68,19 @@ app.get('/api/scan/latest', async (req, res) => {
   const nadirTrail = await memory.getNadirTrail();
   res.json({
     signals: scanner.getLatestSignals(),
+    coinList: scanner.getCoinList(),
     scan: scanner.getScanState(),
     lastNadirPushAt,
     nadirTrail,
     storage: memory.getStorageInfo()
   });
+});
+
+/** Liste sekmesi / eşik altı detay: sunucudaki son analiz özeti (listDetail varsa tam gövde) */
+app.get('/api/coin/snapshot/:symbol', (req, res) => {
+  const snap = scanner.getListSnapshot(req.params.symbol);
+  if (!snap) return res.status(404).json({ ok: false, error: 'Bu parite için henüz tarama özeti yok' });
+  res.json({ ok: true, snapshot: snap });
 });
 
 app.post('/api/prices/bulk', async (req, res) => {
@@ -153,6 +161,7 @@ io.on('connection', async (socket) => {
   socket.emit('scan_update', {
     type: scanState.isScanning ? 'scan_progress' : 'scan_complete',
     data: initialSignals,
+    coinList: scanner.getCoinList(),
     scan: scanState,
     time: new Date().toISOString(),
     nadirTrail,
