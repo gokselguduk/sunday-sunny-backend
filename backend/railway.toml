@@ -1,10 +1,9 @@
-# Sadece Railway'de Root Directory = "backend" ise geçerli.
-# Öneri: Root'u repo kökü bırakıp kökteki Dockerfile ile deploy (daha tutarlı).
-# https://docs.railway.com/guides/monorepo
+# Railway Root Directory = "backend" ise bu ayar + bu klasördeki Dockerfile kullanılır.
+# Root Directory = repo kökü (.) ise üst dizindeki Dockerfile + üst railway.toml geçerlidir.
 
 [build]
-builder = "NIXPACKS"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "npm start"
 restartPolicyType = "ON_FAILURE"
