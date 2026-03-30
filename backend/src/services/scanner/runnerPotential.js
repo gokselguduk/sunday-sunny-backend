@@ -153,15 +153,11 @@ function computeRunnerPotential(signal) {
   else if (score >= 52) label = 'ERKEN_ADAY';
   else if (score >= 38) label = 'IZLEME';
 
-  const disclaimer =
-    'Bu skor olası “erken koşu” örüntülerini listeler; günlük %30–100+ hareketi garanti etmez. Yatırım tavsiyesi değildir.';
-
   return {
     score,
     label,
     flags,
-    reasons: reasons.slice(0, 8),
-    disclaimer
+    reasons: reasons.slice(0, 8)
   };
 }
 
