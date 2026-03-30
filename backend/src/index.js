@@ -1,5 +1,31 @@
+const crypto = require('crypto');
+const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
+const PUBLIC_DIR = path.join(__dirname, 'public');
+
+/** index+sw içeriğinin hash’i; Docker’da mtime hep aynı kalabildiği için dosya içeriği şart */
+let _shellHashCache = { sig: '', hash: null };
+function getClientShellContentHash() {
+  const names = ['index.html', 'sw.js'];
+  let sig = '';
+  const bufs = [];
+  try {
+    for (const name of names) {
+      const p = path.join(PUBLIC_DIR, name);
+      const st = fs.statSync(p);
+      sig += `${name}:${st.mtimeMs}:${st.size};`;
+      bufs.push(fs.readFileSync(p));
+    }
+  } catch (_) {
+    return null;
+  }
+  if (_shellHashCache.sig === sig) return _shellHashCache.hash;
+  const h = crypto.createHash('sha256').update(Buffer.concat(bufs)).digest('hex').slice(0, 24);
+  _shellHashCache = { sig, hash: h };
+  return h;
+}
 
 const express  = require('express');
 const http     = require('http');
@@ -41,8 +67,17 @@ const io     = new socketio.Server(server, { cors: { origin: '*' } });
 
 app.use(cors());
 app.use(express.json());
+
+/** Kök sayfa: statik zincirden önce — ara CDN/tarayıcı HTML saklamasını zorla kır */
+app.get('/', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, private');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+});
+
 app.use(
-  express.static(path.join(__dirname, 'public'), {
+  express.static(PUBLIC_DIR, {
     setHeaders(res, filePath) {
       const b = path.basename(filePath);
       if (/\.html$/i.test(b) || b === 'sw.js' || /\.webmanifest$/i.test(b)) {
@@ -60,19 +95,25 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
 
-/** Canlı sürüm doğrulama (Railway otomatik env); önbellek yok */
+/** Canlı sürüm doğrulama (Railway otomatik env); önbellek yok — CDN/proxy kaçırmasın */
 app.get('/api/build', (req, res) => {
-  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
   const commit =
     process.env.RAILWAY_GIT_COMMIT_SHA ||
     process.env.RAILWAY_GIT_COMMIT ||
     process.env.VERCEL_GIT_COMMIT_SHA ||
     process.env.GITHUB_SHA ||
     null;
-  const shellVersion = process.env.APP_SHELL_VERSION || commit || null;
+  const contentHash = getClientShellContentHash();
+  const shortCommit = commit && String(commit).length >= 7 ? String(commit).slice(0, 12) : null;
+  const envShell = process.env.APP_SHELL_VERSION ? String(process.env.APP_SHELL_VERSION).trim() : null;
+  /** Her zaman içerik hash’i dâhil: aynı commit’te index değişince de client güncellenir */
+  const shellVersion = [envShell, shortCommit, contentHash].filter(Boolean).join(':') || contentHash || null;
   res.json({
     commit,
     shellVersion,
+    shellContentHash: contentHash,
     service: process.env.RAILWAY_SERVICE_NAME || null,
     time: new Date().toISOString()
   });

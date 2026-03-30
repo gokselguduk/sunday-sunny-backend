@@ -1,34 +1,14 @@
-/* Sunday/Sunny SW — v4: tüm kök/HTML GET no-store; iOS/PWA eski kabuk */
+/* Sunday/Sunny SW — v6: fetch YOK — sadece push. Sayfa/iOS önbelleği SW üzerinden takılmaz. */
 
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
-
-function wantsFreshDocument(req) {
-  if (req.method !== 'GET') return false;
-  let url;
-  try {
-    url = new URL(req.url);
-  } catch (_) {
-    return false;
-  }
-  if (url.origin !== self.location.origin) return false;
-  if (req.mode === 'navigate') return true;
-  if (req.destination === 'document') return true;
-  const accept = req.headers.get('accept') || '';
-  if (!accept.includes('text/html')) return false;
-  const p = url.pathname;
-  return p === '/' || p === '' || /\.html$/i.test(p);
-}
-
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
-  if (!wantsFreshDocument(req)) return;
-  event.respondWith(
-    fetch(req, { cache: 'no-store', redirect: 'follow' }).catch(() =>
-      fetch(req.url, { cache: 'reload', redirect: 'follow', mode: 'cors', credentials: 'same-origin' })
-    )
-  );
-});
+self.addEventListener('activate', (event) =>
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  )
+);
 
 self.addEventListener('push', (event) => {
   let data = {};
