@@ -594,6 +594,13 @@ function getListSnapshot(rawSymbol) {
   return listRegistry.get(pair) || null;
 }
 
+/** Tahtadaki tam sinyal satırı (yoksa null); absentThisScan / scannedAt için birleşik özet kullanır */
+function getBoardSignal(rawSymbol) {
+  const pair = normalizeScanPair(rawSymbol);
+  if (!pair) return null;
+  return signalRegistry.get(pair) || null;
+}
+
 module.exports = {
   scanMarket,
   refreshSymbol,
@@ -602,6 +609,7 @@ module.exports = {
   getScanState,
   getCoinList,
   getListSnapshot,
+  getBoardSignal,
   startAutoScan,
   subscribe
 };

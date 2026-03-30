@@ -119,11 +119,27 @@ app.get('/api/coin/snapshot/:symbol', (req, res) => {
   res.json({ ok: true, snapshot: snap });
 });
 
-/** Tek paritede MTF, fırsat, runner, FVG, AI vb. birleşik özet (liste/tahta snapshot) */
-app.get('/api/coin/unified/:symbol', (req, res) => {
+/**
+ * Tek parite: lifecycle durumu, tazelik, çelişkiler, motor hizası, BTC/piyasa arka planı,
+ * diagnostics / formasyon / arbitraj / SR-Fib / öğrenme verisi dahil birleşik özet.
+ */
+app.get('/api/coin/unified/:symbol', async (req, res) => {
   const snap = scanner.getListSnapshot(req.params.symbol);
   if (!snap) return res.status(404).json({ ok: false, error: 'Bu parite için henüz tarama özeti yok' });
-  res.json(coinUnified.buildUnifiedFromSnapshot(snap));
+  try {
+    const board = scanner.getBoardSignal(req.params.symbol);
+    const ctx = await marketContext.getMarketContext(false);
+    const btc = btcPulse.getBtcSnapshot();
+    res.json(
+      coinUnified.buildUnifiedFromSnapshot(snap, {
+        boardSignal: board,
+        marketBrief: coinUnified.slimMarketContext(ctx),
+        btcBrief: coinUnified.slimBtc(btc)
+      })
+    );
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message || 'unified hatası' });
+  }
 });
 
 /**
@@ -243,16 +259,44 @@ io.on('connection', async (socket) => {
 });
 
 scanner.subscribe(async (data) => {
-  let payload = data;
+  let payload = { ...data };
   if (data?.type === 'scan_complete') {
     const fresh = (data.data || []).filter((s) => !s.absentThisScan);
     await memory.recordNadirFromScan(fresh);
     const nadirTrail = await memory.getNadirTrail();
     payload = {
-      ...data,
+      ...payload,
       nadirTrail,
       storage: memory.getStorageInfo()
     };
+    try {
+      const ctx = await marketContext.getMarketContext(false);
+      const btc = btcPulse.getBtcSnapshot();
+      payload.scanBackdrop = {
+        market: coinUnified.slimMarketContext(ctx),
+        btc: coinUnified.slimBtc(btc)
+      };
+    } catch (_) {
+      /* isteğe bağlı; tarama tamamını geciktirmesin */
+    }
+  }
+  if (data?.type === 'symbol_refreshed' && data.refreshed) {
+    try {
+      const snap = scanner.getListSnapshot(data.refreshed);
+      const board = scanner.getBoardSignal(data.refreshed);
+      const ctx = await marketContext.getMarketContext(false);
+      const btc = btcPulse.getBtcSnapshot();
+      payload.coinUnified = snap
+        ? coinUnified.buildUnifiedFromSnapshot(snap, {
+            boardSignal: board,
+            marketBrief: coinUnified.slimMarketContext(ctx),
+            btcBrief: coinUnified.slimBtc(btc)
+          })
+        : null;
+    } catch (e) {
+      payload.coinUnified = null;
+      payload.coinUnifiedError = e.message;
+    }
   }
   io.emit('scan_update', payload);
   if (data?.type !== 'scan_complete') return;

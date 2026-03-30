@@ -685,8 +685,17 @@ if(typeof io!=='undefined'){
     if(payload.scan)scanMeta=payload.scan;
     if(payload.nadirTrail)nadirTrail=payload.nadirTrail;
     if(payload.storage)storageHint=payload.storage;
-    const arr=payload.data;
     const t=payload.type;
+    if(t==='symbol_refreshed'&&payload.coinUnified&&document.getElementById('page-analiz')?.classList.contains('active')){
+      const ref=String(payload.refreshed||'').toUpperCase().replace(/USDT$/i,'');
+      const cur=typeof analizPariteSembol==='function'?analizPariteSembol():'';
+      if(ref&&cur&&ref===cur){
+        const out=document.getElementById('analiz-parite-out');
+        if(out&&typeof renderUnifiedHTML==='function')out.innerHTML=renderUnifiedHTML(payload.coinUnified);
+        if(typeof flashAppToast==='function')flashAppToast('<strong>Birleşik özet</strong> güncellendi · '+cur);
+      }
+    }
+    const arr=payload.data;
     const applyList=Array.isArray(arr)&&(
       arr.length>0||
       t==='scan_complete'||
@@ -1735,24 +1744,55 @@ function analizPariteSembol(){
   var v=document.getElementById('analiz-parite-input');
   return String(v&&v.value?v.value:'').trim().toUpperCase().replace(/\/USDT$/i,'').replace(/USDT$/i,'');
 }
+function escU(s){return String(s==null?'':s).replace(/</g,'&lt;').replace(/&/g,'&amp;');}
 function renderUnifiedHTML(u){
+  if(!u||u.ok===false)return'<p style="color:var(--red);font-size:12px">Özet alınamadı.</p>';
   var bias=u.scenarioBias==='bullish'?'var(--green)':u.scenarioBias==='cautious'?'var(--amber)':'var(--text2)';
   var sec=u.sections||{};
   var mtf=sec.mtf||{};
   var fr=sec.firsat||{};
   var rn=sec.runner||{};
-  var bul=(u.bullets||[]).map(function(b){return'<li>'+String(b).replace(/</g,'&lt;')+'</li>';}).join('');
-  var mtfLine=mtf.allAligned?'Tüm TF uyumlu':'15m '+String(mtf.dir15m||'—')+' · 1h '+String(mtf.dir1h||'—')+' · 4h '+String(mtf.dir4h||'—')+' · 1d '+String(mtf.dir1d||'—');
-  var firsatLine=fr.skor!=null?('Skor '+fr.skor+' '+String(fr.seviye||'')+' '+String(fr.emoji||'')):'—';
+  var bul=(u.bullets||[]).map(function(b){return'<li>'+escU(b)+'</li>';}).join('');
+  var mtfLine=mtf.allAligned?'Tüm TF uyumlu':'15m '+escU(mtf.dir15m||'—')+' · 1h '+escU(mtf.dir1h||'—')+' · 4h '+escU(mtf.dir4h||'—')+' · 1d '+escU(mtf.dir1d||'—');
+  var firsatLine=fr.skor!=null?('Skor '+fr.skor+' '+escU(fr.seviye||'')+' '+escU(fr.emoji||'')):'—';
   var runLine=rn&&rn.score!=null?('Runner '+rn.score+'/100'):'—';
   var ai=sec.ai;
-  var aiBlock=ai&&ai.verdict?('<div class="unified-sec"><div class="unified-sec-h">AI</div><strong style="color:var(--text1)">'+String(ai.verdict).replace(/</g,'&lt;')+'</strong>'+(ai.summary?'<div style="margin-top:6px;color:var(--text3)">'+String(ai.summary).replace(/</g,'&lt;')+'</div>':'')+'</div>'):'';
-  return'<div style="font-size:10px;color:'+bias+';font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">'+(u.scenarioBias==='bullish'?'Senaryo eğilimi: yapıcı':u.scenarioBias==='cautious'?'Senaryo eğilimi: temkinli':'Senaryo eğilimi: karışık')+'</div>'+
-    '<p class="unified-narr">'+String(u.narrative||'').replace(/</g,'&lt;')+'</p>'+
+  var aiBlock=ai&&ai.verdict?('<div class="unified-sec"><div class="unified-sec-h">AI</div><strong style="color:var(--text1)">'+escU(ai.verdict)+'</strong>'+(ai.summary?'<div style="margin-top:6px;color:var(--text3)">'+escU(ai.summary)+'</div>':'')+'</div>'):'';
+  var lifeTr={NO_DETAIL:'Detay yok',LIST_ONLY:'Liste özeti (tahta dışı)',BOARD_FRESH:'Tahtada · güncel tur',BOARD_STALE:'Tahtada · son turda eşik altı'};
+  var lifeLbl=lifeTr[u.lifecycleStatus]||escU(u.lifecycleStatus||'—');
+  var frsh=u.freshness||{};
+  var stale=frsh.isStale;
+  var freshLine=frsh.scannedAt?('Son analiz: '+new Date(frsh.scannedAt).toLocaleString('tr-TR')+(frsh.ageMinutes!=null?' (~'+frsh.ageMinutes+' dk)':'')):'Tarih bilgisi yok';
+  if(frsh.staleAfterMinutes)freshLine+=' · Bayat sayımı: &gt;'+frsh.staleAfterMinutes+' dk';
+  var hf=(u.healthFlags||[]).join(', ');
+  var motor=u.motorAlignment;
+  var motorBlock=motor?('<div class="unified-sec"><div class="unified-sec-h">Motor ile özet hizası</div><span style="color:'+(motor.aligned?'var(--green)':'var(--amber)')+'">'+(motor.aligned?'Uyumlu':'Kısmi uyumsuzluk')+'</span><div style="margin-top:6px;font-size:11px;color:var(--text2)">'+escU(motor.explanation)+'</div>'+(motor.firsatSkor!=null?'<div style="font-size:10px;color:var(--text3);margin-top:4px">Fırsat '+motor.firsatSkor+' · Net skor '+(motor.netScore!=null?motor.netScore:'—')+'</div>':'')+'</div>'):'';
+  var conf=(u.conflicts||[]).map(function(c){
+    var col=c.severity==='high'?'var(--red)':c.severity==='medium'?'var(--amber)':'var(--text2)';
+    return'<div style="border-left:3px solid '+col+';padding:6px 0 6px 10px;margin-bottom:6px;font-size:11px;line-height:1.45"><strong style="color:'+col+'">'+escU(c.code)+'</strong> — '+escU(c.message)+'</div>';
+  }).join('');
+  var confBlock=conf?('<div class="unified-sec" style="border-color:rgba(255,71,87,0.25)"><div class="unified-sec-h">Çelişki / uyarı özeti</div>'+conf+'</div>'):'';
+  var backdrop=u.marketBackdrop&&u.marketBackdrop.sentence?('<div class="unified-sec" style="border-color:rgba(0,212,255,0.2)"><div class="unified-sec-h">Piyasa arka planı (BTC + bağlam)</div><p style="font-size:11px;line-height:1.5;color:var(--text2)">'+escU(u.marketBackdrop.sentence)+'</p></div>'):'';
+  var diag=sec.diagnostics;
+  var diagBlock=diag?('<div class="unified-sec"><div class="unified-sec-h">Teşhis (volatilite / likidite / trend)</div>Vol: '+escU(diag.volatility&&diag.volatility.level)+' · Likidite '+((diag.liquidity&&diag.liquidity.score)!=null?diag.liquidity.score:'—')+'/100 · Trend sağlığı '+((diag.trendHealth&&diag.trendHealth.score)!=null?diag.trendHealth.score:'—')+'/100</div>'):'';
+  var learn=sec.learning;
+  var learnBlock=learn&&learn.total?('<div class="unified-sec"><div class="unified-sec-h">Geçmiş sinyal istatistiği (Redis)</div>'+learn.total+' kayıt · başarı %'+(learn.successRate!=null?escU(learn.successRate):'—')+' (TP / SL sonuçları)</div>'):'';
+  var ver='<div style="font-size:9px;color:var(--text3);margin-bottom:10px">Şema v'+escU(u.schemaVersion||'?')+' · Durum: '+escU(lifeLbl)+(u.onBoard!==undefined?' · Tahta: '+(u.onBoard?'evet':'hayır'):'')+(hf?'<br>Bayraklar: '+escU(hf):'')+'</div>';
+  var staleBanner=stale?'<div style="font-size:11px;color:var(--amber);padding:8px 10px;border-radius:10px;border:1px solid rgba(255,179,0,0.35);margin-bottom:10px;background:rgba(255,179,0,0.06)">Veri bayat sayılabilir; tam tarama veya tek coin yenileme önerilir.</div>':'';
+  var lead=u.narrativeLead||'';
+  var detail=u.narrativeDetail||u.narrative||'';
+  var detailBlock=(detail&&!bul)?'<p class="unified-narr" style="margin-top:8px;font-size:12px">'+escU(detail)+'</p>':'';
+  return ver+staleBanner+
+    '<div style="font-size:10px;color:'+bias+';font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">'+(u.scenarioBias==='bullish'?'Senaryo eğilimi: yapıcı':u.scenarioBias==='cautious'?'Senaryo eğilimi: temkinli':(u.scenarioBias==='unknown'?'Senaryo: —':'Senaryo eğilimi: karışık'))+'</div>'+
+    (lead?'<p class="unified-narr" style="font-weight:600">'+escU(lead)+'</p>':'')+
+    detailBlock+
     (bul?'<ul class="unified-bul">'+bul+'</ul>':'')+
+    backdrop+confBlock+motorBlock+
+    '<div class="unified-sec"><div class="unified-sec-h">Tazelik</div>'+escU(freshLine)+'</div>'+
     '<div class="unified-sec"><div class="unified-sec-h">MTF</div>'+mtfLine+'</div>'+
     '<div class="unified-sec"><div class="unified-sec-h">Fırsat &amp; runner</div>'+firsatLine+' · '+runLine+'</div>'+
-    (sec.horizon?'<div class="unified-sec"><div class="unified-sec-h">Hedef süre</div>'+String(sec.horizon.label||sec.horizon.summary||'—').replace(/</g,'&lt;')+'</div>':'')+
+    diagBlock+learnBlock+
+    (sec.horizon?'<div class="unified-sec"><div class="unified-sec-h">Hedef süre</div>'+escU(sec.horizon.label||sec.horizon.summary||'—')+'</div>':'')+
     aiBlock+
     (!u.hasFullDetail?'<p style="font-size:11px;color:var(--amber);margin-top:12px">Tam gövde yok; liste özeti veya tarama sonrası tekrar deneyin.</p>':'');
 }
