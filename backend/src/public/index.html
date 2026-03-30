@@ -704,12 +704,12 @@ window.SS_SW_URL='/sw.js';
   }
   async function checkDeployAndRegister(){
     try{
-      /* v6: shell şeması — index+harita+dashboard; bir kerelik önbellek süpürme */
+      /* v7: shell şeması — veriCek/sinyal listesi dayanıklılığı; bir kerelik önbellek süpürme */
       var schema=null;
       try{schema=localStorage.getItem('ss_shell_schema');}catch(e){}
-      if(schema!=='6'){
+      if(schema!=='7'){
         await clearSwAndCaches();
-        try{localStorage.setItem('ss_shell_schema','6');}catch(e){}
+        try{localStorage.setItem('ss_shell_schema','7');}catch(e){}
         try{localStorage.removeItem('ss_deploy_id');}catch(e){}
         await hardNavigateReload();
         return;
@@ -866,7 +866,7 @@ if(typeof io!=='undefined'){
       }
     }
     if(Array.isArray(payload.coinList))coinList=payload.coinList;
-    guncelle();
+    try{guncelle();}catch(e){console.error('guncelle',e);try{renderTop();}catch(e2){}renderSinyallerSafe();}
     schedulePoll();
     fiyatGuncelle();
   });
@@ -1455,35 +1455,56 @@ async function nakitTamAnaliz(){
   if(btn)btn.disabled=false;
 }
 function veriCek(){
-  return Promise.all([
-    fetch(BASE_URL+'/api/scan/latest').then(r=>r.json()),
-    fetch(BASE_URL+'/api/performance/tiers?limit=1500').then(r=>r.json()).catch(()=>null),
-    fetch(BASE_URL+'/api/push/config').then(r=>r.json()).catch(()=>null)
-  ]).then(([scanData, perfData, pushData])=>{
-    scanMeta=scanData?.scan||null;
-    perfMeta=perfData||null;
-    pushConfig=pushData||null;
-    if(scanData?.lastNadirPushAt){
+  return Promise.allSettled([
+    fetch(BASE_URL+'/api/scan/latest').then(function(r){
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      return r.json();
+    }),
+    fetch(BASE_URL+'/api/performance/tiers?limit=1500').then(function(r){return r.json();}).catch(function(){return null;}),
+    fetch(BASE_URL+'/api/push/config').then(function(r){return r.json();}).catch(function(){return null;})
+  ]).then(function(results){
+    const scanRes=results[0],perfRes=results[1],pushRes=results[2];
+    const scanData=scanRes.status==='fulfilled'?scanRes.value:null;
+    perfMeta=perfRes.status==='fulfilled'?perfRes.value:null;
+    pushConfig=pushRes.status==='fulfilled'?pushRes.value:null;
+    if(!scanData||typeof scanData!=='object'){
+      scanMeta=scanMeta||{isScanning:false,totalCoins:0,scannedCoins:0};
+      sig=[];
+      coinList=[];
+      try{guncelle();}catch(e){console.error('guncelle',e);renderSinyallerSafe();renderTop();}
+      renderRapor();
+      const jm=document.getElementById('rapor-jump-meta');
+      if(jm)jm.textContent='Tarama verisi alınamadı · yenile';
+      schedulePoll();
+      return;
+    }
+    scanMeta=scanData.scan||null;
+    if(scanData.lastNadirPushAt){
       const t=new Date(scanData.lastNadirPushAt).getTime();
       const prev=parseInt(localStorage.getItem('ss_nadir_local_last')||'0',10);
       if(t>prev)localStorage.setItem('ss_nadir_local_last',String(t));
     }
-    nadirTrail=scanData?.nadirTrail||{};
-    storageHint=scanData?.storage||{};
-    const incoming=scanData?.signals||[];
-    const httpScanning=!!scanData?.scan?.isScanning;
+    nadirTrail=scanData.nadirTrail||{};
+    storageHint=scanData.storage||{};
+    const incoming=Array.isArray(scanData.signals)?scanData.signals:[];
+    const httpScanning=!!scanData.scan?.isScanning;
     if(incoming.length>0){
-      sig=incoming.map((s,i)=>({...s,_idx:i}));
+      sig=incoming.map(function(s,i){return{...s,_idx:i};});
     }else if(!httpScanning){
       sig=[];
     }
-    coinList=Array.isArray(scanData?.coinList)?scanData.coinList:[];
+    coinList=Array.isArray(scanData.coinList)?scanData.coinList:[];
     if(sig.length>0)kur=sig[0].usdTryRate||38;
-    guncelle();
+    try{guncelle();}catch(e){console.error('guncelle',e);renderSinyallerSafe();renderTop();}
     schedulePoll();
     fiyatGuncelle();
     baslatCanliFiyat();
-  }).catch(()=>{
+  }).catch(function(e){
+    console.error('veriCek',e);
+    scanMeta=scanMeta||{isScanning:false,totalCoins:0,scannedCoins:0};
+    sig=[];
+    coinList=[];
+    try{guncelle();}catch(e2){renderSinyallerSafe();renderTop();}
     renderRapor();
     const jm=document.getElementById('rapor-jump-meta');
     if(jm)jm.textContent='Ana veri yüklenemedi';
@@ -1499,7 +1520,9 @@ async function fiyatGuncelle(){
     const res=await fetch(BASE_URL+'/api/prices/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:syms})});
     const j=await res.json();
     if(j.prices){livePrices=j.prices;livePricesAt=Date.now();}
-    renderTop();renderSinyaller();renderHaritaPageIfActive();refreshDashHaritaUi();
+    try{renderTop();}catch(e){console.error('renderTop',e);}
+    renderSinyallerSafe();
+    try{renderHaritaPageIfActive();refreshDashHaritaUi();}catch(e){console.error('harita refresh',e);}
   }catch(e){}
 }
 function baslatCanliFiyat(){
@@ -1631,8 +1654,11 @@ function guncelle(){
   applyLogoMood(fg,sig);
   handleEliteSetupAlerts();
   void refreshPushBtn();
-  renderInvestPanel();
-  renderTop();renderSinyaller();renderRapor();renderHaritaPageIfActive();refreshDashHaritaUi();
+  try{renderInvestPanel();}catch(e){console.error('renderInvestPanel',e);}
+  try{renderTop();}catch(e){console.error('renderTop',e);}
+  renderSinyallerSafe();
+  try{renderRapor();}catch(e){console.error('renderRapor',e);}
+  try{renderHaritaPageIfActive();refreshDashHaritaUi();}catch(e){console.error('harita refresh',e);}
   if(document.getElementById('page-dashboard')?.classList.contains('active'))refreshTrMovers24h();
   syncHeaderOffset();
 }
@@ -2326,33 +2352,41 @@ function renderTop(){
   const head=scanLiveBannerHTML();
   el.innerHTML=head+list.map(kartHTML).join('');
 }
-function renderSinyaller(){
+function renderSinyallerSafe(){
   const el=document.getElementById('sinyal-liste');
   if(!el)return;
-  if(aktifF==='liste'){
-    let rows=coinList.length?coinList.slice():[];
-    if(araM)rows=rows.filter(r=>((r.base||'')+(r.symbol||'')).toUpperCase().includes(araM));
-    rows.sort((a,b)=>(a.base||a.symbol||'').localeCompare(b.base||b.symbol||'','tr'));
-    if(!rows.length){
-      el.innerHTML=scanMeta?.isScanning
-        ?`<div class="bos">Tüm coin listesi tarama ile doluyor… ${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0}</div>`
-        :'<div class="bos">Liste henüz boş veya sunucu coin listesini göndermedi.<br><button type="button" class="filtre-btn" style="margin-top:10px" onclick="veriCek()">Listeyi yenile</button></div>';
+  try{
+    if(aktifF==='liste'){
+      let rows=coinList.length?coinList.slice():[];
+      if(araM)rows=rows.filter(r=>((r.base||'')+(r.symbol||'')).toUpperCase().includes(araM));
+      rows.sort((a,b)=>(a.base||a.symbol||'').localeCompare(b.base||b.symbol||'','tr'));
+      if(!rows.length){
+        el.innerHTML=scanMeta?.isScanning
+          ?`<div class="bos">Tüm coin listesi tarama ile doluyor… ${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0}</div>`
+          :'<div class="bos">Liste henüz boş veya sunucu coin listesini göndermedi.<br><button type="button" class="filtre-btn" style="margin-top:10px" onclick="veriCek()">Listeyi yenile</button></div>';
+        return;
+      }
+      el.innerHTML=scanLiveBannerHTML()+rows.map(listeKartHTML).join('')+'<div style="height:20px"></div>';
       return;
     }
-    el.innerHTML=scanLiveBannerHTML()+rows.map(listeKartHTML).join('')+'<div style="height:20px"></div>';
-    return;
-  }
-  const l=fList();
-  if(!l.length){
-    if(scanMeta?.isScanning){
-      const eta=scanMeta.etaSeconds?` ~${scanMeta.etaSeconds}s`:'';
-      el.innerHTML=`<div class="bos">Filtrede henüz sonuç yok<br>Tarama sürüyor (${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0})${eta}</div>`;
-    }else{
-      el.innerHTML=aktifF==='nadirhist'?'<div class="bos">Bu taramada geçmişte Nadir görülmüş coin yok<br>14 gün içinde 80+ olanlar burada listelenir</div>':'<div class="bos">Bu filtrede sinyal yok</div>';
+    const l=fList();
+    if(!l.length){
+      if(scanMeta?.isScanning){
+        const eta=scanMeta.etaSeconds?` ~${scanMeta.etaSeconds}s`:'';
+        el.innerHTML=`<div class="bos">Filtrede henüz sonuç yok<br>Tarama sürüyor (${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0})${eta}</div>`;
+      }else{
+        el.innerHTML=aktifF==='nadirhist'?'<div class="bos">Bu taramada geçmişte Nadir görülmüş coin yok<br>14 gün içinde 80+ olanlar burada listelenir</div>':'<div class="bos">Bu filtrede sinyal yok</div>';
+      }
+      return;
     }
-    return;
+    el.innerHTML=scanLiveBannerHTML()+l.map(kartHTML).join('')+'<div style="height:20px"></div>';
+  }catch(e){
+    console.error('renderSinyaller',e);
+    el.innerHTML='<div class="bos">Liste oluşturulurken hata oluştu (bir kart verisi bozuk olabilir).<br><button type="button" class="filtre-btn" style="margin-top:10px" onclick="veriCek()">Yeniden yükle</button></div>';
   }
-  el.innerHTML=scanLiveBannerHTML()+l.map(kartHTML).join('')+'<div style="height:20px"></div>';
+}
+function renderSinyaller(){
+  renderSinyallerSafe();
 }
 
 function openSignalModal(s){
