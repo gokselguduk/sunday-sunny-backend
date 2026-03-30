@@ -1,33 +1,33 @@
-/* Sunday/Sunny SW — v3 (2026-03-30): HTML/navigasyon no-store; güncellemelerin telefona yansıması için */
+/* Sunday/Sunny SW — v4: tüm kök/HTML GET no-store; iOS/PWA eski kabuk */
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
-/** Ana belge ve HTML isteklerinde önbelleği atla; PWA / Safari’de eski sürüm kalmasını azaltır */
-self.addEventListener('fetch', (event) => {
-  const req = event.request;
-  if (req.method !== 'GET') return;
+function wantsFreshDocument(req) {
+  if (req.method !== 'GET') return false;
   let url;
   try {
     url = new URL(req.url);
   } catch (_) {
-    return;
+    return false;
   }
-  if (url.origin !== self.location.origin) return;
-
-  const isNavigate = req.mode === 'navigate';
+  if (url.origin !== self.location.origin) return false;
+  if (req.mode === 'navigate') return true;
+  if (req.destination === 'document') return true;
   const accept = req.headers.get('accept') || '';
-  const isHtml = accept.includes('text/html');
+  if (!accept.includes('text/html')) return false;
+  const p = url.pathname;
+  return p === '/' || p === '' || /\.html$/i.test(p);
+}
 
-  if (isNavigate || (isHtml && (url.pathname === '/' || /\.html$/i.test(url.pathname)))) {
-    event.respondWith(
-      fetch(req, {
-        cache: 'no-store',
-        redirect: 'follow',
-        headers: req.headers
-      })
-    );
-  }
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (!wantsFreshDocument(req)) return;
+  event.respondWith(
+    fetch(req, { cache: 'no-store', redirect: 'follow' }).catch(() =>
+      fetch(req.url, { cache: 'reload', redirect: 'follow', mode: 'cors', credentials: 'same-origin' })
+    )
+  );
 });
 
 self.addEventListener('push', (event) => {

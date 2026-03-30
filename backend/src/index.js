@@ -45,7 +45,7 @@ app.use(
   express.static(path.join(__dirname, 'public'), {
     setHeaders(res, filePath) {
       const b = path.basename(filePath);
-      if (/\.html$/i.test(b) || b === 'sw.js') {
+      if (/\.html$/i.test(b) || b === 'sw.js' || /\.webmanifest$/i.test(b)) {
         res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate, private');
         res.setHeader('Pragma', 'no-cache');
       }
@@ -63,8 +63,16 @@ app.get('/health', (req, res) => {
 /** Canlı sürüm doğrulama (Railway otomatik env); önbellek yok */
 app.get('/api/build', (req, res) => {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
+  const commit =
+    process.env.RAILWAY_GIT_COMMIT_SHA ||
+    process.env.RAILWAY_GIT_COMMIT ||
+    process.env.VERCEL_GIT_COMMIT_SHA ||
+    process.env.GITHUB_SHA ||
+    null;
+  const shellVersion = process.env.APP_SHELL_VERSION || commit || null;
   res.json({
-    commit: process.env.RAILWAY_GIT_COMMIT_SHA || null,
+    commit,
+    shellVersion,
     service: process.env.RAILWAY_SERVICE_NAME || null,
     time: new Date().toISOString()
   });

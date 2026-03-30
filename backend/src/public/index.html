@@ -587,19 +587,44 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
 <script>
 const BASE_URL=window.location.origin;
+window.SS_SW_URL='/sw.js';
 (function setupServiceWorkerForFreshShell(){
   if(!('serviceWorker' in navigator))return;
-  function registerAndUpdate(){
-    navigator.serviceWorker.register('/sw.js',{scope:'/'}).then(function(reg){
+  async function checkDeployAndRegister(){
+    var swSuffix='';
+    try{
+      var br=await fetch(BASE_URL+'/api/build',{cache:'no-store'});
+      var j=await br.json();
+      var deployId=String(j.shellVersion||j.commit||'').trim();
+      if(deployId){
+        swSuffix='?v='+encodeURIComponent(deployId);
+        var prev=null;
+        try{prev=localStorage.getItem('ss_deploy_id');}catch(e){}
+        if(prev&&prev!==deployId){
+          try{localStorage.setItem('ss_deploy_id',deployId);}catch(e){}
+          var regs=await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(function(x){return x.unregister();}));
+          if('caches' in window){
+            var keys=await caches.keys();
+            await Promise.all(keys.map(function(k){return caches.delete(k);}));
+          }
+          window.location.reload();
+          return;
+        }
+        try{localStorage.setItem('ss_deploy_id',deployId);}catch(e){}
+      }
+    }catch(e){}
+    window.SS_SW_URL='/sw.js'+swSuffix;
+    return navigator.serviceWorker.register(window.SS_SW_URL,{scope:'/'}).then(function(reg){
       return reg.update().catch(function(){});
     }).catch(function(){});
   }
-  registerAndUpdate();
+  checkDeployAndRegister();
   document.addEventListener('visibilitychange',function(){
-    if(!document.hidden)registerAndUpdate();
+    if(!document.hidden)checkDeployAndRegister();
   });
   window.addEventListener('pageshow',function(ev){
-    if(ev.persisted)registerAndUpdate();
+    if(ev.persisted)checkDeployAndRegister();
   });
 })();
 function syncThemeToggleButton(){
@@ -1655,7 +1680,7 @@ async function togglePush(){
       alert('Sunucu geçerli bir VAPID public key döndürmedi.');
       return;
     }
-    const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/'});
+    const reg=await navigator.serviceWorker.register(window.SS_SW_URL||'/sw.js',{scope:'/'});
     try{await reg.update();}catch(e){}
     await navigator.serviceWorker.ready;
     const existing=await reg.pushManager.getSubscription();

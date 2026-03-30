@@ -2,7 +2,7 @@
   "name": "Sunday / Sunny",
   "short_name": "Sunny",
   "description": "Binance TR kripto tarama ve sinyal takibi",
-  "start_url": "/",
+  "start_url": "/?app=20260331",
   "display": "standalone",
   "background_color": "#080C14",
   "theme_color": "#080C14",
