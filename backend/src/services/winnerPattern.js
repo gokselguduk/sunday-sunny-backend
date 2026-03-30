@@ -2,6 +2,11 @@ const binance = require('./binance');
 
 const CACHE_MS = Number(process.env.WINNER_PATTERN_CACHE_MS) || 3 * 60 * 60 * 1000;
 const BETWEEN_MS = Number(process.env.WINNER_PATTERN_DELAY_MS) || 380;
+/** Günlük mum sayısı (Binance max 1500). Varsayılan ~2 yıl. */
+const LOOKBACK_DAYS = Math.min(
+  1500,
+  Math.max(180, Math.floor(Number(process.env.WINNER_PATTERN_LOOKBACK_DAYS) || 730))
+);
 
 let cache = { at: 0, payload: null, error: null };
 
@@ -43,10 +48,6 @@ function calcRSI(closes, period = 14) {
   return 100 - 100 / (1 + rs);
 }
 
-/**
- * Günlük mumlar üzerinde [startIdx..endIdx] (dahil) penceresi için metrikler.
- * endIdx >= startIdx, startIdx >= 1
- */
 function windowMetrics(candles, endIdx, winLen) {
   const startIdx = endIdx - winLen + 1;
   if (startIdx < 1 || endIdx >= candles.length) return null;
@@ -98,7 +99,7 @@ function findBestUpDayIndex(candles) {
   return { bestI, bestR };
 }
 
-function returnOverWindow(candles) {
+function returnOverFullSeries(candles) {
   if (candles.length < 2) return null;
   const a = candles[0].close;
   const b = candles[candles.length - 1].close;
@@ -131,10 +132,57 @@ function statsFromProfiles(profiles) {
   return { med, sig };
 }
 
+function buildPatternNarrativeTr(lookbackDays, sampleWinners, med) {
+  if (!med || sampleWinners < 5) {
+    return `Model, son ${lookbackDays} günlük USDT-M günlük mumları kullanır. Yeterli “yüksek getiri + ralli öncesi 5 gün” örneği oluşunca özet burada görünür.`;
+  }
+  const mr = (med.meanRet * 100).toFixed(3);
+  const cr = (med.cumRet * 100).toFixed(2);
+  const ra = (med.rangeAvg * 100).toFixed(2);
+  const vr = med.volRatio.toFixed(2);
+  const rsi = med.rsiEnd.toFixed(1);
+  return (
+    `Son **${lookbackDays} gün** içinde toplam getirisi en yüksek olan rallilerden **${sampleWinners}** pariteyi örnek aldık (liste olarak göstermiyoruz). ` +
+    `Her birinde, **tek gün en güçlü yükselişten hemen önceki 5 işlem günü** ortak bir “ön hazırlık” profili oluşturuyor.\n\n` +
+    `Bu profilin tipik özeti:\n` +
+    `• 5 günde günlük ortalama getiri ≈ **%${mr}**\n` +
+    `• Aynı 5 günde kümülatif fiyat hareketi ≈ **%${cr}**\n` +
+    `• Günlük mum aralığı (high−low) / fiyat ortalaması ≈ **%${ra}** (volatilite)\n` +
+    `• Son gün hacmi, önceki ~20 güne göre medyanın ≈ **${vr}×** katı\n` +
+    `• 5. gün sonu RSI ≈ **${rsi}**\n\n` +
+    `Aşağıdaki liste, **şu anki son 5 günü** bu profile sayısal olarak yakın olan paritelerdir. Yatırım tavsiyesi değildir.`
+  ).replace(/\*\*/g, '');
+}
+
+function buildMatchNotesTr(vec, med) {
+  if (!vec || !med) return ['Profil karşılaştırması özet benzerlik skorunda.'];
+  const notes = [];
+  const vC = vec.cumRet;
+  const mC = med.cumRet;
+  if (Number.isFinite(vC) && Number.isFinite(mC) && Math.abs(vC - mC) < Math.max(0.02, Math.abs(mC) * 0.45 + 0.01)) {
+    notes.push('Son 5 günün birikimli hareketi, tarihsel büyük ralli öncesi tipik banda yakın.');
+  }
+  if (vec.volRatio >= med.volRatio * 0.82) {
+    notes.push('Hacim (son güne göre 20g medyanı), kazanan öncesi profilde görülen ilgi artışına benziyor.');
+  }
+  if (vec.rsiEnd >= med.rsiEnd - 15 && vec.rsiEnd <= med.rsiEnd + 22) {
+    notes.push('RSI seviyesi, o dönem örneklerindeki “rally öncesi” RSI bandına yakın.');
+  }
+  if (vec.rangeAvg >= med.rangeAvg * 0.88) {
+    notes.push('Günlük mum genişliği (oynaklık), tarihsel örneklerle uyumlu veya daha hareketli.');
+  }
+  if (vec.meanRet >= med.meanRet - 0.002) {
+    notes.push('Günlük ortalama getiri, sıkışma sonrası hamle öncesi ortalamaya yakın.');
+  }
+  if (!notes.length) {
+    notes.push('Birden fazla gösterge birlikte medyan kazanan profiline yakın (benzerlik yüzdesi ile özetlenir).');
+  }
+  return notes;
+}
+
 /**
- * TR + USDT-M listesi üzerinde 100 günlük getiri sıralaması ve
- * büyük yükseliş gününden önceki 5 günlük davranışın medyan profili ile
- * güncel 5 günlük profili karşılaştırır.
+ * LOOKBACK_DAYS günlük seri: içeride en iyi ralli öncesi 5g profilinin medyanı;
+ * güncel son 5g ile benzerlik — top kazanan listesi API’de dönülmez (sadece model).
  */
 async function computeWinnerPatternAnalysis(forceRefresh) {
   const now = Date.now();
@@ -145,19 +193,19 @@ async function computeWinnerPatternAnalysis(forceRefresh) {
   const started = Date.now();
   const coins = await binance.getTRYCoins();
   const winLen = 5;
-  const limit = 102;
+  const limit = Math.min(1500, LOOKBACK_DAYS + 40);
 
   const bySymbol = new Map();
 
   for (const c of coins) {
     try {
       const candles = await binance.getOHLCV(c.pair, '1d', limit);
-      if (!candles || candles.length < 30) {
+      if (!candles || candles.length < 40) {
         await binance.bekle(BETWEEN_MS);
         continue;
       }
-      const ret100 = returnOverWindow(candles);
-      if (ret100 == null || !Number.isFinite(ret100)) {
+      const longReturnPct = returnOverFullSeries(candles);
+      if (longReturnPct == null || !Number.isFinite(longReturnPct)) {
         await binance.bekle(BETWEEN_MS);
         continue;
       }
@@ -167,12 +215,11 @@ async function computeWinnerPatternAnalysis(forceRefresh) {
         preProfile = windowMetrics(candles, bestI - 1, winLen);
       }
       const endNow = candles.length - 1;
-      const currentProfile =
-        endNow >= winLen ? windowMetrics(candles, endNow, winLen) : null;
+      const currentProfile = endNow >= winLen ? windowMetrics(candles, endNow, winLen) : null;
 
       bySymbol.set(c.pair, {
         candles,
-        return100d: ret100,
+        longReturnPct,
         bestDayReturn: bestR,
         preProfile,
         currentProfile
@@ -185,25 +232,24 @@ async function computeWinnerPatternAnalysis(forceRefresh) {
 
   const ranked = [...bySymbol.entries()]
     .map(([sym, d]) => ({ symbol: sym, ...d }))
-    .filter((d) => Number.isFinite(d.return100d))
-    .sort((a, b) => b.return100d - a.return100d);
+    .filter((d) => Number.isFinite(d.longReturnPct))
+    .sort((a, b) => b.longReturnPct - a.longReturnPct);
 
   const topN = 25;
-  const topGainers = ranked.slice(0, topN).map((d) => ({
-    symbol: d.symbol,
-    return100d: Math.round(d.return100d * 100) / 100,
-    bestDayReturnPct: Math.round((d.bestDayReturn || 0) * 10000) / 100
-  }));
-
   const winnerProfiles = ranked
     .slice(0, topN)
     .map((d) => d.preProfile)
     .filter(Boolean);
+
   let archetype = null;
   let peers = [];
+  let medRef = null;
+  let sigRef = null;
 
   if (winnerProfiles.length >= 5) {
     const { med, sig } = statsFromProfiles(winnerProfiles);
+    medRef = med;
+    sigRef = sig;
     archetype = {
       median: {
         meanRet: Math.round(med.meanRet * 10000) / 10000,
@@ -222,38 +268,43 @@ async function computeWinnerPatternAnalysis(forceRefresh) {
         return {
           symbol: d.symbol,
           similarity: sim,
-          return100d: Math.round(d.return100d * 100) / 100,
+          longReturnPct: Math.round(d.longReturnPct * 100) / 100,
           features: {
             meanRet5d: Math.round(d.currentProfile.meanRet * 10000) / 10000,
             cumRet5d: Math.round(d.currentProfile.cumRet * 10000) / 10000,
             rangeAvg: Math.round(d.currentProfile.rangeAvg * 10000) / 10000,
             volRatio: Math.round(d.currentProfile.volRatio * 100) / 100,
             rsi: Math.round(d.currentProfile.rsiEnd * 10) / 10
-          }
+          },
+          matchNotesTr: buildMatchNotesTr(d.currentProfile, med)
         };
       })
       .filter(Boolean)
       .sort((a, b) => b.similarity - a.similarity);
   }
 
-  const topGainerSet = new Set(topGainers.map((g) => g.symbol));
+  const topGainerSet = new Set(ranked.slice(0, topN).map((d) => d.symbol));
   const similarNow = peers
     .filter((p) => !topGainerSet.has(p.symbol))
     .filter((p) => p.similarity >= 55)
-    .slice(0, 35);
+    .slice(0, 40);
+
+  const patternNarrativeTr = buildPatternNarrativeTr(LOOKBACK_DAYS, archetype?.sampleWinners || 0, medRef);
 
   const payload = {
     ok: true,
     cached: false,
     updatedAt: new Date().toISOString(),
-    days: 100,
+    lookbackDays: LOOKBACK_DAYS,
     symbolCount: bySymbol.size,
     durationMs: Date.now() - started,
-    topGainers,
+    patternNarrativeTr,
+    methodNoteTr:
+      `Arka planda son ${LOOKBACK_DAYS} günlük toplam getiriye göre üst dilim seçilir; “kazanan ralli öncesi 5 gün” medyanı çıkarılır. ` +
+      'Yüksek getiren paritelerin isim listesi istemciye gönderilmez; yalnızca şu an bu profile benzeyenler listelenir.',
     archetype,
     similarNow,
-    note:
-      'Üst sıradaki coinler son ~100 gündeki toplam USDT-M günlük getiriye göre sıralanır. Benzerlik, her birinde en güçlü yükseliş gününden *önceki* 5 günün ortak profili ile şu anki son 5 gününü karşılaştırır; yatırım tavsiyesi değildir.'
+    note: 'Yatırım tavsiyesi değildir. Geçmiş performans geleceği göstermez.'
   };
 
   cache = { at: Date.now(), payload, error: null };

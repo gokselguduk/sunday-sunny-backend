@@ -206,8 +206,8 @@ app.get('/api/coin/unified/:symbol', async (req, res) => {
 });
 
 /**
- * Son ~100 gün USDT-M günlük getiri liderleri + büyük ralli öncesi 5g profiline benzeyen güncel coinler.
- * ?refresh=1 ilk sefer veya önbelleği yenilemek için (TR listesi kadar parite; süre: ~1dk+).
+ * ~2 yıl günlük mum: üst getirilerden “ralli öncesi 5g” medyan profili; yalnızca şu an buna benzeyen pariteler döner (kazanan listesi istemciye gönderilmez).
+ * ?refresh=1 önbellek yenileme (TR listesi; süre birkaç dk).
  */
 app.get('/api/analytics/winner-pattern', async (req, res) => {
   const refresh = req.query.refresh === '1' || req.query.refresh === 'true';

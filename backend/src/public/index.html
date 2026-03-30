@@ -293,6 +293,13 @@ html[data-theme="light"] .kart{box-shadow:0 2px 10px rgba(15,30,60,0.06)}
 .gelir-analiz li{margin-bottom:7px;padding-left:2px}
 .gelir-analiz li::marker{color:var(--accent)}
 .gelir-card-foot{font-size:10px;color:var(--text3);padding:9px 14px;background:var(--bg2);text-align:center;letter-spacing:0.2px}
+.gelir-narrative-box{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.gelir-narrative-box .gelir-narrative{font-size:12px;line-height:1.6;color:var(--text2);white-space:pre-wrap;word-break:break-word}
+.gelir-method{font-size:10px;color:var(--text3);line-height:1.45;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)}
+.gelir-coin-sim{font-family:'Space Mono',monospace;font-size:13px;font-weight:800;color:var(--accent)}
+.gelir-coin-sub{font-size:11px;color:var(--text3);line-height:1.45;margin-top:8px}
+.gelir-coin-sub strong{color:var(--text1)}
+.gelir-tech-details summary{user-select:none}
 .btc-page{padding:12px 16px 24px;max-width:560px;margin:0 auto}
 .btc-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .btc-live{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid var(--border);background:var(--bg2);color:var(--text3)}
@@ -461,7 +468,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
     </div>
     <div class="section-hdr">En İyi Fırsatlar</div>
     <p style="font-size:10px;color:var(--text3);padding:0 16px 6px;line-height:1.4;margin:0">Üstteki filtre şeridi, <strong>Sinyaller</strong> sekmesinde seçtiğin Nadir / Güçlü vb. ile aynıdır.</p>
-    <div class="dash-gelir-link">💎 Son ~100 günde en yüksek getiri ve benzer örüntü analizi: <button type="button" onclick="goPage('gelir')">Gelir+</button></div>
+    <div class="dash-gelir-link">💎 ~2 yıllık ralli öncesi profil — şu an aynı yapıda olanlar: <button type="button" onclick="goPage('gelir')">Gelir+</button></div>
     <div style="padding:0 16px" id="top-list"><div class="loading"><div class="spinner"></div></div></div>
   </div>
 
@@ -487,10 +494,10 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
   </div>
 
   <div class="page" id="page-gelir">
-    <div class="section-hdr">Yüksek getiri analizi</div>
+    <div class="section-hdr">Gelir+ · Ralli öncesi profil</div>
     <div style="padding:0 16px 10px">
-      <p style="font-size:12px;color:var(--text2);line-height:1.55">Binance USDT-M günlük mumlara göre son ~100 günde <strong>en çok yükselen</strong> pariteler ve büyük ralli öncesi davranış profiline <strong>benzeyen</strong> güncel coinler. Yatırım tavsiyesi değildir.</p>
-      <p style="font-size:10px;color:var(--text3);line-height:1.5;margin-top:8px">İlk kez veya önbellek boşsa <strong>Hesapla</strong> birkaç dakika sürebilir (TR listesi kadar parite).</p>
+      <p style="font-size:12px;color:var(--text2);line-height:1.55">Yaklaşık <strong>2 yıllık</strong> günlük veride, en yüksek toplam getiri yapan hareketlerin <strong>tek günlük en güçlü sıçramadan önceki 5 günü</strong> analiz edilir; bu “ön hazırlık” profilinin özeti metin olarak gösterilir. <strong>Geçmiş kazanan listesi gösterilmez.</strong> Sadece <strong>şu anki son 5 günü</strong> bu profile benzeyen pariteler listelenir; satıra dokununca birleşik analiz açılır. Yatırım tavsiyesi değildir.</p>
+      <p style="font-size:10px;color:var(--text3);line-height:1.5;margin-top:8px"><strong>Hesapla / yenile</strong> tüm TR USDT-M pariteleri için günlük mum çeker; liste büyükse birkaç dakika sürebilir.</p>
     </div>
     <div style="padding:0 16px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <button type="button" class="filtre-btn" id="gelir-wp-btn" onclick="gelirWinnerPattern(true)">Hesapla / yenile</button>
@@ -503,7 +510,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
   <div class="page" id="page-analiz">
     <div class="analiz-page">
       <div class="section-hdr">Analiz merkezi</div>
-      <p style="font-size:11px;color:var(--text3);padding:0 0 12px;line-height:1.5">Seçtiğiniz paritenin motor katmanlarını tek senaryoda birleştirirsiniz. Yüksek getiri listesi için <button type="button" onclick="goPage('gelir')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Gelir+</button>. Yatırım tavsiyesi değildir.</p>
+      <p style="font-size:11px;color:var(--text3);padding:0 0 12px;line-height:1.5">Seçtiğiniz paritenin motor katmanlarını tek senaryoda birleştirirsiniz. Ralli öncesi profil eşleşmeleri için <button type="button" onclick="goPage('gelir')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Gelir+</button>. Yatırım tavsiyesi değildir.</p>
       <div id="analiz-panel-parite">
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
           <input class="arama-input" id="analiz-parite-input" placeholder="Sembol (örn. BTC)" style="flex:1;min-width:140px;margin:0" maxlength="16">
@@ -1506,6 +1513,17 @@ function analizPariteTarama(){
     })
     .catch(function(){flashAppToast('Tarama isteği başarısız');});
 }
+function gelirDetayAc(rawBase){
+  var b=String(rawBase||'').replace(/USDT$/i,'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(!b)return;
+  goPage('analiz');
+  setTimeout(function(){
+    var inp=document.getElementById('analiz-parite-input');
+    if(inp)inp.value=b;
+    if(typeof analizPariteYukle==='function')analizPariteYukle();
+    window.scrollTo(0,0);
+  },90);
+}
 function gelirWinnerPattern(refresh){
   var meta=document.getElementById('gelir-wp-meta-txt');
   var out=document.getElementById('gelir-wp-out');
@@ -1520,7 +1538,7 @@ function gelirWinnerPattern(refresh){
       if(j.needsRefresh){
         if(meta)meta.textContent='Önbellek yok';
         if(note)note.textContent=j.message||'';
-        if(out&&!refresh)out.innerHTML='<p style="font-size:12px;color:var(--text3)">Önbellek boş. “Hesapla / yenile” ile analizi başlatın.</p>';
+        if(out&&!refresh)out.innerHTML='<p style="font-size:12px;color:var(--text3)">Önbellek boş. “Hesapla / yenile” ile analizi başlatın (2 yıllık pencere, birkaç dakika sürebilir).</p>';
         return;
       }
       if(j.ok===false){
@@ -1528,25 +1546,46 @@ function gelirWinnerPattern(refresh){
         return;
       }
       if(meta){
-        meta.textContent=j.cached?'Önbellek · '+new Date(j.updatedAt).toLocaleString('tr-TR'):('Yeni · '+new Date(j.updatedAt).toLocaleString('tr-TR'));
+        meta.textContent=(j.cached?'Önbellek · ':'Yeni · ')+new Date(j.updatedAt).toLocaleString('tr-TR')+(j.lookbackDays?' · '+j.lookbackDays+'g pencere':'');
       }
       if(note)note.textContent=j.note||'';
-      var rowsTop=(j.topGainers||[]).map(function(g){
-        return'<tr><td><strong>'+String(g.symbol||'').replace(/USDT$/,'')+'</strong></td><td style="color:var(--green)">+'+g.return100d+'%</td><td>'+(g.bestDayReturnPct!=null?String(g.bestDayReturnPct)+'%':'—')+'</td></tr>';
-      }).join('');
+      var lb=j.lookbackDays||730;
+      var narr=String(j.patternNarrativeTr||j.note||'Özet hazırlanıyor…');
+      var method=String(j.methodNoteTr||'');
       var arch=j.archetype;
-      var archHtml=arch&&arch.median?('<div class="unified-sec" style="margin-top:12px"><div class="unified-sec-h">Kazanan öncesi profil (medyan, '+arch.sampleWinners+' örnek)</div>5g ort. günlük getiri: '+arch.median.meanRet+' · 5g kümülatif: '+arch.median.cumRet+' · ort. günlük aralık %: '+arch.median.rangeAvg+' · hacim oranı: '+arch.median.volRatio+'x · RSI: '+arch.median.rsiEnd+'</div>'):'<p style="font-size:11px;color:var(--text3)">Yeterli örnek yok (kazanan profili hesaplanamadı).</p>';
-      var rowsSim=(j.similarNow||[]).map(function(p){
+      var archTech='';
+      if(arch&&arch.median){
+        var m=arch.median;
+        archTech='<details class="gelir-tech-details" style="margin-bottom:14px"><summary style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:600">Teknik medyan (kazanan ralli öncesi 5 gün)</summary>'+
+          '<p style="font-size:11px;color:var(--text3);margin:10px 0 0;line-height:1.55">Örnek sayısı: '+arch.sampleWinners+' · meanRet '+m.meanRet+' · cumRet '+m.cumRet+' · rangeAvg '+m.rangeAvg+' · vol× '+m.volRatio+' · RSI '+m.rsiEnd+'</p></details>';
+      }else{
+        archTech='<p style="font-size:11px;color:var(--text3);margin-bottom:12px">Henüz yeterli örnek yok; yeniden hesaplamayı deneyin.</p>';
+      }
+      var sim=j.similarNow||[];
+      var cards=sim.map(function(p){
+        var base=String(p.symbol||'').replace(/USDT$/i,'');
+        var safeBase=base.replace(/[^A-Z0-9]/g,'');
+        var ret=p.longReturnPct!=null?p.longReturnPct:(p.return100d!=null?p.return100d:'—');
         var f=p.features||{};
-        return'<tr><td><strong>'+String(p.symbol||'').replace(/USDT$/,'')+'</strong></td><td class="wp-sim">'+p.similarity+'%</td><td>'+p.return100d+'%</td><td style="font-size:10px;color:var(--text3)">R'+f.rsi+' V'+f.volRatio+'</td></tr>';
+        var notes=(p.matchNotesTr||[]).slice(0,5).map(function(n){return'<li>'+escU(n)+'</li>';}).join('');
+        if(!notes)notes='<li>Profil benzerliği skorunda özetlenir.</li>';
+        return'<div class="gelir-card" role="button" tabindex="0" onclick="gelirDetayAc(\''+safeBase+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();gelirDetayAc(\''+safeBase+'\')}">'+
+          '<div class="gelir-card-top">'+
+            '<div><div style="font-family:\'Space Mono\',monospace;font-size:17px;font-weight:800">'+escU(base)+'</div>'+
+            '<div class="gelir-coin-sub">Son '+lb+' gün toplam getiri: <strong>'+ret+'%</strong> · 5g RSI '+escU(String(f.rsi!=null?f.rsi:'—'))+' · hacim oranı '+escU(String(f.volRatio!=null?f.volRatio:'—'))+'×</div></div>'+
+            '<span class="gelir-coin-sim">'+p.similarity+'%</span></div>'+
+          '<ul class="gelir-analiz">'+notes+'</ul>'+
+          '<div class="gelir-card-foot">Tam analiz için dokun → Analiz merkezi</div></div>';
       }).join('');
-      out.innerHTML='<div class="section-hdr" style="margin-top:4px;font-size:12px">Son ~100g en çok yükselenler (USDT-M günlük)</div>'+
-        '<table class="wp-table"><thead><tr><th>Parite</th><th>100g %</th><th>En güçlü gün %</th></tr></thead><tbody>'+(rowsTop||'<tr><td colspan="3">Veri yok</td></tr>')+'</tbody></table>'+
-        archHtml+
-        '<div class="section-hdr" style="margin-top:16px;font-size:12px">Şu an benzer davranış (ralli öncesi profiline yakın)</div>'+
-        '<p style="font-size:10px;color:var(--text3);line-height:1.45">Üst sıradaki kazananlar hariç; benzerlik ≥55%.</p>'+
-        '<table class="wp-table"><thead><tr><th>Parite</th><th>Benzerlik</th><th>100g %</th><th>Özet</th></tr></thead><tbody>'+(rowsSim||'<tr><td colspan="4">Eşleşme yok veya veri eksik</td></tr>')+'</tbody></table>'+
-        '<p style="font-size:10px;color:var(--text3);margin-top:10px">Süre: '+(j.durationMs!=null?Math.round(j.durationMs/1000)+' sn':'—')+' · Parite: '+(j.symbolCount||'—')+'</p>';
+      if(!cards){
+        cards='<p style="font-size:12px;color:var(--text3);line-height:1.55">Şu an bu profile yakın (benzerlik ≥%55) parite bulunamadı veya tarama henüz tamamlanmadı. Filtre: geçmiş üst getiriler listesindekiler çıkarılır.</p>';
+      }
+      out.innerHTML='<div class="gelir-narrative-box"><div class="gelir-narrative">'+escU(narr)+'</div>'+
+        (method?'<p class="gelir-method">'+escU(method)+'</p>':'')+'</div>'+
+        archTech+
+        '<div class="section-hdr" style="font-size:12px;margin-bottom:8px">Şu an aynı gelişim profiline yakın pariteler</div>'+
+        cards+
+        '<p style="font-size:10px;color:var(--text3);margin-top:14px;line-height:1.45">İşlem süresi: '+(j.durationMs!=null?Math.round(j.durationMs/1000)+' sn':'—')+' · İşlenen parite: '+(j.symbolCount||'—')+'</p>';
     })
     .catch(function(){
       if(refresh&&btn){btn.disabled=false;btn.textContent='Hesapla / yenile';}
