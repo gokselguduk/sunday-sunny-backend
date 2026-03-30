@@ -63,6 +63,13 @@ async function saveSignal(signal) {
   try {
     const r   = getRedis();
     const key = `signal:${signal.symbol}:${Date.now()}`;
+    const sitParts = partsFromSignalDetail({
+      firsatSkoru: signal.firsatSkoru,
+      firsatSkor: signal.firsatSkor,
+      regime: signal.regime,
+      divergence: signal.divergence,
+      score: signal.score
+    });
     const data = JSON.stringify({
       symbol:        signal.symbol,
       score:         signal.score,
@@ -77,6 +84,8 @@ async function saveSignal(signal) {
       patterns:      signal.candlePatterns?.patterns?.map(p => p.name),
       divergence:    signal.divergence,
       regime:        signal.regime?.type,
+      situationKeyExact: sitParts ? keyExact(sitParts) : null,
+      situationKeyRelaxed: sitParts ? keyRelaxed(sitParts) : null,
       timestamp:     new Date().toISOString(),
       result:        'BEKLIYOR'
     });
@@ -429,6 +438,263 @@ async function setAlertMeta(key, value) {
   }
 }
 
+// ── DURUM PROFİLİ → GEÇMİŞ BAŞARI (Redis signals:history) ─────────────
+
+function firsatBand(fs) {
+  const n = Number(fs);
+  if (!Number.isFinite(n)) return 'FX';
+  if (n >= 80) return 'F80';
+  if (n >= 65) return 'F65';
+  if (n >= 50) return 'F50';
+  if (n >= 35) return 'F35';
+  return 'FLO';
+}
+
+function scoreTier(sc) {
+  const n = Number(sc);
+  if (!Number.isFinite(n)) return 'SX';
+  if (n >= 14) return 'S3';
+  if (n >= 9) return 'S2';
+  if (n >= 5) return 'S1';
+  return 'S0';
+}
+
+function divClass(d) {
+  if (!d || typeof d !== 'object') return 'DN';
+  if (d.bullish) return 'DB';
+  if (d.hidden_bullish) return 'DH';
+  if (d.bearish) return 'RB';
+  if (d.hidden_bearish) return 'RH';
+  return 'DN';
+}
+
+function regimeNorm(r) {
+  const s = String(r == null ? 'UNK' : r).replace(/\|/g, '').trim().slice(0, 24);
+  return s || 'UNK';
+}
+
+function partsFromSignalDetail(s) {
+  if (!s || typeof s !== 'object') return null;
+  const fs = s.firsatSkoru?.skor ?? s.firsatSkor;
+  const reg = s.regime?.type ?? s.regime;
+  return {
+    band: firsatBand(fs),
+    regime: regimeNorm(reg),
+    div: divClass(s.divergence),
+    stk: scoreTier(s.score)
+  };
+}
+
+function partsFromHistoryRow(h) {
+  if (!h || typeof h !== 'object') return null;
+  return {
+    band: firsatBand(h.firsatSkor),
+    regime: regimeNorm(h.regime),
+    div: divClass(h.divergence),
+    stk: scoreTier(h.score)
+  };
+}
+
+function keyExact(p) {
+  if (!p) return '';
+  return `${p.band}|${p.regime}|${p.div}|${p.stk}`;
+}
+
+function keyRelaxed(p) {
+  if (!p) return '';
+  return `${p.band}|${p.regime}|${p.div}`;
+}
+
+function parseSymbolFromHistoryKey(key) {
+  const m = String(key || '').match(/^signal:([^:]+):/);
+  return m ? m[1].toUpperCase() : null;
+}
+
+function emptyBucket() {
+  return {
+    matched: 0,
+    pending: 0,
+    resolved: 0,
+    success: 0,
+    fail: 0,
+    manuel: 0
+  };
+}
+
+function bumpBucket(bucket, h) {
+  bucket.matched += 1;
+  const res = h.result;
+  if (res === 'BEKLIYOR') {
+    bucket.pending += 1;
+    return;
+  }
+  if (res === 'MANUEL') {
+    bucket.manuel += 1;
+    return;
+  }
+  if (!['TP1', 'TP2', 'TP3', 'SL'].includes(res)) return;
+  bucket.resolved += 1;
+  if (res === 'SL') bucket.fail += 1;
+  else bucket.success += 1;
+}
+
+function finalizeBucket(b) {
+  const rate =
+    b.resolved > 0 ? parseFloat(((b.success / b.resolved) * 100).toFixed(1)) : null;
+  return {
+    ...b,
+    successRatePct: rate
+  };
+}
+
+function describeSituationTr(p) {
+  if (!p) return '';
+  const bandL = {
+    F80: 'Fırsat 80+',
+    F65: 'Fırsat 65–79',
+    F50: 'Fırsat 50–64',
+    F35: 'Fırsat 35–49',
+    FLO: 'Fırsat 35 altı',
+    FX: 'Fırsat bilinmiyor'
+  };
+  const divL = {
+    DB: 'Bullish uyumsuzluk',
+    DH: 'Gizli bullish uyumsuzluk',
+    RB: 'Bearish uyumsuzluk',
+    RH: 'Gizli bearish uyumsuzluk',
+    DN: 'Belirgin uyumsuzluk yok'
+  };
+  const stkL = {
+    S3: 'Net skor 14+',
+    S2: 'Net skor 9–13',
+    S1: 'Net skor 5–8',
+    S0: 'Net skor 5 altı',
+    SX: 'Skor bilinmiyor'
+  };
+  return [
+    bandL[p.band] || p.band,
+    `rejim: ${p.regime}`,
+    divL[p.div] || p.div,
+    stkL[p.stk] || p.stk
+  ].join(' · ');
+}
+
+/**
+ * Kayıtlı sinyal geçmişinde (tüm pariteler) aynı “durum profili”ne yakın kayıtları sayar.
+ * Eski kayıtlarda MTF / birleşik senaryo tutulmadığı için eşleşme: fırsat bandı + rejim + uyumsuzluk sınıfı + skor kademesi.
+ */
+async function getSituationOutcomeStats(signalDetail, opts = {}) {
+  const maxItems = Number.isFinite(opts.historyLimit)
+    ? Math.max(100, Math.min(opts.historyLimit, 8000))
+    : Math.max(200, Math.min(parseInt(process.env.SITUATION_STATS_HISTORY_LIMIT, 10) || 3500, 8000));
+
+  const parts = partsFromSignalDetail(signalDetail);
+  if (!parts) {
+    return {
+      ok: false,
+      reason: 'NO_SIGNAL_DETAIL',
+      note: 'Analiz gövdesi yok; durum istatistiği hesaplanamadı.'
+    };
+  }
+
+  const kEx = keyExact(parts);
+  const kRel = keyRelaxed(parts);
+  const sym = String(signalDetail.symbol || '')
+    .toUpperCase()
+    .replace(/\s+/g, '');
+  const symNorm = sym.endsWith('USDT') ? sym : sym ? `${sym}USDT` : '';
+
+  const gEx = emptyBucket();
+  const gRel = emptyBucket();
+  const sEx = emptyBucket();
+  const sRel = emptyBucket();
+
+  try {
+    const r = getRedis();
+    const keys = await r.lrange('signals:history', 0, maxItems);
+
+    for (const redisKey of keys) {
+      const raw = await r.get(redisKey);
+      if (!raw) continue;
+      let h;
+      try {
+        h = JSON.parse(raw);
+      } catch (_) {
+        continue;
+      }
+      const hp = partsFromHistoryRow(h);
+      if (!hp) continue;
+
+      const exHist = h.situationKeyExact || keyExact(hp);
+      const relHist = h.situationKeyRelaxed || keyRelaxed(hp);
+
+      const rowSym = parseSymbolFromHistoryKey(redisKey);
+      const sameCoin = symNorm && rowSym === symNorm;
+
+      if (exHist === kEx) {
+        bumpBucket(gEx, h);
+        if (sameCoin) bumpBucket(sEx, h);
+      }
+      if (relHist === kRel) {
+        bumpBucket(gRel, h);
+        if (sameCoin) bumpBucket(sRel, h);
+      }
+    }
+
+    const useExactPrimary = gEx.resolved >= 5;
+    const primaryBucket = finalizeBucket(useExactPrimary ? gEx : gRel);
+    const primaryLabel = useExactPrimary
+      ? 'Tam profil (fırsat bandı + rejim + uyumsuzluk + net skor kademesi)'
+      : 'Genişletilmiş profil (aynı fırsat bandı, rejim ve uyumsuzluk; skor kademesi dahil değil)';
+
+    let primarySummaryTr;
+    if (primaryBucket.resolved > 0) {
+      primarySummaryTr = `Bu profile yakın ${primaryBucket.resolved} kapanmış sinyal: ${primaryBucket.success} başarılı (TP1–3), ${primaryBucket.fail} stop — başarı oranı %${primaryBucket.successRatePct}.`;
+    } else if (primaryBucket.matched > 0) {
+      primarySummaryTr = `Eşleşen ${primaryBucket.matched} kayıt var; henüz yeterli TP/SL kapanışı yok (${primaryBucket.pending} bekliyor${primaryBucket.manuel ? `, ${primaryBucket.manuel} manuel` : ''}).`;
+    } else {
+      primarySummaryTr = 'Geçmiş listede bu profile yakın kayıt bulunamadı (örneklem yok).';
+    }
+
+    return {
+      ok: true,
+      historyScanned: keys.length,
+      profile: {
+        keyExact: kEx,
+        keyRelaxed: kRel,
+        parts,
+        descriptionTr: describeSituationTr(parts)
+      },
+      note:
+        'Geçmiş kayıtlar yalnızca tahtaya düşen sinyallerden oluşur; BEKLIYOR ve MANUEL sonuçlar başarı oranına dahil edilmez. Küçük örneklemde oran anlamlı olmayabilir; geleceği garanti etmez.',
+      global: {
+        exact: finalizeBucket(gEx),
+        relaxed: finalizeBucket(gRel)
+      },
+      sameSymbol: symNorm
+        ? {
+            symbol: symNorm,
+            exact: finalizeBucket(sEx),
+            relaxed: finalizeBucket(sRel)
+          }
+        : null,
+      primary: {
+        mode: useExactPrimary ? 'exact' : 'relaxed',
+        label: primaryLabel,
+        stats: primaryBucket,
+        summaryTr: primarySummaryTr
+      }
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      reason: 'READ_ERROR',
+      error: err.message,
+      note: 'Geçmiş okunamadı.'
+    };
+  }
+}
+
 module.exports = {
   saveSignal,
   updateSignalResult,
@@ -445,5 +711,6 @@ module.exports = {
   getNadirTrail,
   getStorageInfo,
   getAlertMeta,
-  setAlertMeta
+  setAlertMeta,
+  getSituationOutcomeStats
 };

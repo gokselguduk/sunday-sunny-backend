@@ -1777,6 +1777,27 @@ function renderUnifiedHTML(u){
   var diagBlock=diag?('<div class="unified-sec"><div class="unified-sec-h">Teşhis (volatilite / likidite / trend)</div>Vol: '+escU(diag.volatility&&diag.volatility.level)+' · Likidite '+((diag.liquidity&&diag.liquidity.score)!=null?diag.liquidity.score:'—')+'/100 · Trend sağlığı '+((diag.trendHealth&&diag.trendHealth.score)!=null?diag.trendHealth.score:'—')+'/100</div>'):'';
   var learn=sec.learning;
   var learnBlock=learn&&learn.total?('<div class="unified-sec"><div class="unified-sec-h">Geçmiş sinyal istatistiği (Redis)</div>'+learn.total+' kayıt · başarı %'+(learn.successRate!=null?escU(learn.successRate):'—')+' (TP / SL sonuçları)</div>'):'';
+  var st=u.situationStats;
+  var stBlock='';
+  if(st&&st.ok){
+    var pr=st.primary||{};
+    var gex=st.global&&st.global.exact;
+    var grl=st.global&&st.global.relaxed;
+    stBlock='<div class="unified-sec" style="border-color:rgba(123,92,255,0.35)"><div class="unified-sec-h">Geçmişte benzer durum profili</div>'+
+      '<p style="font-size:11px;color:var(--text2);line-height:1.5;margin-bottom:8px">'+escU((st.profile&&st.profile.descriptionTr)||'')+'</p>'+
+      '<p style="font-size:12px;font-weight:600;color:var(--text1);margin-bottom:6px;line-height:1.45">'+escU(pr.summaryTr||'')+'</p>'+
+      '<div style="font-size:10px;color:var(--text3);margin-bottom:8px">'+escU(pr.label||'')+' · Listede taranan: '+(st.historyScanned||0)+' anahtar</div>'+
+      (gex?'<div style="font-size:11px;color:var(--text2);line-height:1.5"><strong>Tüm pariteler · tam profil:</strong> '+gex.matched+' eşleşme, '+gex.resolved+' kapanmış (TP/SL), '+gex.success+' TP, '+gex.fail+' SL'+(gex.successRatePct!=null?', oran %'+gex.successRatePct:'')+'</div>':'')+
+      (grl?'<div style="font-size:11px;color:var(--text2);line-height:1.5;margin-top:4px"><strong>Tüm pariteler · geniş profil:</strong> '+grl.matched+' eşleşme, '+grl.resolved+' kapanmış, '+grl.success+' TP, '+grl.fail+' SL'+(grl.successRatePct!=null?', oran %'+grl.successRatePct:'')+'</div>':'');
+    if(st.sameSymbol&&st.sameSymbol.symbol){
+      var sse=st.sameSymbol.exact;
+      var ssr=st.sameSymbol.relaxed;
+      stBlock+='<div style="margin-top:10px;padding-top:8px;border-top:1px dashed var(--border);font-size:11px;color:var(--accent);line-height:1.5"><strong>Sadece '+escU(st.sameSymbol.symbol.replace(/USDT$/,''))+':</strong> tam profil '+sse.resolved+' kapanmış'+(sse.successRatePct!=null?' · başarı %'+sse.successRatePct:'')+' · geniş profil '+ssr.resolved+' kapanmış'+(ssr.successRatePct!=null?' · başarı %'+ssr.successRatePct:'')+'</div>';
+    }
+    stBlock+='<p style="font-size:9px;color:var(--text3);margin-top:8px;line-height:1.45">'+escU(st.note||'')+'</p></div>';
+  }else if(st&&!st.ok){
+    stBlock='<div class="unified-sec"><div class="unified-sec-h">Geçmiş durum istatistiği</div><p style="font-size:11px;color:var(--text3)">'+(st.note?escU(st.note):(st.error?escU(st.error):'—'))+'</p></div>';
+  }
   var ver='<div style="font-size:9px;color:var(--text3);margin-bottom:10px">Şema v'+escU(u.schemaVersion||'?')+' · Durum: '+escU(lifeLbl)+(u.onBoard!==undefined?' · Tahta: '+(u.onBoard?'evet':'hayır'):'')+(hf?'<br>Bayraklar: '+escU(hf):'')+'</div>';
   var staleBanner=stale?'<div style="font-size:11px;color:var(--amber);padding:8px 10px;border-radius:10px;border:1px solid rgba(255,179,0,0.35);margin-bottom:10px;background:rgba(255,179,0,0.06)">Veri bayat sayılabilir; tam tarama veya tek coin yenileme önerilir.</div>':'';
   var lead=u.narrativeLead||'';
@@ -1791,7 +1812,7 @@ function renderUnifiedHTML(u){
     '<div class="unified-sec"><div class="unified-sec-h">Tazelik</div>'+escU(freshLine)+'</div>'+
     '<div class="unified-sec"><div class="unified-sec-h">MTF</div>'+mtfLine+'</div>'+
     '<div class="unified-sec"><div class="unified-sec-h">Fırsat &amp; runner</div>'+firsatLine+' · '+runLine+'</div>'+
-    diagBlock+learnBlock+
+    diagBlock+learnBlock+stBlock+
     (sec.horizon?'<div class="unified-sec"><div class="unified-sec-h">Hedef süre</div>'+escU(sec.horizon.label||sec.horizon.summary||'—')+'</div>':'')+
     aiBlock+
     (!u.hasFullDetail?'<p style="font-size:11px;color:var(--amber);margin-top:12px">Tam gövde yok; liste özeti veya tarama sonrası tekrar deneyin.</p>':'');

@@ -16,6 +16,25 @@ const pushAlerts = require('./services/pushAlerts');
 const coinUnified = require('./services/coinUnified');
 const winnerPattern = require('./services/winnerPattern');
 
+async function buildUnifiedPayloadWithStats(snap, board, ctx, btc) {
+  const body = coinUnified.buildUnifiedFromSnapshot(snap, {
+    boardSignal: board,
+    marketBrief: coinUnified.slimMarketContext(ctx),
+    btcBrief: coinUnified.slimBtc(btc)
+  });
+  if (body.ok) {
+    const det = coinUnified.pickDetail(snap);
+    if (det) {
+      try {
+        body.situationStats = await memory.getSituationOutcomeStats(det);
+      } catch (e) {
+        body.situationStats = { ok: false, reason: 'STATS_ERROR', error: e.message };
+      }
+    }
+  }
+  return body;
+}
+
 const app    = express();
 const server = http.createServer(app);
 const io     = new socketio.Server(server, { cors: { origin: '*' } });
@@ -130,13 +149,7 @@ app.get('/api/coin/unified/:symbol', async (req, res) => {
     const board = scanner.getBoardSignal(req.params.symbol);
     const ctx = await marketContext.getMarketContext(false);
     const btc = btcPulse.getBtcSnapshot();
-    res.json(
-      coinUnified.buildUnifiedFromSnapshot(snap, {
-        boardSignal: board,
-        marketBrief: coinUnified.slimMarketContext(ctx),
-        btcBrief: coinUnified.slimBtc(btc)
-      })
-    );
+    res.json(await buildUnifiedPayloadWithStats(snap, board, ctx, btc));
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message || 'unified hatası' });
   }
@@ -286,13 +299,7 @@ scanner.subscribe(async (data) => {
       const board = scanner.getBoardSignal(data.refreshed);
       const ctx = await marketContext.getMarketContext(false);
       const btc = btcPulse.getBtcSnapshot();
-      payload.coinUnified = snap
-        ? coinUnified.buildUnifiedFromSnapshot(snap, {
-            boardSignal: board,
-            marketBrief: coinUnified.slimMarketContext(ctx),
-            btcBrief: coinUnified.slimBtc(btc)
-          })
-        : null;
+      payload.coinUnified = snap ? await buildUnifiedPayloadWithStats(snap, board, ctx, btc) : null;
     } catch (e) {
       payload.coinUnified = null;
       payload.coinUnifiedError = e.message;
