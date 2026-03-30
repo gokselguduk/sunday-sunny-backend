@@ -13,6 +13,8 @@ const binance = require('./services/binance');
 const btcPulse = require('./services/btcPulse');
 const marketContext = require('./services/marketContext');
 const pushAlerts = require('./services/pushAlerts');
+const coinUnified = require('./services/coinUnified');
+const winnerPattern = require('./services/winnerPattern');
 
 const app    = express();
 const server = http.createServer(app);
@@ -115,6 +117,37 @@ app.get('/api/coin/snapshot/:symbol', (req, res) => {
   const snap = scanner.getListSnapshot(req.params.symbol);
   if (!snap) return res.status(404).json({ ok: false, error: 'Bu parite için henüz tarama özeti yok' });
   res.json({ ok: true, snapshot: snap });
+});
+
+/** Tek paritede MTF, fırsat, runner, FVG, AI vb. birleşik özet (liste/tahta snapshot) */
+app.get('/api/coin/unified/:symbol', (req, res) => {
+  const snap = scanner.getListSnapshot(req.params.symbol);
+  if (!snap) return res.status(404).json({ ok: false, error: 'Bu parite için henüz tarama özeti yok' });
+  res.json(coinUnified.buildUnifiedFromSnapshot(snap));
+});
+
+/**
+ * Son ~100 gün USDT-M günlük getiri liderleri + büyük ralli öncesi 5g profiline benzeyen güncel coinler.
+ * ?refresh=1 ilk sefer veya önbelleği yenilemek için (TR listesi kadar parite; süre: ~1dk+).
+ */
+app.get('/api/analytics/winner-pattern', async (req, res) => {
+  const refresh = req.query.refresh === '1' || req.query.refresh === 'true';
+  try {
+    if (refresh) {
+      const data = await winnerPattern.computeWinnerPatternAnalysis(true);
+      return res.json(data);
+    }
+    const cached = winnerPattern.getCachedWinnerPattern();
+    if (cached) return res.json(cached);
+    return res.json({
+      ok: false,
+      needsRefresh: true,
+      message:
+        'Henüz önbellek yok. Aşağıdan “Hesapla” ile başlatın; ilk çalıştırma tüm pariteler için günlük mum çeker (liste büyükse 1–2 dk sürebilir).'
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message || 'winner-pattern hatası' });
+  }
 });
 
 app.post('/api/prices/bulk', async (req, res) => {
