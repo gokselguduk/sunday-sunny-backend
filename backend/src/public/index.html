@@ -103,6 +103,15 @@ html[data-theme="light"] .board-hm-tog.active{background:rgba(0,136,170,0.12);bo
 .board-hm-frame--tall{min-height:240px;max-height:min(58vw,380px)}
 .board-hm-svg{display:block;width:100%;height:100%;min-height:200px;max-height:min(52vw,340px)}
 .board-hm-frame--tall .board-hm-svg{min-height:240px;max-height:min(58vw,380px)}
+.board-hm-frame--dash{min-height:140px;max-height:200px}
+.board-hm-frame--dash .board-hm-svg{min-height:140px;max-height:200px}
+.dash-harita-block{margin:0 16px 14px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:var(--bg2)}
+.dash-harita-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+@media (max-width:420px){.dash-harita-grid{grid-template-columns:1fr}}
+.dash-harita-lbl{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:4px}
+.dash-harita-hint{font-size:10px;color:var(--text2);line-height:1.45;margin:0 0 8px}
+.dash-harita-actions{text-align:center;margin-top:10px}
+.stat-sym-preview{max-height:5.2em;overflow-y:auto;white-space:normal;-webkit-overflow-scrolling:touch}
 .board-hm-cell{cursor:pointer;transition:filter .12s}
 .board-hm-cell:hover{filter:brightness(1.08)}
 .board-hm-cell:focus{outline:2px solid var(--accent);outline-offset:-2px}
@@ -480,7 +489,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
 <div class="content">
   <div class="page active" id="page-dashboard">
     <div class="dash-stats">
-      <div class="stat-box stat-go" role="button" tabindex="0" id="stat-box-sinyal" title="Tüm sinyaller" onclick="goSinyallerFiltre('tum')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('tum')}"><div class="stat-num" id="s-sinyal" style="color:var(--accent)">—</div><div class="stat-lbl">Sinyal</div><div class="stat-sym-preview" id="stat-sym-preview" style="font-size:9px;color:var(--text3);margin-top:4px;line-height:1.25;max-height:2.5em;overflow:hidden;text-align:center"></div></div>
+      <div class="stat-box stat-go" role="button" tabindex="0" id="stat-box-sinyal" title="Tüm sinyaller" onclick="goSinyallerFiltre('tum')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('tum')}"><div class="stat-num" id="s-sinyal" style="color:var(--accent)">—</div><div class="stat-lbl">Sinyal</div><div class="stat-sym-preview" id="stat-sym-preview" style="font-size:9px;color:var(--text3);margin-top:4px;line-height:1.25;text-align:center"></div></div>
       <div class="stat-box stat-go" role="button" tabindex="0" title="🔥 Nadir (80+)" onclick="goSinyallerFiltre('nadir')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('nadir')}"><div class="stat-num" id="s-nadir" style="color:var(--green)">—</div><div class="stat-lbl">🔥 Nadir</div></div>
       <div class="stat-box"><div class="stat-num" id="s-kur" style="color:var(--amber)">—</div><div class="stat-lbl">USD/TRY</div></div>
     </div>
@@ -502,8 +511,29 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
         <div class="fb-sayi" id="b-guclu-sayi" style="color:var(--accent)">0</div>
       </div>
     </div>
-    <div class="section-hdr">En İyi Fırsatlar</div>
-    <p style="font-size:10px;color:var(--text3);padding:0 16px 6px;line-height:1.4;margin:0">Üstteki filtre şeridi, <strong>Sinyaller</strong> sekmesinde seçtiğin Nadir / Güçlü vb. ile aynıdır.</p>
+    <div class="dash-harita-block" id="dash-harita-block">
+      <div class="section-hdr" style="margin:0 0 4px;padding:0;font-size:11px">Isı haritası (özet)</div>
+      <p class="dash-harita-hint">Aşağıda <strong>tüm tahta</strong> kartları listelenir. Nadir/Güçlü vb. filtre yalnızca <strong>Sinyaller</strong> sekmesinde. Büyük treemap: <strong>Harita</strong> sekmesi (altta, Dashboard’un yanında).</p>
+      <div class="dash-harita-grid">
+        <div>
+          <div class="dash-harita-lbl">Piyasa · 24s %</div>
+          <div class="board-hm-frame board-hm-frame--dash">
+            <svg class="board-hm-svg" id="dash-mini-piyasa" role="img" aria-label="Piyasa mini harita"></svg>
+          </div>
+        </div>
+        <div>
+          <div class="dash-harita-lbl">Sinyaller · TP beklenti</div>
+          <div class="board-hm-frame board-hm-frame--dash">
+            <svg class="board-hm-svg" id="dash-mini-sinyal" role="img" aria-label="Sinyal mini harita"></svg>
+          </div>
+        </div>
+      </div>
+      <div class="dash-harita-actions">
+        <button type="button" class="filtre-btn" onclick="goPage('harita')">Harita sekmesini aç</button>
+      </div>
+    </div>
+    <div class="section-hdr">Tahtadaki tüm sinyaller</div>
+    <p style="font-size:10px;color:var(--text3);padding:0 16px 6px;line-height:1.4;margin:0">Arama kutusu yalnızca <strong>Sinyaller</strong> sekmesindedir; orada coin adıyla süzebilirsiniz.</p>
     <div class="dash-gelir-link">💎 ~2 yıllık ralli öncesi profil — şu an aynı yapıda olanlar: <button type="button" onclick="goPage('gelir')">Gelir+</button></div>
     <div style="padding:0 16px" id="top-list"><div class="loading"><div class="spinner"></div></div></div>
   </div>
@@ -522,7 +552,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
       <button type="button" class="filtre-btn" data-filtre="candle" onclick="filtre('candle',this)">🕯 Formasyon</button>
       <button type="button" class="filtre-btn" data-filtre="fav" onclick="filtre('fav',this)">★ Favori</button>
     </div>
-    <p class="filtre-hint">Seçtiğin filtre hem <strong>Ana sayfa</strong> sinyal kartları hem bu sekmedeki kartlar için geçerlidir (<strong>Liste</strong> görünümü tüm pariteleri gösterir).</p>
+    <p class="filtre-hint">Filtre ve arama bu sekme içindir. <strong>Ana sayfa</strong> her zaman tüm tahta kartlarını listeler; tam treemap için <strong>Harita</strong> sekmesi (<strong>Liste</strong> tüm taranan pariteleri gösterir).</p>
     <div class="arama-wrap">
       <input class="arama-input" id="arama" placeholder="Coin ara... (örn: BTC)" oninput="ara(this.value)">
     </div>
@@ -624,6 +654,10 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
     <span>Dashboard</span>
   </button>
+  <button type="button" class="nav-btn" data-nav="harita" onclick="sayfa('harita',this)" title="Isı haritası · treemap">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="10" rx="1"/><rect x="3" y="14" width="10" height="7" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></svg>
+    <span>Harita</span>
+  </button>
   <button type="button" class="nav-btn" data-nav="sinyaller" onclick="sayfa('sinyaller',this)" title="Sinyaller">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
     <span>Sinyaller <span class="nav-badge" id="s-badge">0</span><span class="nav-coins" id="nav-coins"></span></span>
@@ -635,10 +669,6 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
   <button type="button" class="nav-btn" data-nav="analiz" onclick="sayfa('analiz',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/><path d="M11 8v6M8 11h6"/></svg>
     <span>Analiz</span>
-  </button>
-  <button type="button" class="nav-btn" data-nav="harita" onclick="sayfa('harita',this)" title="Isı haritası">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="10" rx="1"/><rect x="3" y="14" width="10" height="7" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></svg>
-    <span>Harita</span>
   </button>
   <button type="button" class="nav-btn" data-nav="rapor" onclick="sayfa('rapor',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -674,12 +704,12 @@ window.SS_SW_URL='/sw.js';
   }
   async function checkDeployAndRegister(){
     try{
-      /* v5: logo/shell güncellemesi; bir kerelik önbellek süpürme */
+      /* v6: shell şeması — index+harita+dashboard; bir kerelik önbellek süpürme */
       var schema=null;
       try{schema=localStorage.getItem('ss_shell_schema');}catch(e){}
-      if(schema!=='5'){
+      if(schema!=='6'){
         await clearSwAndCaches();
-        try{localStorage.setItem('ss_shell_schema','5');}catch(e){}
+        try{localStorage.setItem('ss_shell_schema','6');}catch(e){}
         try{localStorage.removeItem('ss_deploy_id');}catch(e){}
         await hardNavigateReload();
         return;
@@ -952,17 +982,10 @@ function paintTreemapIntoSvg(svg,items){
   }
   svg.innerHTML=parts.join('');
 }
-function renderHaritaSinyalTreemap(){
-  const svg=document.getElementById('harita-sinyal-svg');
-  const leg=document.getElementById('harita-sinyal-legend');
+function buildHaritaSinyalTreemapItems(){
   const fresh=sig.filter(function(s){return!s.absentThisScan;});
   const list=fresh.length?fresh.slice():sig.slice();
-  if(leg){
-    leg.textContent=list.length
-      ? 'Alan: ağırlıklı TP beklentisi (½·TP1 + 0,35·TP2 + 0,15·TP3). Renk: aynı yüzde (yüksek = daha sıcak yeşil). Kutuya dokun: sinyal kartı.'
-      : 'Henüz sinyal yok; tam tarama sonrası yenileyin.';
-  }
-  if(!list.length){if(svg)svg.innerHTML='';return;}
+  if(!list.length)return{items:[],empty:true};
   const items=list.map(function(s){
     const sym=coinBaseFromSignal(s)||'';
     let idx=typeof s._idx==='number'?s._idx:sig.indexOf(s);
@@ -976,18 +999,45 @@ function renderHaritaSinyalTreemap(){
       click:'onclick="boardHmClick('+idx+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();boardHmClick('+idx+')}"'
     };
   });
-  paintTreemapIntoSvg(svg,items);
+  return{items,empty:false};
+}
+function renderHaritaSinyalTreemap(){
+  const svg=document.getElementById('harita-sinyal-svg');
+  const leg=document.getElementById('harita-sinyal-legend');
+  const b=buildHaritaSinyalTreemapItems();
+  if(leg){
+    leg.textContent=b.empty
+      ? 'Henüz sinyal yok; tam tarama sonrası yenileyin.'
+      : 'Alan: ağırlıklı TP beklentisi (½·TP1 + 0,35·TP2 + 0,15·TP3). Renk: aynı yüzde. Kutuya dokun: sinyal kartı.';
+  }
+  if(b.empty){if(svg)svg.innerHTML='';return;}
+  paintTreemapIntoSvg(svg,b.items);
+}
+function renderDashMiniSinyalTreemap(){
+  const svg=document.getElementById('dash-mini-sinyal');
+  if(!svg)return;
+  const b=buildHaritaSinyalTreemapItems();
+  if(b.empty){svg.innerHTML='';return;}
+  paintTreemapIntoSvg(svg,b.items);
+}
+function applyPiyasaTreemapItems(items){
+  if(!items||!items.length)return;
+  const full=document.getElementById('harita-piyasa-svg');
+  const mini=document.getElementById('dash-mini-piyasa');
+  if(full)paintTreemapIntoSvg(full,items);
+  if(mini)paintTreemapIntoSvg(mini,items);
 }
 function fetchHaritaPiyasaTreemap(){
   const leg=document.getElementById('harita-piyasa-legend');
-  const svg=document.getElementById('harita-piyasa-svg');
+  const full=document.getElementById('harita-piyasa-svg');
   if(leg)leg.textContent='Yükleniyor…';
-  if(svg)svg.innerHTML='';
+  if(full)full.innerHTML='';
   fetch(BASE_URL+'/api/market/tr-24h-movers?limit=50&sort=abs')
     .then(function(r){return r.json();})
     .then(function(j){
       if(!j||!j.ok||!Array.isArray(j.movers)||!j.movers.length){
         if(leg)leg.textContent=(j&&j.error)?String(j.error):'TR parite verisi yok.';
+        window._ssHaritaPiyasaCacheItems=null;
         return;
       }
       if(leg)leg.textContent='Alan: |24s değişim| (hacim değil). Renk: 24s % yönü. Kutuya dokun: Analiz sekmesinde parite açılır.';
@@ -1003,10 +1053,13 @@ function fetchHaritaPiyasaTreemap(){
           click:'onclick="haritaPiyasaClick(\''+base+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();haritaPiyasaClick(\''+base+'\')}"'
         };
       });
-      paintTreemapIntoSvg(svg,items);
+      window._ssHaritaPiyasaCacheItems=items;
+      window._ssHaritaPiyasaAt=Date.now();
+      applyPiyasaTreemapItems(items);
     })
     .catch(function(){
       if(leg)leg.textContent='İstek başarısız; ağı kontrol edip tekrar deneyin.';
+      window._ssHaritaPiyasaCacheItems=null;
     });
 }
 function renderHaritaPage(){
@@ -1018,8 +1071,24 @@ function renderHaritaPageIfActive(){
   if(!document.getElementById('page-harita')?.classList.contains('active'))return;
   renderHaritaSinyalTreemap();
   const t=Date.now(),last=window._ssHaritaPiyasaAt||0;
-  if(t-last<22000)return;
-  window._ssHaritaPiyasaAt=t;
+  if(t-last<22000&&window._ssHaritaPiyasaCacheItems){
+    applyPiyasaTreemapItems(window._ssHaritaPiyasaCacheItems);
+    return;
+  }
+  window._ssHaritaPiyasaAt=Date.now();
+  fetchHaritaPiyasaTreemap();
+}
+/** Ana sayfa kartları: her zaman tüm tahta (Sinyaller sekmesindeki Nadir/Güçlü filtresi uygulanmaz). */
+function dashKartListesi(){
+  return sig.slice();
+}
+function refreshDashHaritaUi(){
+  renderDashMiniSinyalTreemap();
+  if(!document.getElementById('page-dashboard')?.classList.contains('active'))return;
+  if(window._ssHaritaPiyasaCacheItems){
+    applyPiyasaTreemapItems(window._ssHaritaPiyasaCacheItems);
+    return;
+  }
   fetchHaritaPiyasaTreemap();
 }
 function gv(s){return Math.min(Math.max(s.firsatSkoru?.skor||Math.min((s.score||0)*5,97),5),97)}
@@ -1430,7 +1499,7 @@ async function fiyatGuncelle(){
     const res=await fetch(BASE_URL+'/api/prices/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:syms})});
     const j=await res.json();
     if(j.prices){livePrices=j.prices;livePricesAt=Date.now();}
-    renderTop();renderSinyaller();renderHaritaPageIfActive();
+    renderTop();renderSinyaller();renderHaritaPageIfActive();refreshDashHaritaUi();
   }catch(e){}
 }
 function baslatCanliFiyat(){
@@ -1530,8 +1599,7 @@ function guncelle(){
   const prevEl=document.getElementById('stat-sym-preview');
   if(prevEl){
     if(uniq.length){
-      const line=uniq.slice(0,6).join(' · ');
-      prevEl.textContent=uniq.length>6?line+' +'+(uniq.length-6):line;
+      prevEl.textContent=uniq.length+' tahta · '+uniq.join(' · ');
     }else{prevEl.textContent='';}
   }
   const statBox=document.getElementById('stat-box-sinyal');
@@ -1564,7 +1632,7 @@ function guncelle(){
   handleEliteSetupAlerts();
   void refreshPushBtn();
   renderInvestPanel();
-  renderTop();renderSinyaller();renderRapor();renderHaritaPageIfActive();
+  renderTop();renderSinyaller();renderRapor();renderHaritaPageIfActive();refreshDashHaritaUi();
   if(document.getElementById('page-dashboard')?.classList.contains('active'))refreshTrMovers24h();
   syncHeaderOffset();
 }
@@ -1723,7 +1791,7 @@ function sayfa(id,btn){
   if(id==='analiz')void analizPageEnter();
   if(id==='harita'){window.scrollTo(0,0);void renderHaritaPage();}
   if(id==='gelir')void gelirWinnerPattern(false);
-  if(id==='dashboard'){_trMoversFetchedAt=0;refreshTrMovers24h();}
+  if(id==='dashboard'){_trMoversFetchedAt=0;refreshTrMovers24h();refreshDashHaritaUi();}
   if(id==='rapor'){
     renderRapor();
     raporJumpFetch(false);
@@ -2079,18 +2147,6 @@ function fmtCtxPct(n){
   if(n==null||!Number.isFinite(n))return'—';
   return(n>=0?'+':'')+n.toFixed(2)+'%';
 }
-function aktifFiltreLabel(){
-  const m={nadir:'🔥 Nadir (80+)',nadirhist:'⭐ Geçmiş Nadir',guclu:'✅ Güçlü (65+)',div:'📊 Divergence','4tf':'⚡ 4TF uyum',fvg:'🎯 FVG',arb:'💱 Arbitraj',candle:'🕯 Formasyon',fav:'★ Favoriler',tum:'Tümü',liste:'Tam liste'};
-  return m[aktifF]||aktifF;
-}
-function dashFilterStripHTML(){
-  if(aktifF==='tum'||aktifF==='liste')return'';
-  return'<div class="dash-filter-strip" role="status"><span>Ön izleme: <strong>'+aktifFiltreLabel()+'</strong> · Sinyaller ile aynı filtre</span><button type="button" onclick="filtreTumFromDash()">Tümüne dön</button></div>';
-}
-function filtreTumFromDash(){
-  const b=document.querySelector('#page-sinyaller .filtre-btn[data-filtre="tum"]');
-  filtre('tum',b||null);
-}
 function modalSeviyeAciklamaHTML(){
   return'<details class="modal-seviye-aciklama"><summary>Seviyeler nasıl okunur?</summary><div class="modal-aciklama-ic">'+
 '<p><strong>Güncel fiyat:</strong> Anlık USDT (canlı ticker). <strong>Sinyal / tarama fiyatı:</strong> Son uygun turda tahtaya girerken kaydedilen kapanış; SL/TP yüzdeleri bu tarama bazına göre hesaplanır.</p>'+
@@ -2266,12 +2322,8 @@ function renderTop(){
     }
     return;
   }
-  const list=fList();
-  const head=scanLiveBannerHTML()+dashFilterStripHTML();
-  if(!list.length){
-    el.innerHTML=head+'<div class="bos">Bu filtreyle öne çıkan parite yok.<br><button type="button" class="filtre-btn" style="margin-top:10px" onclick="filtreTumFromDash()">Tümünü göster</button></div>';
-    return;
-  }
+  const list=dashKartListesi();
+  const head=scanLiveBannerHTML();
   el.innerHTML=head+list.map(kartHTML).join('');
 }
 function renderSinyaller(){

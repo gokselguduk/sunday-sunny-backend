@@ -1,4 +1,4 @@
-/* Sunday/Sunny SW — v6: fetch YOK — sadece push. Sayfa/iOS önbelleği SW üzerinden takılmaz. */
+/* Sunday/Sunny SW — v7: fetch YOK — sadece push. Sayfa/iOS önbelleği SW üzerinden takılmaz. */
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) =>
