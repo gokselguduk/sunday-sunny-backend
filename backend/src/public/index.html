@@ -194,6 +194,8 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .nadir-toast strong{color:var(--green)}
 .dash-hint{margin:0 16px 12px;padding:12px 14px;border-radius:12px;border:1px solid var(--border);background:var(--bg1);font-size:11px;color:var(--text2);line-height:1.55}
 .dash-hint strong{color:var(--text1);font-weight:600}
+.app-scope-disclaimer{margin:0 16px 10px;padding:10px 12px;border-radius:12px;border:1px solid var(--border);border-left:3px solid var(--amber);background:var(--bg1);font-size:10px;color:var(--text3);line-height:1.5}
+.app-scope-disclaimer strong{color:var(--text2);font-weight:600}
 .fiyat-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .fiyat-canli{font-size:9px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:0.5px}
 .badge-nadir-hist{background:rgba(255,179,0,0.12);color:var(--amber);border:1px solid rgba(255,179,0,0.35)}
@@ -375,6 +377,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
       <div class="stat-box stat-go" role="button" tabindex="0" title="🔥 Nadir (80+)" onclick="goSinyallerFiltre('nadir')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('nadir')}"><div class="stat-num" id="s-nadir" style="color:var(--green)">—</div><div class="stat-lbl">🔥 Nadir</div></div>
       <div class="stat-box"><div class="stat-num" id="s-kur" style="color:var(--amber)">—</div><div class="stat-lbl">USD/TRY</div></div>
     </div>
+    <div class="app-scope-disclaimer" role="note"><strong>Görsel bilgi panosu:</strong> Skorlar, listeler ve grafikler yalnızca fikir ve düzen içindir; <strong>yeterli veya eksiksiz analiz değildir</strong>, yatırım tavsiyesi veya alım-satım önerisi sayılmaz. Karar ve risk tamamen sizdedir.</div>
     <p id="board-hint" style="font-size:10px;color:var(--text3);text-align:center;padding:0 16px 10px;line-height:1.45"></p>
     <p style="font-size:11px;color:var(--text2);text-align:center;padding:0 16px 12px;line-height:1.45"><button type="button" onclick="goPage('nakit')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Nakit rehberi</button> · <button type="button" onclick="goPage('btc')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">₿ BTC</button> · sol üst <strong style="color:var(--text1)">☀️/🌙</strong> tema</p>
     <div class="fb-grid">
@@ -393,6 +396,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
   </div>
 
   <div class="page" id="page-sinyaller">
+    <p style="font-size:9px;color:var(--text3);padding:8px 16px 0;line-height:1.4;margin:0">Sinyaller ve skorlar <strong>görsel / bilgilendirme</strong> amaçlıdır; yeterli analiz veya işlem tavsiyesi değildir.</p>
     <div class="filtre-wrap">
       <button type="button" class="filtre-btn" data-filtre="liste" onclick="filtre('liste',this)">Liste</button>
       <button type="button" class="filtre-btn active" data-filtre="tum" onclick="filtre('tum',this)">Tümü</button>
@@ -455,7 +459,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
   <div class="page" id="page-isiharitasi">
     <div class="hm-page">
       <div class="section-hdr">Isı haritası</div>
-      <p class="hm-hint">Tahta: motor / tarama metrikleri. <strong>Piyasa</strong>: Binance USDT-M gerçek zamanlı 24s borsa verisi (tarama dışı). Kareye dokununca özet açılır. Yatırım tavsiyesi değildir.</p>
+      <p class="hm-hint">Tahta: motor / tarama metrikleri. <strong>Piyasa</strong>: Binance USDT-M 24s borsa verisi. Hepsi <strong>görsel özet</strong>; yatırım analizi veya öneri değildir. Kareye dokununca özet açılır.</p>
       <div class="hm-toolbar" role="group" aria-label="Isı haritası veri kaynağı">
         <button type="button" class="hm-source-btn active" data-hm-source="motor" onclick="setHmDataSource('motor')">Tahta / motor</button>
         <button type="button" class="hm-source-btn" data-hm-source="piyasa" onclick="setHmDataSource('piyasa')">Piyasa (Binance)</button>
