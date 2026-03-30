@@ -390,7 +390,7 @@ async function scanMarket() {
   scanState.boardStale = bs.stale;
   broadcast({
     type: 'scan_progress',
-    data: preBoard.slice(0, 100),
+    data: preBoard,
     scan: { ...scanState },
     time: new Date().toISOString()
   });

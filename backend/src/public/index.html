@@ -108,12 +108,45 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .filtre-wrap::-webkit-scrollbar{display:none}
 .filtre-btn{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:12px;font-weight:500;background:var(--bg2);border:1px solid var(--border);color:var(--text2);cursor:pointer;white-space:nowrap;font-family:'DM Sans',sans-serif;transition:all 0.2s}
 .filtre-btn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.filtre-hint{font-size:10px;color:var(--text3);line-height:1.45;padding:0 16px 8px;margin:0}
+.filtre-hint strong{color:var(--text2);font-weight:600}
 .arama-wrap{padding:10px 16px;border-bottom:1px solid var(--border)}
 .arama-input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:14px;color:var(--text1);outline:none;font-family:'DM Sans',sans-serif}
 .arama-input:focus{border-color:var(--accent)}
 .arama-input::placeholder{color:var(--text3)}
-.kart{background:var(--bg1);border-radius:16px;margin-bottom:10px;border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:transform 0.15s;position:relative}
+.kart{background:var(--bg1);border-radius:18px;margin-bottom:12px;border:1px solid var(--border);overflow:hidden;cursor:pointer;transition:transform 0.15s,box-shadow 0.2s;position:relative;box-shadow:0 2px 12px rgba(0,0,0,0.12)}
+html[data-theme="light"] .kart{box-shadow:0 2px 10px rgba(15,30,60,0.06)}
 .kart:active{transform:scale(0.98)}
+.kart-section-title{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.55px;margin:0 12px 6px}
+.kart-atr-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:0 12px 8px}
+.kart-atr-cell{background:var(--bg2);border-radius:10px;padding:7px 5px;text-align:center;border:1px solid var(--border)}
+.kart-atr-cell.kart-atr-entry{border-color:rgba(0,212,255,0.25)}
+.kart-atr-cell.kart-atr-sl{border-color:rgba(255,71,87,0.2)}
+.kart-atr-cell.kart-atr-tp{border-color:rgba(0,230,118,0.2)}
+.kart-atr-lbl{font-size:7px;color:var(--text3);text-transform:uppercase;margin-bottom:3px;letter-spacing:0.2px}
+.kart-atr-val{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--text1);line-height:1.2}
+.kart-atr-sub{font-size:8px;color:var(--text3);margin-top:2px}
+.kart-sr-flow{display:flex;align-items:stretch;gap:6px;padding:0 12px 8px}
+.kart-sr-box{flex:1;min-width:0;background:var(--bg2);border-radius:10px;padding:8px 6px;text-align:center;border:1px solid var(--border)}
+.kart-sr-box.kart-sr-sup{border-color:rgba(0,230,118,0.22)}
+.kart-sr-box.kart-sr-res{border-color:rgba(255,71,87,0.22)}
+.kart-sr-box.kart-sr-px{border-color:rgba(0,212,255,0.2);flex:0 0 76px}
+.kart-sr-ttl{font-size:8px;color:var(--text3);text-transform:uppercase;margin-bottom:4px}
+.kart-sr-pr{font-family:'Space Mono',monospace;font-size:11px;font-weight:700}
+.kart-sr-sub{font-size:8px;color:var(--text2);margin-top:3px;line-height:1.25}
+.kart-tap-hint{font-size:9px;color:var(--text3);text-align:center;padding:0 12px 8px;line-height:1.35}
+.dash-filter-strip{margin:0 16px 10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(0,212,255,0.28);background:rgba(0,212,255,0.07);font-size:11px;color:var(--text2);line-height:1.45;display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:space-between}
+.dash-filter-strip strong{color:var(--text1)}
+.dash-filter-strip button{font-size:10px;font-weight:600;padding:5px 10px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--accent);cursor:pointer;font-family:'DM Sans',sans-serif}
+.modal-seviye-aciklama{margin-top:12px;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--bg2)}
+.modal-seviye-aciklama summary{cursor:pointer;padding:11px 14px;font-size:12px;font-weight:600;color:var(--text1);list-style:none;display:flex;align-items:center;justify-content:space-between}
+.modal-seviye-aciklama summary::-webkit-details-marker{display:none}
+.modal-seviye-aciklama summary::after{content:'+';color:var(--accent);font-weight:800}
+.modal-seviye-aciklama[open] summary::after{content:'−'}
+.modal-aciklama-ic{padding:0 14px 12px;font-size:11px;color:var(--text2);line-height:1.6}
+.modal-aciklama-ic p{margin-bottom:8px}
+.modal-aciklama-ic p:last-child{margin-bottom:0}
+.modal-aciklama-ic strong{color:var(--text1)}
 .kart-accent{position:absolute;left:0;top:0;bottom:0;width:3px}
 .kart-ust{padding:12px 12px 6px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .kart-ust > div:first-child{flex:1 1 auto;min-width:0;max-width:calc(100% - 58px)}
@@ -197,6 +230,8 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .nadir-toast strong{color:var(--green)}
 .nadir-toast.elite-ping{border-color:rgba(123,92,255,0.55);background:linear-gradient(135deg,rgba(123,92,255,0.12),rgba(0,212,255,0.08))}
 .nadir-toast.elite-ping strong{color:var(--accent2)}
+.scan-live-banner{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:10px 12px;border-radius:12px;border:1px solid rgba(0,212,255,0.35);background:rgba(0,212,255,0.08);font-size:11px;font-weight:600;color:var(--text1);line-height:1.4}
+.scan-live-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.4s ease-in-out infinite;flex-shrink:0}
 .invest-wrap{margin:0 16px 14px}
 .invest-disclaimer{font-size:10px;color:var(--text3);line-height:1.55;margin-bottom:10px}
 .invest-prof{background:var(--bg1);border:1px solid var(--border);border-radius:14px;padding:12px 14px;margin-bottom:10px}
@@ -425,6 +460,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
       </div>
     </div>
     <div class="section-hdr">En İyi Fırsatlar</div>
+    <p style="font-size:10px;color:var(--text3);padding:0 16px 6px;line-height:1.4;margin:0">Üstteki filtre şeridi, <strong>Sinyaller</strong> sekmesinde seçtiğin Nadir / Güçlü vb. ile aynıdır.</p>
     <div class="dash-gelir-link">💎 Son ~100 günde en yüksek getiri ve benzer örüntü analizi: <button type="button" onclick="goPage('gelir')">Gelir+</button></div>
     <div style="padding:0 16px" id="top-list"><div class="loading"><div class="spinner"></div></div></div>
   </div>
@@ -443,6 +479,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
       <button type="button" class="filtre-btn" data-filtre="candle" onclick="filtre('candle',this)">🕯 Formasyon</button>
       <button type="button" class="filtre-btn" data-filtre="fav" onclick="filtre('fav',this)">★ Favori</button>
     </div>
+    <p class="filtre-hint">Seçtiğin filtre hem bu liste hem <strong>Ana sayfa</strong> üstündeki ilk 5 kart için geçerli (<strong>Liste</strong> görünümü tüm pariteleri gösterir).</p>
     <div class="arama-wrap">
       <input class="arama-input" id="arama" placeholder="Coin ara... (örn: BTC)" oninput="ara(this.value)">
     </div>
@@ -689,16 +726,14 @@ if(typeof io!=='undefined'){
       }
     }
     const arr=payload.data;
-    const applyList=Array.isArray(arr)&&(
-      arr.length>0||
-      t==='scan_complete'||
-      t==='scan_progress'||
-      t==='signal_board_tick'||
-      t==='symbol_refreshed'
-    );
-    if(applyList){
-      sig=arr.map((s,i)=>({...s,_idx:i}));
-      if(sig.length>0)kur=sig[0].usdTryRate||kur;
+    if(Array.isArray(arr)){
+      const scanningNow=!!payload.scan?.isScanning;
+      if(arr.length>0){
+        sig=arr.map((s,i)=>({...s,_idx:i}));
+        if(sig[0].usdTryRate)kur=sig[0].usdTryRate||kur;
+      }else if(t==='scan_complete'||!scanningNow){
+        sig=[];
+      }
     }
     if(Array.isArray(payload.coinList))coinList=payload.coinList;
     guncelle();
@@ -1069,7 +1104,13 @@ function veriCek(){
     }
     nadirTrail=scanData?.nadirTrail||{};
     storageHint=scanData?.storage||{};
-    sig=(scanData?.signals||[]).map((s,i)=>({...s,_idx:i}));
+    const incoming=scanData?.signals||[];
+    const httpScanning=!!scanData?.scan?.isScanning;
+    if(incoming.length>0){
+      sig=incoming.map((s,i)=>({...s,_idx:i}));
+    }else if(!httpScanning){
+      sig=[];
+    }
     coinList=Array.isArray(scanData?.coinList)?scanData.coinList:[];
     if(sig.length>0)kur=sig[0].usdTryRate||38;
     guncelle();
@@ -1539,8 +1580,9 @@ function filtre(f,btn){
   document.querySelectorAll('#page-sinyaller .filtre-wrap .filtre-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   renderSinyaller();
+  renderTop();
 }
-function ara(v){araM=v.trim().toUpperCase();renderSinyaller()}
+function ara(v){araM=v.trim().toUpperCase();renderSinyaller();renderTop();}
 
 function utcTrLabel(h){
   const tr=(h+3)%24;
@@ -1632,6 +1674,62 @@ function renderMarketContext(d){
 function fmtCtxPct(n){
   if(n==null||!Number.isFinite(n))return'—';
   return(n>=0?'+':'')+n.toFixed(2)+'%';
+}
+function aktifFiltreLabel(){
+  const m={nadir:'🔥 Nadir (80+)',nadirhist:'⭐ Geçmiş Nadir',guclu:'✅ Güçlü (65+)',div:'📊 Divergence','4tf':'⚡ 4TF uyum',fvg:'🎯 FVG',arb:'💱 Arbitraj',candle:'🕯 Formasyon',fav:'★ Favoriler',tum:'Tümü',liste:'Tam liste'};
+  return m[aktifF]||aktifF;
+}
+function dashFilterStripHTML(){
+  if(aktifF==='tum'||aktifF==='liste')return'';
+  return'<div class="dash-filter-strip" role="status"><span>Ön izleme: <strong>'+aktifFiltreLabel()+'</strong> · Sinyaller ile aynı filtre</span><button type="button" onclick="filtreTumFromDash()">Tümüne dön</button></div>';
+}
+function filtreTumFromDash(){
+  const b=document.querySelector('#page-sinyaller .filtre-btn[data-filtre="tum"]');
+  filtre('tum',b||null);
+}
+function modalSeviyeAciklamaHTML(){
+  return'<details class="modal-seviye-aciklama"><summary>Seviyeler nasıl okunur?</summary><div class="modal-aciklama-ic">'+
+'<p><strong>Giriş (şu an):</strong> Güncel işlem fiyatı; canlı ticker ile uyumludur.</p>'+
+'<p><strong>Stop ve TP1–3:</strong> 1 saatlik ATR’ye göre son kapanıştan yüzde mesafe. Spread, kayma ve haberler gerçek doldurmayı değiştirir; sabit emir tavsiyesi değildir.</p>'+
+'<p><strong>Destek / direnç:</strong> Yaklaşık son 100 adet 1H mumda aranan pivot dipler ve tepeler. Fiyatın tepki ihtimali olan <em>bölge</em> fikri verir.</p>'+
+'<p><strong>Fibonacci:</strong> Seçilen salınımın klasik geri çekilme oranları (ör. %38.2, %78.6).</p>'+
+'<p><strong>VWAP / POC:</strong> Oturum ağırlıklı ortalama ve hacim yoğunluk merkezi — yapı bağlamı için.</p>'+
+'<p style="font-size:10px;color:var(--text3);margin:0">Yatırım tavsiyesi değildir.</p></div></details>';
+}
+function kartTradeZoneHTML(s){
+  const px=pxFor(s);
+  const sr=s.supportResistance||{};
+  const sup=sr.nearestSupport;
+  const res=sr.nearestResistance;
+  const sd=sr.supportDistance;
+  const rd=sr.resistanceDistance;
+  const a=s.atr||{};
+  const supOk=sup!=null&&Number.isFinite(Number(sup));
+  const resOk=res!=null&&Number.isFinite(Number(res));
+  let srMid='';
+  if(supOk||resOk){
+    srMid='<div class="kart-sr-flow">'+
+      '<div class="kart-sr-box kart-sr-sup"><div class="kart-sr-ttl">Destek</div><div class="kart-sr-pr">'+(supOk?'$'+f5(sup):'—')+'</div><div class="kart-sr-sub">'+(sd!=null&&Number.isFinite(sd)?sd.toFixed(2)+'% aşağıda':'pivot altı')+'</div></div>'+
+      '<div class="kart-sr-box kart-sr-px"><div class="kart-sr-ttl">Fiyat</div><div class="kart-sr-pr" style="color:var(--accent)">$'+f5(px)+'</div><div class="kart-sr-sub">Anlık</div></div>'+
+      '<div class="kart-sr-box kart-sr-res"><div class="kart-sr-ttl">Direnç</div><div class="kart-sr-pr">'+(resOk?'$'+f5(res):'—')+'</div><div class="kart-sr-sub">'+(rd!=null&&Number.isFinite(rd)?rd.toFixed(2)+'% yukarıda':'pivot üstü')+'</div></div>'+
+    '</div>';
+  }else{
+    srMid='<div class="kart-sr-flow"><div class="kart-sr-box" style="flex:1"><div class="kart-sr-ttl">Destek / Direnç</div><div class="kart-sr-sub" style="font-size:10px;padding-top:4px">Bu aralıkta net pivot çıkmadı veya fiyat dışında. Tablo için karta dokunun.</div></div></div>';
+  }
+  return'<div class="kart-section-title">Giriş · stop · hedef (ATR)</div>'+
+  '<div class="kart-atr-grid">'+
+    '<div class="kart-atr-cell kart-atr-entry"><div class="kart-atr-lbl">Giriş</div><div class="kart-atr-val">$'+f5(px)+'</div><div class="kart-atr-sub">Referans</div></div>'+
+    '<div class="kart-atr-cell kart-atr-sl"><div class="kart-atr-lbl">Stop</div><div class="kart-atr-val" style="color:var(--red)">$'+f5(a.stopLoss)+'</div><div class="kart-atr-sub">-'+(a.stopLossPct!=null?Number(a.stopLossPct).toFixed(2):'0')+'%</div></div>'+
+    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP1</div><div class="kart-atr-val" style="color:var(--green)">$'+f5(a.takeProfit1)+'</div><div class="kart-atr-sub">+'+(a.tp1Pct!=null?Number(a.tp1Pct).toFixed(2):'0')+'%</div></div>'+
+    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP2</div><div class="kart-atr-val" style="color:var(--green)">$'+f5(a.takeProfit2)+'</div><div class="kart-atr-sub">+'+(a.tp2Pct!=null?Number(a.tp2Pct).toFixed(2):'0')+'%</div></div>'+
+  '</div>'+
+  '<div class="kart-atr-grid" style="padding-top:0;grid-template-columns:1fr 1fr">'+
+    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP3</div><div class="kart-atr-val" style="color:var(--accent)">$'+f5(a.takeProfit3)+'</div><div class="kart-atr-sub">+'+(a.tp3Pct!=null?Number(a.tp3Pct).toFixed(2):'0')+'% · R/R '+(a.riskReward!=null&&Number.isFinite(Number(a.riskReward))?Number(a.riskReward).toFixed(2):'—')+'</div></div>'+
+    '<div class="kart-atr-cell"><div class="kart-atr-lbl">Not</div><div class="kart-atr-val" style="font-size:9px;line-height:1.35;color:var(--text2);font-weight:600">ATR planı; kırılımda güncellenir</div><div class="kart-atr-sub"> </div></div>'+
+  '</div>'+
+  '<div class="kart-section-title" style="margin-top:2px">Yapı (1H pivot)</div>'+
+  srMid+
+  '<div class="kart-tap-hint">Detaylı tablo ve açıklamalar için dokunun</div>';
 }
 function fList(){
   let l=[...sig];
@@ -1733,12 +1831,7 @@ function kartHTML(s){
       <span class="fiyat-deg ${chg>=0?'deg-p':'deg-n'}">24s ${chg>=0?'+':''}${chg.toFixed(2)}%</span>
     </div>
     ${deltaHtml}
-    <div class="kart-hedefler">
-      <div class="hedef"><div class="hedef-lbl">Stop</div><div class="hedef-pct" style="color:var(--red)">-${(s.atr?.stopLossPct||0).toFixed(2)}%</div><div class="hedef-try">${tryF(s.atr?.stopLoss)}</div></div>
-      <div class="hedef"><div class="hedef-lbl">TP1</div><div class="hedef-pct" style="color:var(--green)">+${(s.atr?.tp1Pct||0).toFixed(2)}%</div><div class="hedef-try">${tryF(s.atr?.takeProfit1)}</div></div>
-      <div class="hedef"><div class="hedef-lbl">TP2</div><div class="hedef-pct" style="color:var(--green)">+${(s.atr?.tp2Pct||0).toFixed(2)}%</div><div class="hedef-try">${tryF(s.atr?.takeProfit2)}</div></div>
-      <div class="hedef"><div class="hedef-lbl">TP3</div><div class="hedef-pct" style="color:var(--accent)">+${(s.atr?.tp3Pct||0).toFixed(2)}%</div><div class="hedef-try">${tryF(s.atr?.takeProfit3)}</div></div>
-    </div>
+    ${kartTradeZoneHTML(s)}
     ${horizonKartHTML(s)}
     <div class="kart-ind">
       <div class="ind"><div class="ind-lbl">RSI</div><div class="ind-val" style="color:${(s.rsi||50)<35?'var(--green)':(s.rsi||50)>70?'var(--red)':'var(--text1)'}">${s.rsi||'—'}</div></div>
@@ -1751,6 +1844,12 @@ function kartHTML(s){
   </div>`;
 }
 
+function scanLiveBannerHTML(){
+  if(!scanMeta?.isScanning)return'';
+  const pct=scanMeta.totalCoins?Math.round((scanMeta.scannedCoins/scanMeta.totalCoins)*100):0;
+  const eta=scanMeta.etaSeconds?` · ~${scanMeta.etaSeconds}s kaldı`:'';
+  return'<div class="scan-live-banner" role="status"><span class="scan-live-dot" aria-hidden="true"></span><span>Tarama sürüyor · '+(scanMeta.scannedCoins||0)+'/'+(scanMeta.totalCoins||0)+' (%'+pct+')'+eta+' · Önceki tahta korunuyor; veriler geldikçe güncellenir</span></div>';
+}
 function renderTop(){
   const el=document.getElementById('top-list');
   if(!sig.length){
@@ -1763,7 +1862,13 @@ function renderTop(){
     }
     return;
   }
-  el.innerHTML=sig.slice(0,5).map(kartHTML).join('');
+  const list=fList();
+  const head=scanLiveBannerHTML()+dashFilterStripHTML();
+  if(!list.length){
+    el.innerHTML=head+'<div class="bos">Bu filtreyle öne çıkan parite yok.<br><button type="button" class="filtre-btn" style="margin-top:10px" onclick="filtreTumFromDash()">Tümünü göster</button></div>';
+    return;
+  }
+  el.innerHTML=head+list.slice(0,5).map(kartHTML).join('');
 }
 function renderSinyaller(){
   const el=document.getElementById('sinyal-liste');
@@ -1778,7 +1883,7 @@ function renderSinyaller(){
         :'<div class="bos">Henüz liste verisi yok<br>Sunucu taraması tamamlanınca tüm pariteler burada görünür</div>';
       return;
     }
-    el.innerHTML=rows.map(listeKartHTML).join('')+'<div style="height:20px"></div>';
+    el.innerHTML=scanLiveBannerHTML()+rows.map(listeKartHTML).join('')+'<div style="height:20px"></div>';
     return;
   }
   const l=fList();
@@ -1791,7 +1896,7 @@ function renderSinyaller(){
     }
     return;
   }
-  el.innerHTML=l.map(kartHTML).join('')+'<div style="height:20px"></div>';
+  el.innerHTML=scanLiveBannerHTML()+l.map(kartHTML).join('')+'<div style="height:20px"></div>';
 }
 
 function openSignalModal(s){
@@ -1838,7 +1943,8 @@ function openSignalModal(s){
     })()}
 
     <div class="modal-sec">
-      <div class="modal-sec-title">Al / Sat Seviyeleri</div>
+      <div class="modal-sec-title">Al / Sat Seviyeleri (ATR)</div>
+      <p style="font-size:10px;color:var(--text3);line-height:1.45;margin:-4px 0 10px">Yüzdeler son kapanışa göre ATR ile hesaplanır; gerçek emirde kayma olabilir.</p>
       <table class="sev-tablo">
         <tr style="background:rgba(255,71,87,0.04)">
           <td>Stop Loss</td>
@@ -1880,7 +1986,8 @@ function openSignalModal(s){
     ${horizonModalBlock(s)}
 
     <div class="modal-sec">
-      <div class="modal-sec-title">Destek / Direnç</div>
+      <div class="modal-sec-title">Destek / Direnç · VWAP · POC</div>
+      <p style="font-size:10px;color:var(--text3);line-height:1.45;margin:-4px 0 10px">Pivotlar 1H mumlardan; Fib seviyeleri son salınıma göre. Aşağıdaki kutuda her satırın ne anlama geldiğini okuyabilirsin.</p>
       <table class="sev-tablo">
         <tr>
           <td>Direnç 2</td>
@@ -1919,6 +2026,7 @@ function openSignalModal(s){
           <td style="color:var(--green)">Fib 38.2%</td>
         </tr>
       </table>
+      ${modalSeviyeAciklamaHTML()}
       ${s.fvg?.nearestBullish?`<div style="margin-top:8px;background:rgba(123,92,255,0.08);border:1px solid rgba(123,92,255,0.2);border-radius:8px;padding:8px;font-size:11px">
         <span style="color:var(--accent2);font-weight:600">🎯 FVG Bölgesi:</span>
         <span style="margin-left:6px;color:var(--text2)">$${f5(s.fvg.nearestBullish.bottom)} — $${f5(s.fvg.nearestBullish.top)}</span>
@@ -2007,12 +2115,18 @@ function listeKartHTML(row){
   const pxShow=lp!=null?lp:px;
   const chg=row.priceChange24h!=null?row.priceChange24h:0;
   const st=row.onBoard?'<span class="badge b-green">Tahtada</span>':'<span class="badge b-amber">Eşik altı</span>';
+  let tier='';
+  if(typeof fs==='number'){
+    if(fs>=80)tier='<span class="badge b-fire">NADİR</span>';
+    else if(fs>=65)tier='<span class="badge b-green">GÜÇLÜ</span>';
+    else if(fs>=50)tier='<span class="badge b-blue">İYİ</span>';
+  }
   const ai=row.aiVerdict?`<span class="badge b-blue">${row.aiVerdict}</span>`:'';
   return`<div class="kart" onclick="modalListeAc(${JSON.stringify(fullSym||'')})" style="cursor:pointer">
     <div class="kart-accent" style="background:${r}"></div>
     <div class="kart-ust">
       <div><div><span class="kart-symbol">${sym}</span><span class="kart-pair">${fullSym||''}</span></div>
-        <div class="kart-badges">${st}${ai}${row.listReason?`<span class="badge b-amber" title="${listeReasonTr(row.listReason)}">${listeReasonTr(row.listReason)}</span>`:''}</div>
+        <div class="kart-badges">${st}${tier}${ai}${row.listReason?`<span class="badge b-amber" title="${listeReasonTr(row.listReason)}">${listeReasonTr(row.listReason)}</span>`:''}</div>
       </div>
       <div class="kart-sag"><span style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:${r}">${fs}</span><div style="font-size:9px;color:var(--text3)">Fırsat</div></div>
     </div>
