@@ -91,10 +91,23 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 .firsat-banner.stat-go:active{transform:scale(0.99)}
 .firsat-banner.stat-go:hover{border-color:rgba(0,212,255,0.25)}
 .stat-num{font-family:'Space Mono',monospace;font-size:20px;font-weight:700;margin-bottom:2px}
-.dash-tickers-wrap{padding:0 14px 14px}
-.dash-tickers-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:8px;text-align:center}
-.dash-tickers{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center}
-.dash-ticker{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;padding:8px 12px;border-radius:12px;background:var(--bg2);border:1px solid var(--border);color:var(--text1)}
+.board-hm-wrap{padding:0 14px 14px}
+.board-hm-head{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px}
+.board-hm-title{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.55px;font-weight:700;margin:0;line-height:1.3;max-width:52%}
+.board-hm-toggles{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.board-hm-tog{font-size:10px;font-weight:600;padding:6px 11px;border-radius:10px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s,border-color .15s,color .15s}
+.board-hm-tog.active{background:rgba(0,212,255,0.14);border-color:rgba(0,212,255,0.4);color:var(--accent)}
+html[data-theme="light"] .board-hm-tog.active{background:rgba(0,136,170,0.12);border-color:rgba(0,136,170,0.45);color:var(--accent)}
+.board-hm-legend{font-size:9px;color:var(--text3);line-height:1.45;margin:0 0 8px}
+.board-hm-frame{width:100%;border-radius:14px;border:1px solid var(--border);background:var(--bg2);overflow:hidden;min-height:200px;max-height:min(52vw,340px)}
+.board-hm-svg{display:block;width:100%;height:100%;min-height:200px;max-height:min(52vw,340px)}
+.board-hm-cell{cursor:pointer;transition:filter .12s}
+.board-hm-cell:hover{filter:brightness(1.08)}
+.board-hm-cell:focus{outline:2px solid var(--accent);outline-offset:-2px}
+.board-hm-txt{pointer-events:none;font-family:'Space Mono',monospace;font-weight:800;fill:rgba(255,255,255,0.92);stroke:rgba(0,0,0,0.35);stroke-width:0.35px;paint-order:stroke fill}
+html[data-theme="light"] .board-hm-txt{fill:rgba(13,21,38,0.92);stroke:rgba(255,255,255,0.85);stroke-width:0.45px}
+.board-hm-sub{pointer-events:none;font-family:'DM Sans',sans-serif;font-weight:600;fill:rgba(255,255,255,0.78);stroke:rgba(0,0,0,0.28);stroke-width:0.25px;paint-order:stroke fill}
+html[data-theme="light"] .board-hm-sub{fill:rgba(13,21,38,0.75);stroke:rgba(255,255,255,0.8);stroke-width:0.3px}
 .nav-coins{display:block;font-size:8px;font-weight:600;color:var(--accent2);max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.15;margin-top:2px;letter-spacing:-0.02em}
 .stat-lbl{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.3px}
 .firsat-banner{margin:0 16px 12px;padding:12px 16px;border-radius:14px;border:1px solid;display:flex;align-items:center;justify-content:space-between}
@@ -169,6 +182,13 @@ html[data-theme="light"] .kart{box-shadow:0 2px 10px rgba(15,30,60,0.06)}
 .fav-btn{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);padding:0;line-height:1}
 .fav-btn.active{color:var(--amber)}
 .kart-fiyat{padding:0 12px 6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.kart-signal-prices{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:start;margin:0 12px 10px;padding:11px 12px;background:var(--bg2);border-radius:12px;border:1px solid var(--border)}
+.kart-sp-lbl{font-size:8px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.35px;margin-bottom:4px}
+.kart-sp-val{font-family:'Space Mono',monospace;font-size:13px;font-weight:800;color:var(--text1);line-height:1.2}
+.kart-sp-sub{font-size:9px;color:var(--text2);margin-top:4px;line-height:1.35}
+@media (max-width:400px){
+  .kart-signal-prices{grid-template-columns:1fr;gap:8px}
+}
 .fiyat-usdt{font-family:'Space Mono',monospace;font-size:13px;font-weight:700}
 .fiyat-try{font-size:11px;color:var(--text2);background:var(--bg3);padding:2px 7px;border-radius:6px}
 .fiyat-deg{font-size:11px;font-weight:600;padding:2px 6px;border-radius:5px}
@@ -462,9 +482,18 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
       <div class="stat-box stat-go" role="button" tabindex="0" title="🔥 Nadir (80+)" onclick="goSinyallerFiltre('nadir')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('nadir')}"><div class="stat-num" id="s-nadir" style="color:var(--green)">—</div><div class="stat-lbl">🔥 Nadir</div></div>
       <div class="stat-box"><div class="stat-num" id="s-kur" style="color:var(--amber)">—</div><div class="stat-lbl">USD/TRY</div></div>
     </div>
-    <div class="dash-tickers-wrap" id="dash-tickers-wrap" hidden>
-      <div class="dash-tickers-lbl">Tahtadaki coinler</div>
-      <div class="dash-tickers" id="dash-tickers"></div>
+    <div class="board-hm-wrap" id="board-hm-wrap" hidden>
+      <div class="board-hm-head">
+        <p class="board-hm-title">Sinyal tahtası ısı haritası</p>
+        <div class="board-hm-toggles" role="tablist" aria-label="Harita modu">
+          <button type="button" class="board-hm-tog active" data-hm-mode="market" onclick="setBoardHeatmapMode('market',this)">Piyasa (24s %)</button>
+          <button type="button" class="board-hm-tog" data-hm-mode="potential" onclick="setBoardHeatmapMode('potential',this)">Potansiyel (analiz)</button>
+        </div>
+      </div>
+      <p class="board-hm-legend" id="board-hm-legend"></p>
+      <div class="board-hm-frame">
+        <svg class="board-hm-svg" id="board-hm-svg" role="img" aria-label="Sinyal tahtası treemap"></svg>
+      </div>
     </div>
     <p id="board-hint" style="font-size:10px;color:var(--text3);text-align:center;padding:0 16px 10px;line-height:1.45"></p>
     <div class="tr-movers-wrap" id="dash-tr-movers-wrap">
@@ -473,7 +502,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
     </div>
     <p style="font-size:11px;color:var(--text2);text-align:center;padding:0 16px 12px;line-height:1.45"><button type="button" onclick="goPage('analiz')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Analiz merkezi</button> · <button type="button" onclick="goPage('nakit')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Nakit rehberi</button> · sol üst <strong style="color:var(--text1)">☀️/🌙</strong> tema</p>
     <div class="section-hdr" style="margin-top:2px">Tahta özeti · profil &amp; potansiyel</div>
-    <div class="invest-wrap" id="invest-guidance-root"><p class="invest-disclaimer">Tahta verisi yüklenince burada 3 strateji profili ve en yüksek potansiyelli 5 parite özeti oluşur. Yatırım tavsiyesi değildir.</p></div>
+    <div class="invest-wrap" id="invest-guidance-root"><p class="invest-disclaimer">Tahta verisi yüklenince burada 3 strateji profili ve potansiyel sıralı parite özeti oluşur. Yatırım tavsiyesi değildir.</p></div>
     <div class="fb-grid">
       <div class="firsat-banner fb-nadir stat-go" role="button" tabindex="0" title="Nadir listesine git" style="flex-direction:column;align-items:flex-start;gap:4px" onclick="goSinyallerFiltre('nadir')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('nadir')}">
         <div style="font-size:10px;color:var(--text3)">🔥 Nadir Fırsat (80+)</div>
@@ -504,7 +533,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
       <button type="button" class="filtre-btn" data-filtre="candle" onclick="filtre('candle',this)">🕯 Formasyon</button>
       <button type="button" class="filtre-btn" data-filtre="fav" onclick="filtre('fav',this)">★ Favori</button>
     </div>
-    <p class="filtre-hint">Seçtiğin filtre hem bu liste hem <strong>Ana sayfa</strong> üstündeki ilk 5 kart için geçerli (<strong>Liste</strong> görünümü tüm pariteleri gösterir).</p>
+    <p class="filtre-hint">Seçtiğin filtre hem <strong>Ana sayfa</strong> sinyal kartları hem bu sekmedeki kartlar için geçerlidir (<strong>Liste</strong> görünümü tüm pariteleri gösterir).</p>
     <div class="arama-wrap">
       <input class="arama-input" id="arama" placeholder="Coin ara... (örn: BTC)" oninput="ara(this.value)">
     </div>
@@ -727,6 +756,21 @@ let pollIntervalId=null;
 let nadirTrail={},storageHint={},livePrices={},livePricesAt=null;
 let fiyatIntervalId=null;
 
+function f5(n){
+  if(n==null||n===''||!Number.isFinite(Number(n)))return'—';
+  const x=Number(n);
+  if(Math.abs(x)>=1e6)return x.toLocaleString('tr-TR',{maximumFractionDigits:0});
+  if(Math.abs(x)>=1000)return x.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if(Math.abs(x)>=1)return x.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:4});
+  return x.toLocaleString('tr-TR',{minimumFractionDigits:4,maximumFractionDigits:8});
+}
+function tryF(n){
+  if(n==null||n===''||!Number.isFinite(Number(n)))return'—';
+  const k=typeof kur==='number'&&kur>0?kur:38;
+  const x=Number(n)*k;
+  return'₺'+x.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
 function schedulePoll(){
   if(pollIntervalId)clearInterval(pollIntervalId);
   const ms=scanMeta?.isScanning?10000:60000;
@@ -788,7 +832,129 @@ if(typeof io!=='undefined'){
   });
 }
 
-function renderHeatmap(){}
+window.boardHeatmapMode=window.boardHeatmapMode||'market';
+function setBoardHeatmapMode(mode,btn){
+  window.boardHeatmapMode=mode;
+  document.querySelectorAll('.board-hm-tog').forEach(function(b){
+    b.classList.toggle('active',b.getAttribute('data-hm-mode')===mode);
+  });
+  renderHeatmap();
+}
+function boardHmClick(idx){
+  const n=parseInt(idx,10);
+  if(Number.isFinite(n)&&sig[n])modalAc(n);
+}
+function renk(fs){
+  const n=Number(fs)||0;
+  if(n>=80)return'var(--green)';
+  if(n>=65)return'var(--accent)';
+  if(n>=50)return'var(--accent2)';
+  return'var(--text3)';
+}
+function escSvgText(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function hmThemeLight(){return document.documentElement.getAttribute('data-theme')==='light';}
+function hmFillMarket(pct){
+  const t=Math.max(-35,Math.min(35,Number(pct)||0));
+  const L=hmThemeLight()?50:36,L2=hmThemeLight()?56:42;
+  if(t>=0){
+    const u=Math.min(1,t/35);
+    return'hsl('+(105+Math.round(u*15))+','+(52+Math.round(u*16))+'%,'+(L+Math.round(u*10))+'%)';
+  }
+  const u=Math.min(1,-t/35);
+  return'hsl('+(Math.round((1-u)*18))+','+(58+Math.round(u*14))+'%,'+(L2-Math.round(u*8))+'%)';
+}
+function hmFillPotential(firsatSkor){
+  const f=Math.max(0,Math.min(100,Number(firsatSkor)||0));
+  const L=hmThemeLight()?46:32;
+  return'hsl('+(168-Math.round(f*0.62))+','+(48+Math.round(f*0.28))+'%,'+(L+Math.round((100-f)*0.14))+'%)';
+}
+function treemapSliceDice(sorted,x,y,w,h,vert){
+  if(!sorted.length)return[];
+  const g=0.38;
+  if(sorted.length===1){
+    const it=sorted[0];
+    return[{sym:it.sym,idx:it.idx,fill:it.fill,sub:it.sub,wt:it.wt,x:x+g,y:y+g,w:Math.max(0.15,w-2*g),h:Math.max(0.15,h-2*g)}];
+  }
+  const total=sorted.reduce(function(s,a){return s+a.wt;},0);
+  if(total<=0){
+    const n=sorted.length,iw=w/n,cx=x,out=[];
+    for(let i=0;i<n;i++)out=out.concat(treemapSliceDice([sorted[i]],cx,y,iw,h,vert)),cx+=iw;
+    return out;
+  }
+  const mid=Math.ceil(sorted.length/2);
+  const left=sorted.slice(0,mid),right=sorted.slice(mid);
+  const ls=left.reduce(function(s,a){return s+a.wt;},0);
+  const r=ls/total;
+  if(vert){
+    const wl=w*r;
+    return treemapSliceDice(left,x,y,wl,h,!vert).concat(treemapSliceDice(right,x+wl,y,w-wl,h,!vert));
+  }
+  const hh=h*r;
+  return treemapSliceDice(left,x,y,w,hh,!vert).concat(treemapSliceDice(right,x,y+hh,w,h-hh,!vert));
+}
+function renderHeatmap(){
+  const wrap=document.getElementById('board-hm-wrap');
+  const svg=document.getElementById('board-hm-svg');
+  const leg=document.getElementById('board-hm-legend');
+  if(!wrap||!svg)return;
+  const fresh=sig.filter(function(s){return!s.absentThisScan;});
+  const list=fresh.length?fresh.slice():sig.slice();
+  if(!list.length){
+    wrap.hidden=true;
+    svg.innerHTML='';
+    if(leg)leg.textContent='';
+    return;
+  }
+  wrap.hidden=false;
+  const mode=window.boardHeatmapMode||'market';
+  if(leg){
+    leg.textContent=mode==='market'
+      ? 'Alan · hacim değil: |24s fiyat değişimi|. Renk: 24s % (yeşil yukarı, kırmızı aşağı). Kutuya dokun: detay.'
+      : 'Alan · hacim değil: birleşik potansiyel (fırsat, güven, katmanlar, R/R, runner, AI…). Renk: fırsat skoru. Kutuya dokun: detay.';
+  }
+  const items=[];
+  for(let i=0;i<list.length;i++){
+    const s=list[i];
+    const sym=coinBaseFromSignal(s)||'';
+    let idx=typeof s._idx==='number'?s._idx:sig.indexOf(s);
+    if(idx<0)idx=i;
+    let wt,fill,sub;
+    if(mode==='market'){
+      let ch=Number(s.priceChange24h);
+      if(!Number.isFinite(ch))ch=0;
+      wt=Math.max(0.35,Math.abs(ch));
+      fill=hmFillMarket(ch);
+      sub=(ch>=0?'+':'')+ch.toFixed(1)+'%';
+    }else{
+      wt=Math.max(0.5,investPotencyScore(s));
+      const fs=s.firsatSkoru&&s.firsatSkoru.skor!=null?Number(s.firsatSkoru.skor):0;
+      fill=hmFillPotential(fs);
+      sub='F'+Math.round(fs)+' · P'+Math.round(wt);
+    }
+    items.push({sym,idx,fill,sub,wt});
+  }
+  items.sort(function(a,b){return b.wt-a.wt;});
+  const rects=treemapSliceDice(items,0,0,100,100,true);
+  svg.setAttribute('viewBox','0 0 100 100');
+  svg.setAttribute('preserveAspectRatio','none');
+  const parts=[];
+  for(let j=0;j<rects.length;j++){
+    const r=rects[j];
+    if(r.w<0.12||r.h<0.12)continue;
+    parts.push('<rect class="board-hm-cell" tabindex="0" role="button" x="'+r.x+'" y="'+r.y+'" width="'+r.w+'" height="'+r.h+'" fill="'+r.fill+'" data-idx="'+r.idx+'" onclick="boardHmClick('+r.idx+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();boardHmClick('+r.idx+')}"/>');
+    const fsz=Math.min(4.2,Math.max(1.65,Math.min(r.w,r.h)*0.36));
+    const fsz2=Math.min(3,fsz*0.58);
+    if(r.w>=5.2&&r.h>=4.2){
+      parts.push('<text class="board-hm-txt" x="'+(r.x+r.w/2)+'" y="'+(r.y+r.h/2-fsz2*0.28)+'" text-anchor="middle" font-size="'+fsz+'">'+escSvgText(r.sym)+'</text>');
+      parts.push('<text class="board-hm-sub" x="'+(r.x+r.w/2)+'" y="'+(r.y+r.h/2+fsz2*0.88)+'" text-anchor="middle" font-size="'+fsz2+'">'+escSvgText(r.sub)+'</text>');
+    }else if(r.w>=3.8&&r.h>=3){
+      parts.push('<text class="board-hm-txt" x="'+(r.x+r.w/2)+'" y="'+(r.y+r.h/2)+'" dominant-baseline="middle" text-anchor="middle" font-size="'+Math.min(fsz,2.7)+'">'+escSvgText(r.sym)+'</text>');
+    }
+  }
+  svg.innerHTML=parts.join('');
+}
 function gv(s){return Math.min(Math.max(s.firsatSkoru?.skor||Math.min((s.score||0)*5,97),5),97)}
 function investPotencyScore(s){
   const fs=s.firsatSkoru?.skor||0,g=gv(s);
@@ -959,8 +1125,7 @@ function renderInvestPanel(){
     'Daha geniş stop mesafelerinde psikolojik baskı artabilir; pozisyon büyüklüğünü stop mesafesine göre sabit riskle ölçeklemek yaygın yaklaşımdır (genel bilgi).'
   );
   const byPot=fresh.slice().sort(function(a,b){return investPotencyScore(b)-investPotencyScore(a);});
-  const top5=byPot.slice(0,5);
-  const rows=top5.map(function(s){
+  const rows=byPot.map(function(s){
     const name=coinBaseFromSignal(s);
     const vol=String(s.diagnostics?.volatility?.level||'—');
     const aiV=String(s.ai?.verdict||'—');
@@ -970,7 +1135,7 @@ function renderInvestPanel(){
       '<div class="invest-row-body">Fırsat '+(s.firsatSkoru?.skor||0)+' · Katman '+technicalLayerCount(s)+' · Vol '+escU(vol)+' · AI '+escU(aiV)+'<br>'+escU(stopTpSummaryTr(s))+'</div>'+
       '<span class="invest-pot" title="Birleşik potansiyel skoru (panel içi)">'+pot+'</span></div>';
   }).join('');
-  root.innerHTML=disc+p1+p2+p3+'<div class="invest-top5"><div class="invest-top5-h">En yüksek birleşik potansiyel (5)</div>'+rows+'</div>';
+  root.innerHTML=disc+p1+p2+p3+'<div class="invest-top5"><div class="invest-top5-h">Tahtadaki tüm pariteler · birleşik potansiyel sırası ('+byPot.length+')</div>'+rows+'</div>';
 }
 function pxFor(s){
   const sym=s?.symbol;
@@ -979,6 +1144,31 @@ function pxFor(s){
   return(p!=null&&Number.isFinite(p))?p:(s.lastClose||0);
 }
 function canliFiyatVar(s){return s?.symbol&&livePrices[s.symbol]!=null&&Number.isFinite(livePrices[s.symbol]);}
+/** Son uygun tarama turunda kayıtlı referans (öneri anı USDT) */
+function anchorPxFor(s){
+  const a=s?.anchorCloseLastFullScan;
+  if(a!=null&&Number.isFinite(Number(a))&&Number(a)>0)return Number(a);
+  return null;
+}
+function signalPriceBarHTML(s){
+  const px=pxFor(s),anc=anchorPxFor(s);
+  if(anc==null)return '';
+  const pct=s.vsLastFullScanPricePct;
+  let pctOk=pct!=null&&Number.isFinite(Number(pct));
+  let pctNum=pctOk?Number(pct):null;
+  if(!pctOk&&anc>0&&Number.isFinite(px)){
+    pctNum=parseFloat((((px-anc)/anc)*100).toFixed(3));
+    pctOk=true;
+  }
+  const pctStr=pctOk&&pctNum!=null?(pctNum>=0?'+':'')+pctNum.toFixed(2)+'%':'—';
+  const pctCol=pctOk&&pctNum!=null?(pctNum>=0?'var(--green)':'var(--red)'):'var(--text3)';
+  const tryA=tryF(anc),tryP=tryF(px);
+  return'<div class="kart-signal-prices">'+
+    '<div><div class="kart-sp-lbl">Sinyal / tarama fiyatı</div><div class="kart-sp-val">$'+f5(anc)+'</div><div class="kart-sp-sub">'+tryA+'</div></div>'+
+    '<div><div class="kart-sp-lbl">Güncel fiyat</div><div class="kart-sp-val" style="color:var(--accent)">$'+f5(px)+'</div><div class="kart-sp-sub">'+tryP+(canliFiyatVar(s)?' · <span class="fiyat-canli">canlı</span>':'')+'</div></div>'+
+    '<div><div class="kart-sp-lbl">Fark</div><div class="kart-sp-val" style="color:'+pctCol+'">'+pctStr+'</div><div class="kart-sp-sub">Tarama sonrası</div></div>'+
+    '</div>';
+}
 
 function btcFmtNum(n,d){
   if(n==null||!Number.isFinite(Number(n)))return'—';
@@ -1270,14 +1460,6 @@ function guncelle(){
   const bases=listForNames.map(coinBaseFromSignal).filter(Boolean);
   const uniq=[];
   for(const b of bases){if(!uniq.includes(b))uniq.push(b);}
-  const tickWrap=document.getElementById('dash-tickers-wrap');
-  const tickEl=document.getElementById('dash-tickers');
-  if(tickEl&&tickWrap){
-    if(uniq.length){
-      tickEl.innerHTML=uniq.slice(0,24).map(b=>'<span class="dash-ticker">'+b+'</span>').join('');
-      tickWrap.hidden=false;
-    }else{tickEl.innerHTML='';tickWrap.hidden=true;}
-  }
   const prevEl=document.getElementById('stat-sym-preview');
   if(prevEl){
     if(uniq.length){
@@ -1843,7 +2025,7 @@ function filtreTumFromDash(){
 }
 function modalSeviyeAciklamaHTML(){
   return'<details class="modal-seviye-aciklama"><summary>Seviyeler nasıl okunur?</summary><div class="modal-aciklama-ic">'+
-'<p><strong>Giriş (şu an):</strong> Güncel işlem fiyatı; canlı ticker ile uyumludur.</p>'+
+'<p><strong>Güncel fiyat:</strong> Anlık USDT (canlı ticker). <strong>Sinyal / tarama fiyatı:</strong> Son uygun turda tahtaya girerken kaydedilen kapanış; SL/TP yüzdeleri bu tarama bazına göre hesaplanır.</p>'+
 '<p><strong>Stop ve TP1–3:</strong> 1 saatlik ATR’ye göre son kapanıştan yüzde mesafe. Spread, kayma ve haberler gerçek doldurmayı değiştirir; sabit emir tavsiyesi değildir.</p>'+
 '<p><strong>Destek / direnç:</strong> Yaklaşık son 100 adet 1H mumda aranan pivot dipler ve tepeler. Fiyatın tepki ihtimali olan <em>bölge</em> fikri verir.</p>'+
 '<p><strong>Fibonacci:</strong> Seçilen salınımın klasik geri çekilme oranları (ör. %38.2, %78.6).</p>'+
@@ -1852,6 +2034,8 @@ function modalSeviyeAciklamaHTML(){
 }
 function kartTradeZoneHTML(s){
   const px=pxFor(s);
+  const ancB=anchorPxFor(s);
+  const baseRef=ancB!=null?ancB:px;
   const sr=s.supportResistance||{};
   const sup=sr.nearestSupport;
   const res=sr.nearestResistance;
@@ -1870,9 +2054,9 @@ function kartTradeZoneHTML(s){
   }else{
     srMid='<div class="kart-sr-flow"><div class="kart-sr-box" style="flex:1"><div class="kart-sr-ttl">Destek / Direnç</div><div class="kart-sr-sub" style="font-size:10px;padding-top:4px">Bu aralıkta net pivot çıkmadı veya fiyat dışında. Tablo için karta dokunun.</div></div></div>';
   }
-  return'<div class="kart-section-title">Giriş · stop · hedef (ATR)</div>'+
+  return'<div class="kart-section-title">Stop loss · TP1 · TP2 · TP3 (ATR) · destek / direnç</div>'+
   '<div class="kart-atr-grid">'+
-    '<div class="kart-atr-cell kart-atr-entry"><div class="kart-atr-lbl">Giriş</div><div class="kart-atr-val">$'+f5(px)+'</div><div class="kart-atr-sub">Referans</div></div>'+
+    '<div class="kart-atr-cell kart-atr-entry"><div class="kart-atr-lbl">Tarama bazı</div><div class="kart-atr-val">$'+f5(baseRef)+'</div><div class="kart-atr-sub">ATR seviyeleri bu fiyata göre</div></div>'+
     '<div class="kart-atr-cell kart-atr-sl"><div class="kart-atr-lbl">Stop</div><div class="kart-atr-val" style="color:var(--red)">$'+f5(a.stopLoss)+'</div><div class="kart-atr-sub">-'+(a.stopLossPct!=null?Number(a.stopLossPct).toFixed(2):'0')+'%</div></div>'+
     '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP1</div><div class="kart-atr-val" style="color:var(--green)">$'+f5(a.takeProfit1)+'</div><div class="kart-atr-sub">+'+(a.tp1Pct!=null?Number(a.tp1Pct).toFixed(2):'0')+'%</div></div>'+
     '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP2</div><div class="kart-atr-val" style="color:var(--green)">$'+f5(a.takeProfit2)+'</div><div class="kart-atr-sub">+'+(a.tp2Pct!=null?Number(a.tp2Pct).toFixed(2):'0')+'%</div></div>'+
@@ -1961,9 +2145,6 @@ function kartHTML(s){
     if(vps.pricePctSinceLastScan!=null)p.push('Fiyat '+(vps.pricePctSinceLastScan>=0?'+':'')+parseFloat(vps.pricePctSinceLastScan).toFixed(2)+'%');
     if(p.length)deltaHtml='<div style="font-size:10px;color:var(--text3);padding:0 12px 6px;line-height:1.35">Tarama farkı: '+p.join(' · ')+'</div>';
   }
-  if(s.vsLastFullScanPricePct!=null&&Number.isFinite(s.vsLastFullScanPricePct)){
-    deltaHtml+='<div style="font-size:10px;color:var(--accent2);padding:0 12px 6px">Tam tarama sonrası fiyat: '+(s.vsLastFullScanPricePct>=0?'+':'')+parseFloat(s.vsLastFullScanPricePct).toFixed(2)+'%</div>';
-  }
   return `<div class="kart" onclick="modalAc(${s._idx})">
     <div class="kart-accent" style="background:${r}"></div>
     <div class="kart-ust">
@@ -1984,6 +2165,7 @@ function kartHTML(s){
       </div>
       <span class="fiyat-deg ${chg>=0?'deg-p':'deg-n'}">24s ${chg>=0?'+':''}${chg.toFixed(2)}%</span>
     </div>
+    ${signalPriceBarHTML(s)}
     ${deltaHtml}
     ${kartTradeZoneHTML(s)}
     ${horizonKartHTML(s)}
@@ -2022,7 +2204,7 @@ function renderTop(){
     el.innerHTML=head+'<div class="bos">Bu filtreyle öne çıkan parite yok.<br><button type="button" class="filtre-btn" style="margin-top:10px" onclick="filtreTumFromDash()">Tümünü göster</button></div>';
     return;
   }
-  el.innerHTML=head+list.slice(0,5).map(kartHTML).join('');
+  el.innerHTML=head+list.map(kartHTML).join('');
 }
 function renderSinyaller(){
   const el=document.getElementById('sinyal-liste');
