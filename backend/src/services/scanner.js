@@ -568,9 +568,18 @@ function startRegistryPriceRefresh() {
   console.log(`Tahta fiyat yenilemesi: her ${CONFIG.REGISTRY_PRICE_REFRESH_MS / 1000}s`);
 }
 
-async function startAutoScan() {
+async function preloadCoins() {
+  if (allCoins.length) return allCoins.length;
   allCoins = await binance.getTRYCoins();
-  console.log(`Otomatik tarama — her ${CONFIG.SCAN_INTERVAL_MS/60000} dk`);
+  console.log(`Coin evreni: ${allCoins.length} parite (ön yükleme)`);
+  return allCoins.length;
+}
+
+async function startAutoScan() {
+  if (!allCoins.length) {
+    await preloadCoins();
+  }
+  console.log(`Otomatik tarama — her ${CONFIG.SCAN_INTERVAL_MS / 60000} dk`);
   startRegistryPriceRefresh();
   setTimeout(() => {
     scanMarket();
@@ -611,5 +620,6 @@ module.exports = {
   getListSnapshot,
   getBoardSignal,
   startAutoScan,
+  preloadCoins,
   subscribe
 };

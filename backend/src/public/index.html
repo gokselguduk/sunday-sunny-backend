@@ -529,7 +529,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
     <div style="padding:12px 16px">
       <div id="rapor-jump-root">
         <div class="section-hdr">Sıcrama adayları · 2 yıl, tüm pariteler</div>
-        <p style="font-size:11px;color:var(--text3);line-height:1.55;margin:8px 0 10px">Tüm coinlerde tek gün ≥ eşik sıçrama yapan günler taranır; bu günlerden <strong>hemen önceki 5 işlem günü</strong> ortak havuza eklenir. Ortaya çıkan <strong>küresel medyan profil</strong> ile şu anki son 5 gün karşılaştırılır. <strong>Vaat</strong> sütunu: geçmişte profile benzeyen olaylarda görülen günlük sıçrama büyüklüğünün medyanı. <strong>Süre</strong>: günlük mum — tanım gereği sıçrama, kurulumu izleyen işlem gününde ölçülür; saatlik vaat verilmez. Yatırım tavsiyesi değildir.</p>
+        <p style="font-size:11px;color:var(--text3);line-height:1.55;margin:8px 0 10px">Varsayılan eşik: tek günde <strong>≥ %40</strong> kapanış hareketi (büyük sıçramalar). Bu günlerden önceki <strong>5 işlem günü</strong> küresel havuzda birleştirilir; şu anki son 5 gün bu profile yakınlık + Binance <strong>24s anlık</strong> veriyle sıralanır. <strong>Potansiyel</strong> skoru bu birleşimdir. Vaat: geçmiş benzer profillerde görülen sıçrama medyanı. Yatırım tavsiyesi değildir.</p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:4px">
           <button type="button" class="filtre-btn" id="rapor-jump-btn" onclick="raporJumpFetch(true)">Sıcrama havuzunu hesapla / yenile</button>
           <span class="btc-live" id="rapor-jump-meta" style="font-size:10px"></span>
@@ -1111,7 +1111,7 @@ async function nakitTamAnaliz(){
   if(btn)btn.disabled=false;
 }
 function veriCek(){
-  Promise.all([
+  return Promise.all([
     fetch(BASE_URL+'/api/scan/latest').then(r=>r.json()),
     fetch(BASE_URL+'/api/performance/tiers?limit=1500').then(r=>r.json()).catch(()=>null),
     fetch(BASE_URL+'/api/push/config').then(r=>r.json()).catch(()=>null)
@@ -1423,6 +1423,7 @@ function sayfa(id,btn){
     renderRapor();
     raporJumpFetch(false);
   }
+  if(id==='sinyaller'&&aktifF==='liste'&&(!coinList||!coinList.length))void veriCek();
 }
 function goPage(pageId){
   const b=document.querySelector('.nav-btn[data-nav="'+pageId+'"]');
@@ -1676,6 +1677,7 @@ function filtre(f,btn){
   aktifF=f;
   document.querySelectorAll('#page-sinyaller .filtre-wrap .filtre-btn').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
+  if(f==='liste'&&(!coinList||!coinList.length))void veriCek();
   renderSinyaller();
   renderTop();
 }
@@ -1793,8 +1795,7 @@ function modalSeviyeAciklamaHTML(){
 '<p><strong>VWAP / POC:</strong> Oturum ağırlıklı ortalama ve hacim yoğunluk merkezi — yapı bağlamı için.</p>'+
 '<p style="font-size:10px;color:var(--text3);margin:0">Yatırım tavsiyesi değildir.</p></div></details>';
 }
-/** Liste kartı: sadece rakamlar; açıklamalar modalda */
-function kartKompaktSeviyelerHTML(s){
+function kartTradeZoneHTML(s){
   const px=pxFor(s);
   const sr=s.supportResistance||{};
   const sup=sr.nearestSupport;
@@ -1804,24 +1805,40 @@ function kartKompaktSeviyelerHTML(s){
   const a=s.atr||{};
   const supOk=sup!=null&&Number.isFinite(Number(sup));
   const resOk=res!=null&&Number.isFinite(Number(res));
-  const subD=(d)=>d!=null&&Number.isFinite(d)?d.toFixed(1)+'%':'';
-  const srMid='<div class="kart-sr-flow" style="padding:0 12px 6px">'+
-    '<div class="kart-sr-box kart-sr-sup"><div class="kart-sr-ttl">Destek</div><div class="kart-sr-pr">'+(supOk?'$'+f5(sup):'—')+'</div><div class="kart-sr-sub">'+subD(sd)+'</div></div>'+
-    '<div class="kart-sr-box kart-sr-px"><div class="kart-sr-ttl">Fiyat</div><div class="kart-sr-pr" style="color:var(--accent)">$'+f5(px)+'</div><div class="kart-sr-sub"></div></div>'+
-    '<div class="kart-sr-box kart-sr-res"><div class="kart-sr-ttl">Direnç</div><div class="kart-sr-pr">'+(resOk?'$'+f5(res):'—')+'</div><div class="kart-sr-sub">'+subD(rd)+'</div></div>'+
-  '</div>';
-  const rr=a.riskReward!=null&&Number.isFinite(Number(a.riskReward))?Number(a.riskReward).toFixed(2):'—';
-  return srMid+
-  '<div class="kart-atr-grid" style="padding-top:0;padding-bottom:4px">'+
-    '<div class="kart-atr-cell kart-atr-entry"><div class="kart-atr-lbl">Alış</div><div class="kart-atr-val">$'+f5(px)+'</div><div class="kart-atr-sub"></div></div>'+
-    '<div class="kart-atr-cell kart-atr-sl"><div class="kart-atr-lbl">SL</div><div class="kart-atr-val" style="color:var(--red)">$'+f5(a.stopLoss)+'</div><div class="kart-atr-sub"></div></div>'+
-    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP1</div><div class="kart-atr-val" style="color:var(--green)">$'+f5(a.takeProfit1)+'</div><div class="kart-atr-sub">'+(a.tp1Pct!=null?'+'+Number(a.tp1Pct).toFixed(1)+'%':'')+'</div></div>'+
-    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP2</div><div class="kart-atr-val" style="color:var(--green)">$'+f5(a.takeProfit2)+'</div><div class="kart-atr-sub">'+(a.tp2Pct!=null?'+'+Number(a.tp2Pct).toFixed(1)+'%':'')+'</div></div>'+
+  let srMid='';
+  if(supOk||resOk){
+    srMid='<div class="kart-sr-flow">'+
+      '<div class="kart-sr-box kart-sr-sup"><div class="kart-sr-ttl">Destek</div><div class="kart-sr-pr">'+(supOk?'$'+f5(sup):'—')+'</div><div class="kart-sr-sub">'+(sd!=null&&Number.isFinite(sd)?sd.toFixed(2)+'% aşağıda':'pivot altı')+'</div></div>'+
+      '<div class="kart-sr-box kart-sr-px"><div class="kart-sr-ttl">Fiyat</div><div class="kart-sr-pr" style="color:var(--accent)">$'+f5(px)+'</div><div class="kart-sr-sub">Anlık</div></div>'+
+      '<div class="kart-sr-box kart-sr-res"><div class="kart-sr-ttl">Direnç</div><div class="kart-sr-pr">'+(resOk?'$'+f5(res):'—')+'</div><div class="kart-sr-sub">'+(rd!=null&&Number.isFinite(rd)?rd.toFixed(2)+'% yukarıda':'pivot üstü')+'</div></div>'+
+    '</div>';
+  }else{
+    srMid='<div class="kart-sr-flow"><div class="kart-sr-box" style="flex:1"><div class="kart-sr-ttl">Destek / Direnç</div><div class="kart-sr-sub" style="font-size:10px;padding-top:4px">Bu aralıkta net pivot çıkmadı veya fiyat dışında. Tablo için karta dokunun.</div></div></div>';
+  }
+  return'<div class="kart-section-title">Giriş · stop · hedef (ATR)</div>'+
+  '<div class="kart-atr-grid">'+
+    '<div class="kart-atr-cell kart-atr-entry"><div class="kart-atr-lbl">Giriş</div><div class="kart-atr-val">$'+f5(px)+'</div><div class="kart-atr-sub">Referans</div></div>'+
+    '<div class="kart-atr-cell kart-atr-sl"><div class="kart-atr-lbl">Stop</div><div class="kart-atr-val" style="color:var(--red)">$'+f5(a.stopLoss)+'</div><div class="kart-atr-sub">-'+(a.stopLossPct!=null?Number(a.stopLossPct).toFixed(2):'0')+'%</div></div>'+
+    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP1</div><div class="kart-atr-val" style="color:var(--green)">$'+f5(a.takeProfit1)+'</div><div class="kart-atr-sub">+'+(a.tp1Pct!=null?Number(a.tp1Pct).toFixed(2):'0')+'%</div></div>'+
+    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP2</div><div class="kart-atr-val" style="color:var(--green)">$'+f5(a.takeProfit2)+'</div><div class="kart-atr-sub">+'+(a.tp2Pct!=null?Number(a.tp2Pct).toFixed(2):'0')+'%</div></div>'+
   '</div>'+
-  '<div class="kart-atr-grid" style="padding-top:0;padding-bottom:8px;grid-template-columns:1fr 1fr">'+
-    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP3</div><div class="kart-atr-val" style="color:var(--accent)">$'+f5(a.takeProfit3)+'</div><div class="kart-atr-sub">'+(a.tp3Pct!=null?'+'+Number(a.tp3Pct).toFixed(1)+'%':'')+'</div></div>'+
-    '<div class="kart-atr-cell"><div class="kart-atr-lbl">R/R</div><div class="kart-atr-val" style="color:'+(Number(a.riskReward)>=1.5?'var(--green)':'var(--text2)')+'">'+rr+'</div><div class="kart-atr-sub"></div></div>'+
-  '</div>';
+  '<div class="kart-atr-grid" style="padding-top:0;grid-template-columns:1fr 1fr">'+
+    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP3</div><div class="kart-atr-val" style="color:var(--accent)">$'+f5(a.takeProfit3)+'</div><div class="kart-atr-sub">+'+(a.tp3Pct!=null?Number(a.tp3Pct).toFixed(2):'0')+'% · R/R '+(a.riskReward!=null&&Number.isFinite(Number(a.riskReward))?Number(a.riskReward).toFixed(2):'—')+'</div></div>'+
+    '<div class="kart-atr-cell"><div class="kart-atr-lbl">Not</div><div class="kart-atr-val" style="font-size:9px;line-height:1.35;color:var(--text2);font-weight:600">ATR planı; kırılımda güncellenir</div><div class="kart-atr-sub"> </div></div>'+
+  '</div>'+
+  '<div class="kart-section-title" style="margin-top:2px">Yapı (1H pivot)</div>'+
+  srMid+
+  '<div class="kart-tap-hint">Detaylı tablo ve açıklamalar için dokunun</div>';
+}
+function horizonKartHTML(s){
+  const h=s.horizon;
+  if(!h||(!h.tp1&&!h.tp2&&!h.tp3))return '';
+  const p=[];
+  if(h.tp1?.labelTr)p.push('TP1 ~'+h.tp1.labelTr);
+  if(h.tp2?.labelTr)p.push('TP2 ~'+h.tp2.labelTr);
+  if(h.tp3?.labelTr)p.push('TP3 ~'+h.tp3.labelTr);
+  if(!p.length)return '';
+  return'<div class="kart-horizon"><strong>⏱ Öngörü</strong> (1H volatilite): '+p.join(' · ')+'</div>';
 }
 function fList(){
   let l=[...sig];
@@ -1863,24 +1880,40 @@ function kartHTML(s){
   const r=renk(fs),g=gv(s),isFav=favs.includes(s.symbol);
   const px=pxFor(s),canli=canliFiyatVar(s);
   const chg=s.priceChange24h||0,circ=2*Math.PI*22,dash=(g/100)*circ;
-  const sc=s.score||0;
   const bd=[];
-  if(fs>=80)bd.push('<span class="badge b-fire">80+</span>');
-  else if(fs>=65)bd.push('<span class="badge b-green">65+</span>');
-  else if(fs>=50)bd.push('<span class="badge b-blue">50+</span>');
+  if(fs>=80)bd.push('<span class="badge b-fire">🔥 NADİR '+fs+'</span>');
+  else if(fs>=65)bd.push('<span class="badge b-green">✅ GÜÇLÜ '+fs+'</span>');
+  else if(fs>=50)bd.push('<span class="badge b-blue">👍 İYİ '+fs+'</span>');
   const tr=nadirTrail[s.symbol];
-  if(tr&&tr.maxSkor>=80&&fs<80)bd.push('<span class="badge badge-nadir-hist" title="Geçmiş tepe '+tr.maxSkor+'">⭐</span>');
-  if(s.mtfDetay?.allAligned)bd.push('<span class="badge b-green">4TF</span>');
-  if(s.absentThisScan)bd.push('<span class="badge b-amber" title="Önceki tur verisi">Önceki</span>');
+  if(tr&&tr.maxSkor>=80&&fs<80){
+    bd.push('<span class="badge badge-nadir-hist" title="Son Nadir: '+(tr.lastSeen||'')+'">⭐ Tepe '+tr.maxSkor+'</span>');
+  }
+  if(s.mtfDetay?.allAligned)bd.push('<span class="badge b-green">4TF ⚡</span>');
+  if(s.divergence?.bullish)bd.push('<span class="badge b-blue">DIV 📊</span>');
+  if(s.divergence?.hidden_bullish)bd.push('<span class="badge b-blue">Gizli 👁</span>');
+  if(s.fvg?.inBullishFVG)bd.push('<span class="badge b-purple">FVG 🎯</span>');
+  if(s.arbitraj?.isOpportunity)bd.push('<span class="badge b-amber">ARB 💱</span>');
+  if(s.footprint?.strongBull)bd.push('<span class="badge b-green">Delta ✓</span>');
+  if(s.candlePatterns?.hasBullish)bd.push('<span class="badge b-amber">'+(s.candlePatterns.patterns[0]?.name||'Formasyon')+'</span>');
+  if(s.anomaly?.isAnomaly)bd.push('<span class="badge b-red">⚠ Anomali</span>');
+  if(s.absentThisScan)bd.push('<span class="badge b-amber" title="Son tam taramada eşik altı kaldı; veri önceki turdan">Önceki tur</span>');
+  const vps=s.vsPreviousScan;
+  let deltaHtml='';
+  if(vps&&!vps.isFirst){
+    const p=[];
+    if(vps.firsatDelta!=null)p.push('Fırsat '+(vps.firsatDelta>=0?'+':'')+vps.firsatDelta);
+    if(vps.scoreDelta!=null)p.push('Skor '+(vps.scoreDelta>=0?'+':'')+vps.scoreDelta);
+    if(vps.pricePctSinceLastScan!=null)p.push('Fiyat '+(vps.pricePctSinceLastScan>=0?'+':'')+parseFloat(vps.pricePctSinceLastScan).toFixed(2)+'%');
+    if(p.length)deltaHtml='<div style="font-size:10px;color:var(--text3);padding:0 12px 6px;line-height:1.35">Tarama farkı: '+p.join(' · ')+'</div>';
+  }
+  if(s.vsLastFullScanPricePct!=null&&Number.isFinite(s.vsLastFullScanPricePct)){
+    deltaHtml+='<div style="font-size:10px;color:var(--accent2);padding:0 12px 6px">Tam tarama sonrası fiyat: '+(s.vsLastFullScanPricePct>=0?'+':'')+parseFloat(s.vsLastFullScanPricePct).toFixed(2)+'%</div>';
+  }
   return `<div class="kart" onclick="modalAc(${s._idx})">
     <div class="kart-accent" style="background:${r}"></div>
     <div class="kart-ust">
       <div><div><span class="kart-symbol">${sym}</span><span class="kart-pair">${pairLbl}</span></div><div class="kart-badges">${bd.join('')}</div></div>
       <div class="kart-sag">
-        <div style="text-align:right;margin-bottom:2px">
-          <span style="font-family:'Space Mono',monospace;font-size:19px;font-weight:800;color:${r}">${fs}</span>
-          <span style="display:block;font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:0.04em">Fırsat</span>
-        </div>
         <div class="guven-ring">
           <svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="var(--bg3)" stroke-width="3"/><circle cx="26" cy="26" r="22" fill="none" stroke="${r}" stroke-width="3" stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}" stroke-linecap="round"/></svg>
           <div class="guven-ring-txt"><span class="guven-pct" style="color:${r}">${g}</span><span class="guven-lbl">%</span></div>
@@ -1896,14 +1929,17 @@ function kartHTML(s){
       </div>
       <span class="fiyat-deg ${chg>=0?'deg-p':'deg-n'}">24s ${chg>=0?'+':''}${chg.toFixed(2)}%</span>
     </div>
-    <div class="kart-skor-ozet" style="display:flex;flex-wrap:wrap;gap:10px 14px;padding:2px 12px 6px;font-size:11px;color:var(--text2)">
-      <span>Alış skoru <strong style="color:${r};font-family:'Space Mono',monospace">${sc>=0?'+':''}${sc}</strong></span>
-      <span>RSI <strong style="font-family:'Space Mono',monospace;color:${(s.rsi||50)<35?'var(--green)':(s.rsi||50)>70?'var(--red)':'var(--text1)'}">${s.rsi??'—'}</strong></span>
-      <span>1h <strong style="font-family:'Space Mono',monospace;color:${(s.score1h||0)>=0?'var(--green)':'var(--red)'}">${(s.score1h||0)>=0?'+':''}${s.score1h??0}</strong></span>
-      <span>4h <strong style="font-family:'Space Mono',monospace;color:${(s.score4h||0)>=0?'var(--green)':'var(--red)'}">${(s.score4h||0)>=0?'+':''}${s.score4h??0}</strong></span>
-      <span>1d <strong style="font-family:'Space Mono',monospace;color:${(s.score1d||0)>=0?'var(--green)':'var(--red)'}">${(s.score1d||0)>=0?'+':''}${s.score1d??0}</strong></span>
+    ${deltaHtml}
+    ${kartTradeZoneHTML(s)}
+    ${horizonKartHTML(s)}
+    <div class="kart-ind">
+      <div class="ind"><div class="ind-lbl">RSI</div><div class="ind-val" style="color:${(s.rsi||50)<35?'var(--green)':(s.rsi||50)>70?'var(--red)':'var(--text1)'}">${s.rsi||'—'}</div></div>
+      <div class="ind"><div class="ind-lbl">Skor</div><div class="ind-val" style="color:${r}">${s.score>=0?'+':''}${s.score||0}</div></div>
+      <div class="ind"><div class="ind-lbl">1h</div><div class="ind-val" style="color:${(s.score1h||0)>=0?'var(--green)':'var(--red)'}">${(s.score1h||0)>=0?'+':''}${s.score1h||0}</div></div>
+      <div class="ind"><div class="ind-lbl">4h</div><div class="ind-val" style="color:${(s.score4h||0)>=0?'var(--green)':'var(--red)'}">${(s.score4h||0)>=0?'+':''}${s.score4h||0}</div></div>
+      <div class="ind"><div class="ind-lbl">1d</div><div class="ind-val" style="color:${(s.score1d||0)>=0?'var(--green)':'var(--red)'}">${(s.score1d||0)>=0?'+':''}${s.score1d||0}</div></div>
+      <div class="ind"><div class="ind-lbl">R/R</div><div class="ind-val" style="color:${(s.atr?.riskReward||0)>=1.5?'var(--green)':'var(--text3)'}">${s.atr?.riskReward||'—'}</div></div>
     </div>
-    ${kartKompaktSeviyelerHTML(s)}
   </div>`;
 }
 
@@ -1943,7 +1979,7 @@ function renderSinyaller(){
     if(!rows.length){
       el.innerHTML=scanMeta?.isScanning
         ?`<div class="bos">Tüm coin listesi tarama ile doluyor… ${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0}</div>`
-        :'<div class="bos">Henüz liste verisi yok<br>Sunucu taraması tamamlanınca tüm pariteler burada görünür</div>';
+        :'<div class="bos">Liste henüz boş veya sunucu coin listesini göndermedi.<br><button type="button" class="filtre-btn" style="margin-top:10px" onclick="veriCek()">Listeyi yenile</button></div>';
       return;
     }
     el.innerHTML=scanLiveBannerHTML()+rows.map(listeKartHTML).join('')+'<div style="height:20px"></div>';
@@ -2177,19 +2213,19 @@ function listeKartHTML(row){
   const lp=fullSym&&livePrices[fullSym]!=null?livePrices[fullSym]:null;
   const pxShow=lp!=null?lp:px;
   const chg=row.priceChange24h!=null?row.priceChange24h:0;
-  const st=row.onBoard?'<span class="badge b-green">Tahta</span>':'<span class="badge b-amber">Alt</span>';
+  const st=row.onBoard?'<span class="badge b-green">Tahtada</span>':'<span class="badge b-amber">Eşik altı</span>';
   let tier='';
   if(typeof fs==='number'){
-    if(fs>=80)tier='<span class="badge b-fire">80+</span>';
-    else if(fs>=65)tier='<span class="badge b-green">65+</span>';
-    else if(fs>=50)tier='<span class="badge b-blue">50+</span>';
+    if(fs>=80)tier='<span class="badge b-fire">NADİR</span>';
+    else if(fs>=65)tier='<span class="badge b-green">GÜÇLÜ</span>';
+    else if(fs>=50)tier='<span class="badge b-blue">İYİ</span>';
   }
   const ai=row.aiVerdict?`<span class="badge b-blue">${row.aiVerdict}</span>`:'';
   return`<div class="kart" onclick="modalListeAc(${JSON.stringify(fullSym||'')})" style="cursor:pointer">
     <div class="kart-accent" style="background:${r}"></div>
     <div class="kart-ust">
       <div><div><span class="kart-symbol">${sym}</span><span class="kart-pair">${fullSym||''}</span></div>
-        <div class="kart-badges">${st}${tier}${ai}${row.listReason?`<span class="badge b-amber" title="${listeReasonTr(row.listReason)}">!</span>`:''}</div>
+        <div class="kart-badges">${st}${tier}${ai}${row.listReason?`<span class="badge b-amber" title="${listeReasonTr(row.listReason)}">${listeReasonTr(row.listReason)}</span>`:''}</div>
       </div>
       <div class="kart-sag"><span style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:${r}">${fs}</span><div style="font-size:9px;color:var(--text3)">Fırsat</div></div>
     </div>
@@ -2197,7 +2233,7 @@ function listeKartHTML(row){
       <div class="fiyat-row"><span class="fiyat-usdt" style="color:${r}">$${f5(pxShow)}</span><span class="fiyat-try">${tryF(pxShow)}</span>${lp!=null?'<span class="fiyat-canli">canlı</span>':''}</div>
       <span class="fiyat-deg ${chg>=0?'deg-p':'deg-n'}">24s ${typeof chg==='number'?(chg>=0?'+':'')+chg.toFixed(2)+'%':'—'}</span>
     </div>
-    <div class="kart-skor-ozet" style="padding:6px 12px 10px;font-size:10px;color:var(--text3)">Alış skoru <strong style="color:${r};font-family:'Space Mono',monospace">${row.score!=null?(row.score>=0?'+':'')+row.score:'—'}</strong> · ${row.overallSignal||'—'}${row.scannedAt?' · '+new Date(row.scannedAt).toLocaleString('tr-TR',{dateStyle:'short',timeStyle:'short'}):''}</div>
+    <div style="font-size:10px;color:var(--text3);padding:8px 12px 12px;line-height:1.4">Skor: ${row.score!=null?row.score:'—'} · ${row.overallSignal||'—'} · ${row.scannedAt?new Date(row.scannedAt).toLocaleString('tr-TR',{dateStyle:'short',timeStyle:'short'}):'—'}</div>
   </div>`;
 }
 function modalListeAc(fullSym){
@@ -2266,11 +2302,13 @@ function raporJumpFetch(refresh){
         var base=String(p.symbol||'').replace(/USDT$/i,'');
         var safe=base.replace(/[^A-Z0-9]/g,'');
         var f=p.features||{};
+        var l24=p.live24hPct!=null&&Number.isFinite(Number(p.live24hPct))?(Number(p.live24hPct)>=0?'+':'')+Number(p.live24hPct).toFixed(2)+'%':'—';
+        var pot=p.potentialBlend!=null&&Number.isFinite(Number(p.potentialBlend))?Number(p.potentialBlend).toFixed(1):'—';
         return'<div class="gelir-card" style="margin-bottom:8px" role="button" tabindex="0" onclick="gelirDetayAc(\''+safe+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();gelirDetayAc(\''+safe+'\')}">'+
           '<div class="gelir-card-top"><div><div style="font-family:\'Space Mono\',monospace;font-size:16px;font-weight:800">'+escU(base)+'</div>'+
-          '<div class="gelir-coin-sub">Vaat (tarihsel medyan sıçrama): <strong>%'+escU(String(p.spikePromisePct!=null?p.spikePromisePct:'—'))+'</strong> · P75 %'+escU(String(p.spikePromiseP75Pct!=null?p.spikePromiseP75Pct:'—'))+
-          ' · Örnek n≈'+escU(String(p.promiseSampleSize!=null?p.promiseSampleSize:'—'))+' · 5g RSI '+escU(String(f.rsi!=null?f.rsi:'—'))+'</div></div>'+
-          '<span class="gelir-coin-sim">'+escU(String(p.similarity))+'%</span></div>'+
+          '<div class="gelir-coin-sub">Potansiyel <strong>'+escU(pot)+'</strong> · 24s <strong>'+escU(l24)+'</strong> · Vaat %'+escU(String(p.spikePromisePct!=null?p.spikePromisePct:'—'))+
+          ' · Benzerlik %'+escU(String(p.similarity))+' · 5g RSI '+escU(String(f.rsi!=null?f.rsi:'—'))+'</div></div>'+
+          '<span class="gelir-coin-sim" title="Profil benzerliği">'+escU(String(p.similarity))+'%</span></div>'+
           '<div class="gelir-card-foot">Analiz merkezi →</div></div>';
       }).join('');
       const empty=!rows?'<p style="font-size:11px;color:var(--text3)">Şu an bu profile yeterince yakın parite yok veya filtreler sıkı.</p>':'';

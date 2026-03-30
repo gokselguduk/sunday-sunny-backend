@@ -12,14 +12,16 @@ const LOOKBACK_DAYS = Math.min(
   1500,
   Math.max(180, Math.floor(Number(process.env.JUMP_ARCHETYPE_LOOKBACK_DAYS || process.env.WINNER_PATTERN_LOOKBACK_DAYS) || 730))
 );
-/** Tek günlük kapanış hareketi bu oranın üstündeyse "sıçrama" sayılır (yüzde cinsinden, örn. 8 = %8). */
-const SPIKE_MIN_DAY_PCT = Math.min(35, Math.max(4, Number(process.env.JUMP_ARCHETYPE_MIN_DAY_PCT) || 8));
+/** Tek günlük kapanış hareketi bu oranın üstündeyse "sıçrama" sayılır (varsayılan %40 büyük günlük sıçramalar). */
+const SPIKE_MIN_DAY_PCT = Math.min(95, Math.max(5, Number(process.env.JUMP_ARCHETYPE_MIN_DAY_PCT) || 40));
 const SIM_DIST_SCALE = Math.max(3.2, Math.min(6, Number(process.env.JUMP_ARCHETYPE_SIM_DIST_SCALE) || 4.2));
 const MIN_SIMILARITY = Math.min(95, Math.max(52, Number(process.env.JUMP_ARCHETYPE_MIN_SIMILARITY) || 62));
 const MIN_STRUCTURAL_HITS = Math.min(5, Math.max(1, Number(process.env.JUMP_ARCHETYPE_MIN_HITS) || 2));
 const HIGH_SIM_ESCAPE = Math.min(92, Math.max(70, Number(process.env.JUMP_ARCHETYPE_HIGH_SIM_ESCAPE) || 72));
 const MAX_LISTED = Math.min(60, Math.max(6, Number(process.env.JUMP_ARCHETYPE_MAX_MATCHES) || 22));
-const MIN_TRAINING_SAMPLES = Math.max(40, Math.floor(Number(process.env.JUMP_ARCHETYPE_MIN_SAMPLES) || 80));
+/** Canlı sıralama için havuz çarpanı (önce benzerlikle alınır, sonra 24s veriyle sıralanır). */
+const LIVE_POOL_MULT = Math.min(5, Math.max(1, Math.floor(Number(process.env.JUMP_ARCHETYPE_LIVE_POOL_MULT) || 3)));
+const MIN_TRAINING_SAMPLES = Math.max(12, Math.floor(Number(process.env.JUMP_ARCHETYPE_MIN_SAMPLES) || 24));
 const PROMISE_PEER_SIM_GAP = Math.min(25, Math.max(5, Number(process.env.JUMP_ARCHETYPE_PROMISE_GAP) || 14));
 
 let cache = { at: 0, payload: null };
@@ -250,7 +252,7 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
     `Liste: şu anki son 5 günü bu küresel profile yakın olan pariteler; “vaat” sütunu, geçmişte benzer profile sahip olaylarda görülen sıçrama büyüklüğünün medyanıdır (gelecek garantisi değildir). Zaman: **günlük mum** — tanım gereği sıçrama, 5 günlük pencerenin **ertesi işlem gününde** ölçüldü.`;
 
   const horizonNoteTr =
-    'Çözünürlük günlük; saatlik veya anlık sıçrama bu modelde yok. Geçmiş örneklerde olay, 5 günlük kurulumu takip eden ilk güçlü yeşil gün olarak etiketlendi.';
+    'Kurulum günlük mumdadır. Kartlardaki 24s % ve fiyat Binance USDT-M anlık ticker’dır; “potansiyel” skoru bu veri + profil benzerliğinin birleşimidir. Yatırım tavsiyesi değildir.';
 
   const peers = [];
   for (const [sym, row] of bySymbol.entries()) {
@@ -272,28 +274,60 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
         rangeAvg: Math.round(cp.rangeAvg * 10000) / 10000,
         volRatio: Math.round(cp.volRatio * 100) / 100,
         rsi: Math.round(cp.rsiEnd * 10) / 10
-      },
-      horizonNoteTr
+      }
     });
   }
 
   peers.sort((a, b) => b.similarity - a.similarity);
 
-  const candidates = peers
+  const poolLimit = Math.min(peers.length, Math.ceil(MAX_LISTED * LIVE_POOL_MULT));
+  const pool = peers
     .filter((p) => p.similarity >= MIN_SIMILARITY)
     .filter((p) => p.structuralHits >= MIN_STRUCTURAL_HITS || p.similarity >= HIGH_SIM_ESCAPE)
     .filter((p) => {
       const row = bySymbol.get(p.symbol);
       return hasMeaningfulRecentStructure(row?.currentProfile, med);
     })
-    .slice(0, MAX_LISTED);
+    .slice(0, poolLimit);
+
+  let tick24 = {};
+  try {
+    tick24 = await binance.getAllFutures24hTickers();
+  } catch (e) {
+    tick24 = {};
+  }
+
+  const withLive = pool.map((c) => {
+    const t = tick24[c.symbol];
+    const rawPct = t?.priceChangePercent;
+    const p = Number(rawPct);
+    const live24hPct = Number.isFinite(p) ? Math.round(p * 100) / 100 : null;
+    const liveLastPrice = t?.lastPrice != null && Number.isFinite(Number(t.lastPrice)) ? Number(t.lastPrice) : null;
+    const liveQuoteVol =
+      t?.quoteVolume != null && Number.isFinite(Number(t.quoteVolume)) ? Number(t.quoteVolume) : null;
+    const mom = live24hPct != null && Number.isFinite(live24hPct) ? Math.min(22, Math.max(0, live24hPct) * 0.22) : 0;
+    const hits = Math.min(5, c.structuralHits || 0);
+    const potentialBlend = Math.round(c.similarity * 0.58 + mom + hits * 1.35);
+    return {
+      ...c,
+      live24hPct,
+      liveLastPrice,
+      liveQuoteVol,
+      potentialBlend
+    };
+  });
+
+  withLive.sort((a, b) => b.potentialBlend - a.potentialBlend);
+  const candidates = withLive.slice(0, MAX_LISTED);
 
   const methodNoteTr =
-    `Tüm TR USDT-M perpetual pariteleri taranır; tek gün kapanış getirisi ≥%${SPIKE_MIN_DAY_PCT} olan her gün bir “sıçrama” kabul edilir ve o günden önceki 5 gün profili havuza eklenir. ` +
-    'Arketip, bu havuzun medyan ve sapmasıdır. Vaat: şu anki benzerlik skoruna yakın geçmiş profillerde gerçekleşen sıçrama yüzdelerinin medyanı.';
+    `Tüm TR USDT-M perpetual pariteleri taranır; tek gün kapanış getirisi ≥%${SPIKE_MIN_DAY_PCT} olan her gün “sıçrama” sayılır ve önceki 5 gün profili havuza eklenir. ` +
+    'Arketip medyan + sapmadır. Vaat: benzer geçmiş profillerdeki sıçrama büyüklüğünün medyanı. ' +
+    'Liste sırası: Binance **24 saatlik** işlem verisi (fiyat değişimi + hacim) ile profil benzerliği birleştirilerek “potansiyel” skoru üretilir (anlık ticker; günlük modelle birlikte okunmalı).';
 
   const filterSummaryTr =
-    `Liste: benzerlik ≥%${MIN_SIMILARITY}, yapı taşı ≥${MIN_STRUCTURAL_HITS} (veya benzerlik ≥%${HIGH_SIM_ESCAPE}), anlamsız yatay 5g elendi; en fazla ${MAX_LISTED} satır. Ortam: JUMP_ARCHETYPE_* .`;
+    `Ön süzgeç: benzerlik ≥%${MIN_SIMILARITY}, yapı taşı ≥${MIN_STRUCTURAL_HITS} (veya ≥%${HIGH_SIM_ESCAPE}), yatay 5g elendi. ` +
+    `Canlı sıralama: ${LIVE_POOL_MULT}× havuzdan en iyi ${MAX_LISTED} satır. Ortam: JUMP_ARCHETYPE_* .`;
 
   const payload = {
     ok: true,

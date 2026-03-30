@@ -411,10 +411,15 @@ scanner.subscribe(async (data) => {
 });
 
 // ── BAŞLAT ──────────────────────────────────
-scanner.startAutoScan();
-
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Sunucu calisiyor: http://localhost:${PORT}`);
-  btcPulse.startBtcPulse(io);
-});
+
+scanner
+  .preloadCoins()
+  .catch((e) => console.error('Coin evreni ön yüklenemedi:', e.message))
+  .finally(() => {
+    server.listen(PORT, () => {
+      console.log(`Sunucu calisiyor: http://localhost:${PORT}`);
+      btcPulse.startBtcPulse(io);
+      scanner.startAutoScan();
+    });
+  });
