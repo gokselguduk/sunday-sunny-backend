@@ -587,6 +587,21 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
 <script>
 const BASE_URL=window.location.origin;
+(function setupServiceWorkerForFreshShell(){
+  if(!('serviceWorker' in navigator))return;
+  function registerAndUpdate(){
+    navigator.serviceWorker.register('/sw.js',{scope:'/'}).then(function(reg){
+      return reg.update().catch(function(){});
+    }).catch(function(){});
+  }
+  registerAndUpdate();
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden)registerAndUpdate();
+  });
+  window.addEventListener('pageshow',function(ev){
+    if(ev.persisted)registerAndUpdate();
+  });
+})();
 function syncThemeToggleButton(){
   const t=document.documentElement.getAttribute('data-theme')==='light'?'light':'dark';
   const b=document.getElementById('theme-toggle');

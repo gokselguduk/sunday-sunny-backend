@@ -46,7 +46,8 @@ app.use(
     setHeaders(res, filePath) {
       const b = path.basename(filePath);
       if (/\.html$/i.test(b) || b === 'sw.js') {
-        res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate');
+        res.setHeader('Cache-Control', 'no-store, max-age=0, must-revalidate, private');
+        res.setHeader('Pragma', 'no-cache');
       }
     }
   })
