@@ -100,7 +100,9 @@ body{background:var(--bg0);color:var(--text1);font-family:'DM Sans',sans-serif;m
 html[data-theme="light"] .board-hm-tog.active{background:rgba(0,136,170,0.12);border-color:rgba(0,136,170,0.45);color:var(--accent)}
 .board-hm-legend{font-size:9px;color:var(--text3);line-height:1.45;margin:0 0 8px}
 .board-hm-frame{width:100%;border-radius:14px;border:1px solid var(--border);background:var(--bg2);overflow:hidden;min-height:200px;max-height:min(52vw,340px)}
+.board-hm-frame--tall{min-height:240px;max-height:min(58vw,380px)}
 .board-hm-svg{display:block;width:100%;height:100%;min-height:200px;max-height:min(52vw,340px)}
+.board-hm-frame--tall .board-hm-svg{min-height:240px;max-height:min(58vw,380px)}
 .board-hm-cell{cursor:pointer;transition:filter .12s}
 .board-hm-cell:hover{filter:brightness(1.08)}
 .board-hm-cell:focus{outline:2px solid var(--accent);outline-offset:-2px}
@@ -482,25 +484,12 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
       <div class="stat-box stat-go" role="button" tabindex="0" title="🔥 Nadir (80+)" onclick="goSinyallerFiltre('nadir')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('nadir')}"><div class="stat-num" id="s-nadir" style="color:var(--green)">—</div><div class="stat-lbl">🔥 Nadir</div></div>
       <div class="stat-box"><div class="stat-num" id="s-kur" style="color:var(--amber)">—</div><div class="stat-lbl">USD/TRY</div></div>
     </div>
-    <div class="board-hm-wrap" id="board-hm-wrap" hidden>
-      <div class="board-hm-head">
-        <p class="board-hm-title">Sinyal tahtası ısı haritası</p>
-        <div class="board-hm-toggles" role="tablist" aria-label="Harita modu">
-          <button type="button" class="board-hm-tog active" data-hm-mode="market" onclick="setBoardHeatmapMode('market',this)">Piyasa (24s %)</button>
-          <button type="button" class="board-hm-tog" data-hm-mode="potential" onclick="setBoardHeatmapMode('potential',this)">Potansiyel (analiz)</button>
-        </div>
-      </div>
-      <p class="board-hm-legend" id="board-hm-legend"></p>
-      <div class="board-hm-frame">
-        <svg class="board-hm-svg" id="board-hm-svg" role="img" aria-label="Sinyal tahtası treemap"></svg>
-      </div>
-    </div>
     <p id="board-hint" style="font-size:10px;color:var(--text3);text-align:center;padding:0 16px 10px;line-height:1.45"></p>
     <div class="tr-movers-wrap" id="dash-tr-movers-wrap">
       <div class="section-hdr" style="font-size:12px;margin-bottom:4px">TR pariteler · 24 saatlik hareket (Binance)</div>
       <div id="dash-tr-movers"><p class="tr-movers-hint">Yükleniyor…</p></div>
     </div>
-    <p style="font-size:11px;color:var(--text2);text-align:center;padding:0 16px 12px;line-height:1.45"><button type="button" onclick="goPage('analiz')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Analiz merkezi</button> · <button type="button" onclick="goPage('nakit')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Nakit rehberi</button> · sol üst <strong style="color:var(--text1)">☀️/🌙</strong> tema</p>
+    <p style="font-size:11px;color:var(--text2);text-align:center;padding:0 16px 12px;line-height:1.45"><button type="button" onclick="goPage('harita')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Isı haritası</button> · <button type="button" onclick="goPage('analiz')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Analiz merkezi</button> · <button type="button" onclick="goPage('nakit')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Nakit rehberi</button> · sol üst <strong style="color:var(--text1)">☀️/🌙</strong> tema</p>
     <div class="section-hdr" style="margin-top:2px">Tahta özeti · profil &amp; potansiyel</div>
     <div class="invest-wrap" id="invest-guidance-root"><p class="invest-disclaimer">Tahta verisi yüklenince burada 3 strateji profili ve potansiyel sıralı parite özeti oluşur. Yatırım tavsiyesi değildir.</p></div>
     <div class="fb-grid">
@@ -572,6 +561,29 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
     </div>
   </div>
 
+  <div class="page" id="page-harita">
+    <div class="analiz-page">
+      <div class="section-hdr">Isı haritası</div>
+      <p style="font-size:11px;color:var(--text3);padding:0 0 14px;line-height:1.55">İki treemap: <strong>piyasa</strong> için Binance TR USDT-M paritelerinde 24 saatlik yüzde hareket; <strong>sinyaller</strong> için tahtadaki kurulumlarda ATR hedeflerinden türetilen ağırlıklı kazanç beklentisi (½·TP1 + 0,35·TP2 + 0,15·TP3). Hacim / market cap kullanılmaz. Yatırım tavsiyesi değildir.</p>
+
+      <div class="board-hm-wrap" style="padding-bottom:18px">
+        <p class="board-hm-title" style="max-width:none;margin-bottom:4px">Piyasa · TR pariteler (24s %)</p>
+        <p class="board-hm-legend" id="harita-piyasa-legend">Yükleniyor…</p>
+        <div class="board-hm-frame board-hm-frame--tall">
+          <svg class="board-hm-svg" id="harita-piyasa-svg" role="img" aria-label="Piyasa ısı haritası"></svg>
+        </div>
+      </div>
+
+      <div class="board-hm-wrap" style="padding-bottom:24px">
+        <p class="board-hm-title" style="max-width:none;margin-bottom:4px">Sinyaller · kazanç beklentisi (ATR TP)</p>
+        <p class="board-hm-legend" id="harita-sinyal-legend"></p>
+        <div class="board-hm-frame board-hm-frame--tall">
+          <svg class="board-hm-svg" id="harita-sinyal-svg" role="img" aria-label="Sinyal treemap"></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="page" id="page-rapor">
     <div style="padding:12px 16px">
       <div id="rapor-jump-root">
@@ -623,6 +635,10 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
   <button type="button" class="nav-btn" data-nav="analiz" onclick="sayfa('analiz',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/><path d="M11 8v6M8 11h6"/></svg>
     <span>Analiz</span>
+  </button>
+  <button type="button" class="nav-btn" data-nav="harita" onclick="sayfa('harita',this)" title="Isı haritası">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="10" rx="1"/><rect x="3" y="14" width="10" height="7" rx="1"/><rect x="16" y="16" width="5" height="5" rx="1"/></svg>
+    <span>Harita</span>
   </button>
   <button type="button" class="nav-btn" data-nav="rapor" onclick="sayfa('rapor',this)">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -742,7 +758,7 @@ function toggleTheme(){
   const m=document.querySelector('meta[name="theme-color"]');
   if(m)m.setAttribute('content',next==='light'?'#EDF1F7':'#080C14');
   syncThemeToggleButton();
-  renderHeatmap();
+  renderHaritaPageIfActive();
   if(typeof requestAnimationFrame!=='undefined')requestAnimationFrame(function(){syncHeaderOffset();});
 }
 let sig=[],favs=JSON.parse(localStorage.getItem('ss_fav')||'[]');
@@ -832,17 +848,17 @@ if(typeof io!=='undefined'){
   });
 }
 
-window.boardHeatmapMode=window.boardHeatmapMode||'market';
-function setBoardHeatmapMode(mode,btn){
-  window.boardHeatmapMode=mode;
-  document.querySelectorAll('.board-hm-tog').forEach(function(b){
-    b.classList.toggle('active',b.getAttribute('data-hm-mode')===mode);
-  });
-  renderHeatmap();
-}
 function boardHmClick(idx){
   const n=parseInt(idx,10);
   if(Number.isFinite(n)&&sig[n])modalAc(n);
+}
+function haritaPiyasaClick(rawBase){
+  const b=String(rawBase||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,14);
+  if(!b)return;
+  goPage('analiz');
+  const v=document.getElementById('analiz-parite-input');
+  if(v)v.value=b;
+  void analizPariteYukle();
 }
 function renk(fs){
   const n=Number(fs)||0;
@@ -870,12 +886,30 @@ function hmFillPotential(firsatSkor){
   const L=hmThemeLight()?46:32;
   return'hsl('+(168-Math.round(f*0.62))+','+(48+Math.round(f*0.28))+'%,'+(L+Math.round((100-f)*0.14))+'%)';
 }
+/** ATR TP1/2/3 yüzdelerinden ağırlıklı tek “beklenti” (model çıktısı; gerçekleşme değildir). */
+function signalExpectedTpBlend(s){
+  const a=s&&s.atr?s.atr:{};
+  const t1=Number(a.tp1Pct),t2=Number(a.tp2Pct),t3=Number(a.tp3Pct);
+  let v=0,w=0;
+  if(Number.isFinite(t1)){v+=0.5*t1;w+=0.5;}
+  if(Number.isFinite(t2)){v+=0.35*t2;w+=0.35;}
+  if(Number.isFinite(t3)){v+=0.15*t3;w+=0.15;}
+  if(w>0)return v/w;
+  if(Number.isFinite(t1))return t1;
+  return 0;
+}
+function hmFillTpExpectation(pct){
+  const p=Math.max(0,Math.min(22,Number(pct)||0));
+  const L=hmThemeLight()?50:34;
+  return'hsl('+(132-Math.round(p*2.1))+','+(46+Math.round(p*1.15))+'%,'+(L-Math.round(p*0.25))+'%)';
+}
 function treemapSliceDice(sorted,x,y,w,h,vert){
   if(!sorted.length)return[];
   const g=0.38;
   if(sorted.length===1){
     const it=sorted[0];
-    return[{sym:it.sym,idx:it.idx,fill:it.fill,sub:it.sub,wt:it.wt,x:x+g,y:y+g,w:Math.max(0.15,w-2*g),h:Math.max(0.15,h-2*g)}];
+    const ck=it.click?String(it.click):'';
+    return[{sym:it.sym,idx:it.idx,fill:it.fill,sub:it.sub,wt:it.wt,click:ck,x:x+g,y:y+g,w:Math.max(0.15,w-2*g),h:Math.max(0.15,h-2*g)}];
   }
   const total=sorted.reduce(function(s,a){return s+a.wt;},0);
   if(total<=0){
@@ -894,56 +928,19 @@ function treemapSliceDice(sorted,x,y,w,h,vert){
   const hh=h*r;
   return treemapSliceDice(left,x,y,w,hh,!vert).concat(treemapSliceDice(right,x,y+hh,w,h-hh,!vert));
 }
-function renderHeatmap(){
-  const wrap=document.getElementById('board-hm-wrap');
-  const svg=document.getElementById('board-hm-svg');
-  const leg=document.getElementById('board-hm-legend');
-  if(!wrap||!svg)return;
-  const fresh=sig.filter(function(s){return!s.absentThisScan;});
-  const list=fresh.length?fresh.slice():sig.slice();
-  if(!list.length){
-    wrap.hidden=true;
-    svg.innerHTML='';
-    if(leg)leg.textContent='';
-    return;
-  }
-  wrap.hidden=false;
-  const mode=window.boardHeatmapMode||'market';
-  if(leg){
-    leg.textContent=mode==='market'
-      ? 'Alan · hacim değil: |24s fiyat değişimi|. Renk: 24s % (yeşil yukarı, kırmızı aşağı). Kutuya dokun: detay.'
-      : 'Alan · hacim değil: birleşik potansiyel (fırsat, güven, katmanlar, R/R, runner, AI…). Renk: fırsat skoru. Kutuya dokun: detay.';
-  }
-  const items=[];
-  for(let i=0;i<list.length;i++){
-    const s=list[i];
-    const sym=coinBaseFromSignal(s)||'';
-    let idx=typeof s._idx==='number'?s._idx:sig.indexOf(s);
-    if(idx<0)idx=i;
-    let wt,fill,sub;
-    if(mode==='market'){
-      let ch=Number(s.priceChange24h);
-      if(!Number.isFinite(ch))ch=0;
-      wt=Math.max(0.35,Math.abs(ch));
-      fill=hmFillMarket(ch);
-      sub=(ch>=0?'+':'')+ch.toFixed(1)+'%';
-    }else{
-      wt=Math.max(0.5,investPotencyScore(s));
-      const fs=s.firsatSkoru&&s.firsatSkoru.skor!=null?Number(s.firsatSkoru.skor):0;
-      fill=hmFillPotential(fs);
-      sub='F'+Math.round(fs)+' · P'+Math.round(wt);
-    }
-    items.push({sym,idx,fill,sub,wt});
-  }
-  items.sort(function(a,b){return b.wt-a.wt;});
-  const rects=treemapSliceDice(items,0,0,100,100,true);
+function paintTreemapIntoSvg(svg,items){
+  if(!svg)return;
+  if(!items||!items.length){svg.innerHTML='';return;}
+  const sorted=items.slice().sort(function(a,b){return b.wt-a.wt;});
+  const rects=treemapSliceDice(sorted,0,0,100,100,true);
   svg.setAttribute('viewBox','0 0 100 100');
   svg.setAttribute('preserveAspectRatio','none');
   const parts=[];
   for(let j=0;j<rects.length;j++){
     const r=rects[j];
     if(r.w<0.12||r.h<0.12)continue;
-    parts.push('<rect class="board-hm-cell" tabindex="0" role="button" x="'+r.x+'" y="'+r.y+'" width="'+r.w+'" height="'+r.h+'" fill="'+r.fill+'" data-idx="'+r.idx+'" onclick="boardHmClick('+r.idx+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();boardHmClick('+r.idx+')}"/>');
+    const extra=r.click?(' '+r.click):'';
+    parts.push('<rect class="board-hm-cell" tabindex="0" role="button" x="'+r.x+'" y="'+r.y+'" width="'+r.w+'" height="'+r.h+'" fill="'+r.fill+'"'+extra+'/>');
     const fsz=Math.min(4.2,Math.max(1.65,Math.min(r.w,r.h)*0.36));
     const fsz2=Math.min(3,fsz*0.58);
     if(r.w>=5.2&&r.h>=4.2){
@@ -954,6 +951,76 @@ function renderHeatmap(){
     }
   }
   svg.innerHTML=parts.join('');
+}
+function renderHaritaSinyalTreemap(){
+  const svg=document.getElementById('harita-sinyal-svg');
+  const leg=document.getElementById('harita-sinyal-legend');
+  const fresh=sig.filter(function(s){return!s.absentThisScan;});
+  const list=fresh.length?fresh.slice():sig.slice();
+  if(leg){
+    leg.textContent=list.length
+      ? 'Alan: ağırlıklı TP beklentisi (½·TP1 + 0,35·TP2 + 0,15·TP3). Renk: aynı yüzde (yüksek = daha sıcak yeşil). Kutuya dokun: sinyal kartı.'
+      : 'Henüz sinyal yok; tam tarama sonrası yenileyin.';
+  }
+  if(!list.length){if(svg)svg.innerHTML='';return;}
+  const items=list.map(function(s){
+    const sym=coinBaseFromSignal(s)||'';
+    let idx=typeof s._idx==='number'?s._idx:sig.indexOf(s);
+    if(idx<0)idx=0;
+    const blend=signalExpectedTpBlend(s);
+    const wt=Math.max(0.3,blend||0.15);
+    const fill=hmFillTpExpectation(blend);
+    const sub='~'+blend.toFixed(1)+'%';
+    return{
+      sym,wt,fill,sub,
+      click:'onclick="boardHmClick('+idx+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();boardHmClick('+idx+')}"'
+    };
+  });
+  paintTreemapIntoSvg(svg,items);
+}
+function fetchHaritaPiyasaTreemap(){
+  const leg=document.getElementById('harita-piyasa-legend');
+  const svg=document.getElementById('harita-piyasa-svg');
+  if(leg)leg.textContent='Yükleniyor…';
+  if(svg)svg.innerHTML='';
+  fetch(BASE_URL+'/api/market/tr-24h-movers?limit=50&sort=abs')
+    .then(function(r){return r.json();})
+    .then(function(j){
+      if(!j||!j.ok||!Array.isArray(j.movers)||!j.movers.length){
+        if(leg)leg.textContent=(j&&j.error)?String(j.error):'TR parite verisi yok.';
+        return;
+      }
+      if(leg)leg.textContent='Alan: |24s değişim| (hacim değil). Renk: 24s % yönü. Kutuya dokun: Analiz sekmesinde parite açılır.';
+      const items=j.movers.map(function(m){
+        const base=String(m.base||'').replace(/[^A-Z0-9]/gi,'').slice(0,14);
+        const ch=Number(m.change24hPct);
+        const chOk=Number.isFinite(ch)?ch:0;
+        return{
+          sym:base||'—',
+          wt:Math.max(0.25,Math.abs(chOk)||0.1),
+          fill:hmFillMarket(chOk),
+          sub:(chOk>=0?'+':'')+chOk.toFixed(1)+'%',
+          click:'onclick="haritaPiyasaClick(\''+base+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();haritaPiyasaClick(\''+base+'\')}"'
+        };
+      });
+      paintTreemapIntoSvg(svg,items);
+    })
+    .catch(function(){
+      if(leg)leg.textContent='İstek başarısız; ağı kontrol edip tekrar deneyin.';
+    });
+}
+function renderHaritaPage(){
+  renderHaritaSinyalTreemap();
+  window._ssHaritaPiyasaAt=Date.now();
+  fetchHaritaPiyasaTreemap();
+}
+function renderHaritaPageIfActive(){
+  if(!document.getElementById('page-harita')?.classList.contains('active'))return;
+  renderHaritaSinyalTreemap();
+  const t=Date.now(),last=window._ssHaritaPiyasaAt||0;
+  if(t-last<22000)return;
+  window._ssHaritaPiyasaAt=t;
+  fetchHaritaPiyasaTreemap();
 }
 function gv(s){return Math.min(Math.max(s.firsatSkoru?.skor||Math.min((s.score||0)*5,97),5),97)}
 function investPotencyScore(s){
@@ -1363,7 +1430,7 @@ async function fiyatGuncelle(){
     const res=await fetch(BASE_URL+'/api/prices/bulk',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:syms})});
     const j=await res.json();
     if(j.prices){livePrices=j.prices;livePricesAt=Date.now();}
-    renderTop();renderSinyaller();renderHeatmap();
+    renderTop();renderSinyaller();renderHaritaPageIfActive();
   }catch(e){}
 }
 function baslatCanliFiyat(){
@@ -1497,7 +1564,7 @@ function guncelle(){
   handleEliteSetupAlerts();
   void refreshPushBtn();
   renderInvestPanel();
-  renderTop();renderSinyaller();renderRapor();renderHeatmap();
+  renderTop();renderSinyaller();renderRapor();renderHaritaPageIfActive();
   if(document.getElementById('page-dashboard')?.classList.contains('active'))refreshTrMovers24h();
   syncHeaderOffset();
 }
@@ -1654,6 +1721,7 @@ function sayfa(id,btn){
   if(navBtn)navBtn.classList.add('active');
   if(id==='nakit')void loadNakitTab();
   if(id==='analiz')void analizPageEnter();
+  if(id==='harita'){window.scrollTo(0,0);void renderHaritaPage();}
   if(id==='gelir')void gelirWinnerPattern(false);
   if(id==='dashboard'){_trMoversFetchedAt=0;refreshTrMovers24h();}
   if(id==='rapor'){
