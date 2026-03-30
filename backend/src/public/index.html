@@ -404,6 +404,20 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
 .hm-legend{display:flex;align-items:center;gap:12px;font-size:10px;color:var(--text3);flex-wrap:wrap;padding-top:4px;border-top:1px dashed var(--border);margin-top:4px}
 .hm-legend-bar{height:10px;flex:1;min-width:100px;max-width:240px;border-radius:6px;border:1px solid var(--border)}
 .hm-hint{font-size:10px;color:var(--text3);line-height:1.45;margin-bottom:10px}
+.tr-movers-wrap{padding:0 16px 12px}
+.tr-movers-hdr{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px}
+.tr-movers-time{font-family:'Space Mono',monospace;font-size:9px;opacity:0.85}
+.tr-movers-row{display:flex;flex-wrap:wrap;gap:6px}
+.tr-mv-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:5px 10px;background:var(--bg2);cursor:pointer;font:inherit;color:var(--text1)}
+.tr-mv-chip.tr-mv-up{border-color:rgba(0,230,118,0.28)}
+.tr-mv-chip.tr-mv-dn{border-color:rgba(255,71,87,0.25)}
+.tr-mv-sym{font-family:'Space Mono',monospace;font-size:11px;font-weight:800}
+.tr-mv-pct{font-family:'Space Mono',monospace;font-size:10px;font-weight:700}
+.tr-mv-up .tr-mv-pct{color:var(--green)}
+.tr-mv-dn .tr-mv-pct{color:var(--red)}
+.tr-movers-retro{margin-top:10px;font-size:10px;color:var(--text3);line-height:1.45}
+.tr-movers-retro summary{cursor:pointer;color:var(--accent);font-weight:600}
+.tr-movers-hint{font-size:10px;color:var(--text3);margin:0;line-height:1.45}
 </style>
 <script>
 (function(){
@@ -453,6 +467,10 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
       <div class="dash-tickers" id="dash-tickers"></div>
     </div>
     <p id="board-hint" style="font-size:10px;color:var(--text3);text-align:center;padding:0 16px 10px;line-height:1.45"></p>
+    <div class="tr-movers-wrap" id="dash-tr-movers-wrap">
+      <div class="section-hdr" style="font-size:12px;margin-bottom:4px">TR pariteler · 24 saatlik hareket (Binance)</div>
+      <div id="dash-tr-movers"><p class="tr-movers-hint">Yükleniyor…</p></div>
+    </div>
     <p style="font-size:11px;color:var(--text2);text-align:center;padding:0 16px 12px;line-height:1.45"><button type="button" onclick="goPage('analiz')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Analiz merkezi</button> · <button type="button" onclick="goPage('nakit')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Nakit rehberi</button> · sol üst <strong style="color:var(--text1)">☀️/🌙</strong> tema</p>
     <div class="section-hdr" style="margin-top:2px">Tahta özeti · profil &amp; potansiyel</div>
     <div class="invest-wrap" id="invest-guidance-root"><p class="invest-disclaimer">Tahta verisi yüklenince burada 3 strateji profili ve en yüksek potansiyelli 5 parite özeti oluşur. Yatırım tavsiyesi değildir.</p></div>
@@ -1203,6 +1221,41 @@ function coinBaseFromSignal(s){
   const b=String(s.base||'').trim().toUpperCase();
   return b||'';
 }
+var _trMoversFetchedAt=0;
+function _escMini(s){
+  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+}
+function renderTrMovers24h(j){
+  const root=document.getElementById('dash-tr-movers');
+  if(!root)return;
+  if(!j||!j.ok||!j.movers||!j.movers.length){
+    root.innerHTML='<p class="tr-movers-hint">TR 24s verisi yok veya liste boş.</p>';
+    return;
+  }
+  const time=j.updatedAt?new Date(j.updatedAt).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}):'';
+  const chips=j.movers.map(function(m){
+    var b=String(m.base||'').replace(/[^A-Z0-9]/gi,'').slice(0,14);
+    if(!b)return'';
+    var p=m.change24hPct!=null&&Number.isFinite(Number(m.change24hPct))?Number(m.change24hPct):0;
+    var cls=p>=0?'tr-mv-up':'tr-mv-dn';
+    return'<button type="button" class="tr-mv-chip '+cls+'" onclick="gelirDetayAc(\''+b+'\')"><span class="tr-mv-sym">'+b+'</span><span class="tr-mv-pct">'+(p>=0?'+':'')+p.toFixed(1)+'%</span></button>';
+  }).filter(Boolean).join('');
+  var note=j.retroNoteTr||'';
+  root.innerHTML='<div class="tr-movers-hdr"><span>En çok yükselenler (özet)</span><span class="tr-movers-time">'+_escMini(time)+'</span></div>'+
+    '<div class="tr-movers-row">'+chips+'</div>'+
+    '<details class="tr-movers-retro"><summary>Geriye dönük kontrol (DAR vb.)</summary><p class="tr-movers-hint">'+_escMini(note)+'</p></details>';
+}
+function refreshTrMovers24h(){
+  if(Date.now()-_trMoversFetchedAt<40000)return;
+  _trMoversFetchedAt=Date.now();
+  fetch(BASE_URL+'/api/market/tr-24h-movers?limit=14&sort=gainers')
+    .then(function(r){return r.json();})
+    .then(renderTrMovers24h)
+    .catch(function(){
+      const root=document.getElementById('dash-tr-movers');
+      if(root)root.innerHTML='<p class="tr-movers-hint">TR movers isteği başarısız.</p>';
+    });
+}
 function guncelle(){
   const fresh=sig.filter(s=>!s.absentThisScan);
   const t=sig.length,nadir=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=80).length,guclu=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=65).length;
@@ -1263,6 +1316,7 @@ function guncelle(){
   void refreshPushBtn();
   renderInvestPanel();
   renderTop();renderSinyaller();renderRapor();renderHeatmap();
+  if(document.getElementById('page-dashboard')?.classList.contains('active'))refreshTrMovers24h();
   syncHeaderOffset();
 }
 
@@ -1419,6 +1473,7 @@ function sayfa(id,btn){
   if(id==='nakit')void loadNakitTab();
   if(id==='analiz')void analizPageEnter();
   if(id==='gelir')void gelirWinnerPattern(false);
+  if(id==='dashboard'){_trMoversFetchedAt=0;refreshTrMovers24h();}
   if(id==='rapor'){
     renderRapor();
     raporJumpFetch(false);

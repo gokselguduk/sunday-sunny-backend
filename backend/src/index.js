@@ -168,6 +168,65 @@ app.get('/api/market/futures-24h', async (req, res) => {
   }
 });
 
+/**
+ * Binance TR (BINANCE_TR_COINS ∩ USDT-M) pariteleri; 24s ticker’a göre sıralı.
+ * sort=gainers|losers|abs — geriye dönük “o an listede miydi?” için uygulama geçmiş kaydı tutmaz; bu endpoint anlık snapshot’tır.
+ */
+app.get('/api/market/tr-24h-movers', async (req, res) => {
+  try {
+    const now = Date.now();
+    if (!futures24hCache.tickers || now - futures24hCache.at > FUTURES24H_CACHE_MS) {
+      futures24hCache.tickers = await binance.getAllFutures24hTickers();
+      futures24hCache.at = now;
+    }
+    const tickMap = futures24hCache.tickers || {};
+    const coins = await binance.getTRYCoins();
+    const sort = String(req.query.sort || 'gainers').toLowerCase();
+    const limit = Math.min(50, Math.max(5, parseInt(req.query.limit, 10) || 15));
+
+    const rows = [];
+    for (const c of coins) {
+      const sym = c.pair;
+      const t = tickMap[sym];
+      if (!t) continue;
+      const ch = t.priceChangePercent;
+      const pct = Number.isFinite(Number(ch)) ? Number(ch) : null;
+      rows.push({
+        symbol: sym,
+        base: c.symbol,
+        lastPrice: t.lastPrice,
+        change24hPct: pct,
+        quoteVolume: t.quoteVolume,
+        highPrice: t.highPrice,
+        lowPrice: t.lowPrice
+      });
+    }
+
+    if (sort === 'losers') {
+      rows.sort((a, b) => (a.change24hPct ?? -999) - (b.change24hPct ?? -999));
+    } else if (sort === 'abs') {
+      rows.sort((a, b) => Math.abs(b.change24hPct ?? 0) - Math.abs(a.change24hPct ?? 0));
+    } else {
+      rows.sort((a, b) => (b.change24hPct ?? -999) - (a.change24hPct ?? -999));
+    }
+
+    res.setHeader('Cache-Control', 'private, max-age=25');
+    res.json({
+      ok: true,
+      source: 'binance_futures_usdm_tr_subset',
+      sort: sort === 'losers' ? 'losers' : sort === 'abs' ? 'abs' : 'gainers',
+      updatedAt: new Date(futures24hCache.at).toISOString(),
+      pairCount: rows.length,
+      limit,
+      movers: rows.slice(0, limit),
+      retroNoteTr:
+        'Bu yanıt anlık Binance verisidir; geçmiş tarih/saat için sunucuda arşiv tutulmaz. DAR vb. bir coinin Gelir+/Sıcrama/Sinyal listesinde o an görünüp görünmediğini geriye dönük doğrulamak için o güne ait ekran görüntüsü veya kaydettiğiniz API çıktısı gerekir.'
+    });
+  } catch (e) {
+    res.status(502).json({ ok: false, error: e.message || 'TR 24s movers alınamadı' });
+  }
+});
+
 // ── TARAMA ──────────────────────────────────
 app.get('/api/scan/latest', async (req, res) => {
   const lastNadirPushAt = await memory.getNadirPushLastAt();
