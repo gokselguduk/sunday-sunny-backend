@@ -1,57 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sunday Sunny">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Sunday Sunny" shape-rendering="geometricPrecision">
   <defs>
-    <radialGradient id="core" cx="42%" cy="38%" r="55%">
-      <stop offset="0%" stop-color="#FFF8E7"/>
-      <stop offset="35%" stop-color="#FFD54F"/>
-      <stop offset="70%" stop-color="#FF9800"/>
+    <radialGradient id="core" cx="38%" cy="34%" r="58%" gradientUnits="objectBoundingBox">
+      <stop offset="0%" stop-color="#FFFEF5"/>
+      <stop offset="18%" stop-color="#FFF3C4"/>
+      <stop offset="42%" stop-color="#FFD54F"/>
+      <stop offset="68%" stop-color="#FF9800"/>
+      <stop offset="88%" stop-color="#F57C00"/>
       <stop offset="100%" stop-color="#E65100"/>
     </radialGradient>
-    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#00D4FF" stop-opacity="0.38"/>
-      <stop offset="50%" stop-color="#7B5CFF" stop-opacity="0.08"/>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00D4FF" stop-opacity="0.22"/>
+      <stop offset="45%" stop-color="#7B5CFF" stop-opacity="0.09"/>
       <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="rayGold" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFE082"/>
-      <stop offset="100%" stop-color="#FF6F00"/>
+      <stop offset="0%" stop-color="#FFECB3"/>
+      <stop offset="45%" stop-color="#FFB300"/>
+      <stop offset="100%" stop-color="#E65100"/>
     </linearGradient>
     <linearGradient id="rayCyan" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#00D4FF"/>
-      <stop offset="100%" stop-color="#00B8D4"/>
+      <stop offset="0%" stop-color="#84FFFF"/>
+      <stop offset="40%" stop-color="#00D4FF"/>
+      <stop offset="100%" stop-color="#0097A7"/>
     </linearGradient>
-    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="b"/>
-      <feMerge>
-        <feMergeNode in="b"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
+    <linearGradient id="rim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#00D4FF" stop-opacity="0.35"/>
+    </linearGradient>
   </defs>
-  <g transform="translate(256,256) scale(0.86) translate(-256,-256)">
-    <circle cx="256" cy="256" r="200" fill="url(#glow)"/>
-    <g transform="translate(256,256)" filter="url(#soft)">
-      <g stroke-linecap="round" fill="none">
-        <path d="M0-175 L0-115" stroke="url(#rayCyan)" stroke-width="14" opacity="0.95"/>
-        <path d="M124-124 L81-81" stroke="url(#rayGold)" stroke-width="12" opacity="0.9"/>
-        <path d="M175 0 L115 0" stroke="url(#rayCyan)" stroke-width="14" opacity="0.95"/>
-        <path d="M124 124 L81 81" stroke="url(#rayGold)" stroke-width="12" opacity="0.9"/>
-        <path d="M0 175 L0 115" stroke="url(#rayCyan)" stroke-width="14" opacity="0.95"/>
-        <path d="M-124 124 L-81 81" stroke="url(#rayGold)" stroke-width="12" opacity="0.9"/>
-        <path d="M-175 0 L-115 0" stroke="url(#rayCyan)" stroke-width="14" opacity="0.95"/>
-        <path d="M-124-124 L-81-81" stroke="url(#rayGold)" stroke-width="12" opacity="0.9"/>
-      </g>
-      <g stroke-linecap="round" fill="none" opacity="0.75">
-        <path d="M60-165 L40-110" stroke="#FFB300" stroke-width="8"/>
-        <path d="M165-60 L110-40" stroke="#00E5FF" stroke-width="8"/>
-        <path d="M165 60 L110 40" stroke="#FFB300" stroke-width="8"/>
-        <path d="M60 165 L40 110" stroke="#00E5FF" stroke-width="8"/>
-        <path d="M-60 165 L-40 110" stroke="#FFB300" stroke-width="8"/>
-        <path d="M-165 60 L-110 40" stroke="#00E5FF" stroke-width="8"/>
-        <path d="M-165-60 L-110-40" stroke="#FFB300" stroke-width="8"/>
-        <path d="M-60-165 L-40-110" stroke="#00E5FF" stroke-width="8"/>
+  <g transform="translate(256,256) scale(0.88) translate(-256,-256)">
+    <circle cx="256" cy="256" r="198" fill="url(#halo)"/>
+    <g stroke-linecap="round" stroke-linejoin="round" fill="none">
+      <path d="M256 68 V128" stroke="url(#rayCyan)" stroke-width="16" opacity="0.98"/>
+      <path d="M380 132 L332 180" stroke="url(#rayGold)" stroke-width="14" opacity="0.95"/>
+      <path d="M444 256 H384" stroke="url(#rayCyan)" stroke-width="16" opacity="0.98"/>
+      <path d="M380 380 L332 332" stroke="url(#rayGold)" stroke-width="14" opacity="0.95"/>
+      <path d="M256 444 V384" stroke="url(#rayCyan)" stroke-width="16" opacity="0.98"/>
+      <path d="M132 380 L180 332" stroke="url(#rayGold)" stroke-width="14" opacity="0.95"/>
+      <path d="M68 256 H128" stroke="url(#rayCyan)" stroke-width="16" opacity="0.98"/>
+      <path d="M132 132 L180 180" stroke="url(#rayGold)" stroke-width="14" opacity="0.95"/>
+      <g opacity="0.82">
+        <path d="M316 98 L298 148" stroke="#FFA000" stroke-width="9"/>
+        <path d="M414 198 L364 216" stroke="#00E5FF" stroke-width="9"/>
+        <path d="M414 314 L364 296" stroke="#FFA000" stroke-width="9"/>
+        <path d="M316 414 L298 364" stroke="#00E5FF" stroke-width="9"/>
+        <path d="M196 414 L214 364" stroke="#FFA000" stroke-width="9"/>
+        <path d="M98 314 L148 296" stroke="#00E5FF" stroke-width="9"/>
+        <path d="M98 198 L148 216" stroke="#FFA000" stroke-width="9"/>
+        <path d="M196 98 L214 148" stroke="#00E5FF" stroke-width="9"/>
       </g>
     </g>
-    <circle cx="256" cy="256" r="78" fill="url(#core)" stroke="#FFF3E0" stroke-width="3" stroke-opacity="0.35"/>
-    <circle cx="256" cy="256" r="78" fill="none" stroke="url(#rayCyan)" stroke-width="2" opacity="0.25"/>
+    <circle cx="256" cy="256" r="80" fill="url(#core)" stroke="url(#rim)" stroke-width="2.5"/>
+    <ellipse cx="232" cy="228" rx="28" ry="20" fill="#FFFFFF" fill-opacity="0.22" transform="rotate(-18 232 228)"/>
+    <circle cx="256" cy="256" r="80" fill="none" stroke="#00D4FF" stroke-width="1.75" opacity="0.28"/>
   </g>
 </svg>
