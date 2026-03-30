@@ -7,6 +7,16 @@ const LOOKBACK_DAYS = Math.min(
   1500,
   Math.max(180, Math.floor(Number(process.env.WINNER_PATTERN_LOOKBACK_DAYS) || 730))
 );
+/** Benzerlik yüzdesi eşiği (yükselt = daha az sonuç). */
+const MIN_SIMILARITY = Math.min(95, Math.max(52, Number(process.env.WINNER_PATTERN_MIN_SIMILARITY) || 64));
+/** Z-mesafe ölçeği (düşür = skor daha sıkı, örn. 4.15). */
+const SIM_DIST_SCALE = Math.max(3.2, Math.min(6, Number(process.env.WINNER_PATTERN_SIM_DIST_SCALE) || 4.15));
+/** En az kaç “yapı taşı” (hacim/RSI/aralık/kümülatif…) eşleşsin. */
+const MIN_STRUCTURAL_HITS = Math.min(5, Math.max(1, Number(process.env.WINNER_PATTERN_MIN_HITS) || 2));
+/** Bu benzerlik üstüyse daha az yapı taşı yeter. */
+const HIGH_SIM_ESCAPE = Math.min(92, Math.max(70, Number(process.env.WINNER_PATTERN_HIGH_SIM_ESCAPE) || 74));
+/** Listede en fazla kaç parite. */
+const MAX_SIMILAR_LISTED = Math.min(50, Math.max(5, Number(process.env.WINNER_PATTERN_MAX_MATCHES) || 14));
 
 let cache = { at: 0, payload: null, error: null };
 
@@ -118,7 +128,35 @@ function similarityScore(vec, med, sig) {
     n++;
   }
   const dist = Math.sqrt(sumSq / n);
-  return Math.max(0, Math.min(100, Math.round(100 * (1 - Math.min(1, dist / 5)))));
+  const scale = SIM_DIST_SCALE;
+  return Math.max(0, Math.min(100, Math.round(100 * (1 - Math.min(1, dist / scale)))));
+}
+
+/** Ralli öncesi profiline kaç ayrı boyutta yakınlık var (0–5). */
+function countStructuralHits(vec, med) {
+  if (!vec || !med) return 0;
+  let n = 0;
+  const vC = vec.cumRet;
+  const mC = med.cumRet;
+  if (Number.isFinite(vC) && Number.isFinite(mC) && Math.abs(vC - mC) < Math.max(0.02, Math.abs(mC) * 0.45 + 0.01)) {
+    n++;
+  }
+  if (vec.volRatio >= med.volRatio * 0.82) n++;
+  if (vec.rsiEnd >= med.rsiEnd - 15 && vec.rsiEnd <= med.rsiEnd + 22) n++;
+  if (vec.rangeAvg >= med.rangeAvg * 0.88) n++;
+  if (vec.meanRet >= med.meanRet - 0.002) n++;
+  return n;
+}
+
+/** Son 5g tamamen “ölü yatay” ise listeye alma (sadece ortalamaya yakın kalan gürültü). */
+function hasMeaningfulRecentStructure(vec, med) {
+  if (!vec || !med) return true;
+  const flat =
+    Math.abs(vec.cumRet) < 0.003 &&
+    vec.volRatio < 0.92 &&
+    vec.rangeAvg < med.rangeAvg * 0.68 &&
+    Math.abs(vec.meanRet) < 0.001;
+  return !flat;
 }
 
 function statsFromProfiles(profiles) {
@@ -265,9 +303,11 @@ async function computeWinnerPatternAnalysis(forceRefresh) {
       .map((d) => {
         if (!d.currentProfile) return null;
         const sim = similarityScore(d.currentProfile, med, sig);
+        const hits = countStructuralHits(d.currentProfile, med);
         return {
           symbol: d.symbol,
           similarity: sim,
+          structuralHits: hits,
           longReturnPct: Math.round(d.longReturnPct * 100) / 100,
           features: {
             meanRet5d: Math.round(d.currentProfile.meanRet * 10000) / 10000,
@@ -286,10 +326,20 @@ async function computeWinnerPatternAnalysis(forceRefresh) {
   const topGainerSet = new Set(ranked.slice(0, topN).map((d) => d.symbol));
   const similarNow = peers
     .filter((p) => !topGainerSet.has(p.symbol))
-    .filter((p) => p.similarity >= 55)
-    .slice(0, 40);
+    .filter((p) => p.similarity >= MIN_SIMILARITY)
+    .filter((p) => p.structuralHits >= MIN_STRUCTURAL_HITS || p.similarity >= HIGH_SIM_ESCAPE)
+    .filter((p) => {
+      const row = bySymbol.get(p.symbol);
+      return hasMeaningfulRecentStructure(row?.currentProfile, medRef);
+    })
+    .slice(0, MAX_SIMILAR_LISTED);
 
   const patternNarrativeTr = buildPatternNarrativeTr(LOOKBACK_DAYS, archetype?.sampleWinners || 0, medRef);
+
+  const filterSummaryTr =
+    `Liste daraltma: benzerlik ≥%${MIN_SIMILARITY}, en az ${MIN_STRUCTURAL_HITS} yapı taşı (hacim/RSI/aralık vb.) veya benzerlik ≥%${HIGH_SIM_ESCAPE}; ` +
+    'son 5 günü tamamen yatay/hacimsiz eşleşmeler elenir. En fazla ' +
+    `${MAX_SIMILAR_LISTED} parite. Railway’de WINNER_PATTERN_* ile ince ayar yapılabilir.`;
 
   const payload = {
     ok: true,
@@ -302,6 +352,14 @@ async function computeWinnerPatternAnalysis(forceRefresh) {
     methodNoteTr:
       `Arka planda son ${LOOKBACK_DAYS} günlük toplam getiriye göre üst dilim seçilir; “kazanan ralli öncesi 5 gün” medyanı çıkarılır. ` +
       'Yüksek getiren paritelerin isim listesi istemciye gönderilmez; yalnızca şu an bu profile benzeyenler listelenir.',
+    listFilters: {
+      minSimilarity: MIN_SIMILARITY,
+      minStructuralHits: MIN_STRUCTURAL_HITS,
+      highSimilarityEscape: HIGH_SIM_ESCAPE,
+      maxMatches: MAX_SIMILAR_LISTED,
+      distScale: SIM_DIST_SCALE
+    },
+    filterSummaryTr,
     archetype,
     similarNow,
     note: 'Yatırım tavsiyesi değildir. Geçmiş performans geleceği göstermez.'

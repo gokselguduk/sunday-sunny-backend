@@ -41,6 +41,7 @@ const marketContext = require('./services/marketContext');
 const pushAlerts = require('./services/pushAlerts');
 const coinUnified = require('./services/coinUnified');
 const winnerPattern = require('./services/winnerPattern');
+const jumpArchetype = require('./services/jumpArchetype');
 
 async function buildUnifiedPayloadWithStats(snap, board, ctx, btc) {
   const body = coinUnified.buildUnifiedFromSnapshot(snap, {
@@ -226,6 +227,30 @@ app.get('/api/analytics/winner-pattern', async (req, res) => {
     });
   } catch (e) {
     res.status(500).json({ ok: false, error: e.message || 'winner-pattern hatası' });
+  }
+});
+
+/**
+ * 2y günlük: tüm paritelerde ≥eşik günlük sıçramaların öncesi 5g profillerinden küresel arketip;
+ * şu an bu profile yakın pariteler + geçmiş benzer profillerde görülen sıçrama büyüklüğü (medyan).
+ */
+app.get('/api/analytics/jump-candidates', async (req, res) => {
+  const refresh = req.query.refresh === '1' || req.query.refresh === 'true';
+  try {
+    if (refresh) {
+      const data = await jumpArchetype.computeJumpArchetypeAnalysis(true);
+      return res.json(data);
+    }
+    const cached = jumpArchetype.getCachedJumpArchetype();
+    if (cached) return res.json(cached);
+    return res.json({
+      ok: false,
+      needsRefresh: true,
+      message:
+        'Önbellek boş. Rapor sekmesinde “Sıcrama havuzunu hesapla” ile başlatın; tüm pariteler için günlük mum çekilir (birkaç dakika sürebilir).'
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message || 'jump-candidates hatası' });
   }
 });
 
