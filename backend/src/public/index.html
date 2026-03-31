@@ -520,6 +520,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
       <label for="filtre-min-tp1" style="font-size:11px;color:var(--text2);white-space:nowrap">TP1 min. (ATR %)</label>
       <input class="arama-input" id="filtre-min-tp1" type="text" inputmode="decimal" autocomplete="off" placeholder="Boş = tümü" title="ATR TP1 bu yüzden küçük olanları gizle. Boş: sunucudaki tüm tahta. Kayıt: bu cihaz (localStorage)." style="width:88px;max-width:40%;padding:8px 10px;margin:0" onchange="onMinTp1UiChange()" onkeydown="if(event.key==='Enter'){event.preventDefault();onMinTp1UiChange();}">
       <span style="font-size:10px;color:var(--text3);line-height:1.35;max-width:220px">Örn. <strong>3</strong> yazıp Enter — sadece görünüm (tarayıcıda saklanır).</span>
+      <button type="button" class="filtre-btn" style="font-size:10px;padding:6px 10px" onclick="goSinyallerFiltre('tp1gt2')" title="Sinyaller sekmesinde yalnızca ATR TP1 &gt; %2">Sinyaller · TP1 &gt;%2</button>
     </div>
     <p style="font-size:11px;color:var(--text2);text-align:center;padding:0 16px 12px;line-height:1.45"><button type="button" onclick="goPage('harita')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Isı haritası</button> · <button type="button" onclick="goPage('analiz')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Analiz merkezi</button> · <button type="button" onclick="goPage('nakit')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Nakit rehberi</button> · sol üst <strong style="color:var(--text1)">☀️/🌙</strong> tema</p>
     <div class="section-hdr" style="margin-top:2px">Tahta özeti · profil &amp; potansiyel</div>
@@ -574,6 +575,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
       <button type="button" class="filtre-btn" data-filtre="arb" onclick="filtre('arb',this)">💱 Arbitraj</button>
       <button type="button" class="filtre-btn" data-filtre="candle" onclick="filtre('candle',this)">🕯 Formasyon</button>
       <button type="button" class="filtre-btn" data-filtre="fav" onclick="filtre('fav',this)">★ Favori</button>
+      <button type="button" class="filtre-btn" data-filtre="tp1gt2" onclick="filtre('tp1gt2',this)" title="1H ATR TP1 yüzdesi tam olarak %2’den büyük olanlar">TP1 &gt;%2</button>
     </div>
     <p class="filtre-hint">Filtre ve arama bu sekme içindir. <strong>Ana sayfa</strong> her zaman tüm tahta kartlarını listeler; tam treemap için <strong>Harita</strong> sekmesi (<strong>Liste</strong> tüm taranan pariteleri gösterir).</p>
     <div class="arama-wrap">
@@ -1714,6 +1716,11 @@ function signalPassesUiMinTp1(s){
   var t=Number(s&&s.atr&&s.atr.tp1Pct);
   return Number.isFinite(t)&&t>=m;
 }
+/** ATR TP1 yüzdesi verilen eşiğin üstünde mi (sıkı: &gt;). */
+function signalAtrTp1PctGt(s,pct){
+  var t=Number(s&&s.atr&&s.atr.tp1Pct);
+  return Number.isFinite(t)&&Number.isFinite(pct)&&t>pct;
+}
 function onMinTp1UiChange(){
   var inp=document.getElementById('filtre-min-tp1');
   if(inp){
@@ -2405,6 +2412,7 @@ function fList(){
   if(aktifF==='arb')l=l.filter(s=>s.arbitraj?.isOpportunity);
   if(aktifF==='candle')l=l.filter(s=>s.candlePatterns?.hasBullish);
   if(aktifF==='fav')l=l.filter(s=>favs.includes(s.symbol));
+  if(aktifF==='tp1gt2')l=l.filter(s=>signalAtrTp1PctGt(s,2));
   if(araM)l=l.filter(s=>s.symbol?.includes(araM));
   return l;
 }
@@ -2545,7 +2553,7 @@ function renderSinyallerSafe(){
         const eta=scanMeta.etaSeconds?` ~${scanMeta.etaSeconds}s`:'';
         el.innerHTML=`<div class="bos">Filtrede henüz sonuç yok<br>Tarama sürüyor (${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0})${eta}</div>`;
       }else{
-        el.innerHTML=aktifF==='nadirhist'?'<div class="bos">Bu taramada geçmişte Nadir görülmüş coin yok<br>14 gün içinde 80+ olanlar burada listelenir</div>':'<div class="bos">Bu filtrede sinyal yok'+(getUiMinTp1Pct()>0?' · Dashboard’da TP1 min. alanını kontrol edin':'')+'</div>';
+        el.innerHTML=aktifF==='nadirhist'?'<div class="bos">Bu taramada geçmişte Nadir görülmüş coin yok<br>14 gün içinde 80+ olanlar burada listelenir</div>':aktifF==='tp1gt2'?'<div class="bos">Bu taramada ATR TP1 yüzdesi %2’yi aşan sinyal yok<br>TP1 min. (Dashboard) veya başka filtreler listeyi daraltıyor olabilir</div>':'<div class="bos">Bu filtrede sinyal yok'+(getUiMinTp1Pct()>0?' · Dashboard’da TP1 min. alanını kontrol edin':'')+'</div>';
       }
       return;
     }
