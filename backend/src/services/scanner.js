@@ -692,6 +692,9 @@ function broadcast(data) {
 function getLastSignals() { return lastSignals; }
 function getLatestSignals() { return isScanning ? liveSignals : lastSignals; }
 function getScanState() { return { ...scanState }; }
+function getScannerConfig() {
+  return { minFirsat: CONFIG.MIN_FIRSAT, minTp1Pct: CONFIG.MIN_TP1_PCT };
+}
 function getCoinList() { return buildCoinListSlim(); }
 
 function getListSnapshot(rawSymbol) {
@@ -713,6 +716,7 @@ module.exports = {
   getLastSignals,
   getLatestSignals,
   getScanState,
+  getScannerConfig,
   getCoinList,
   getListSnapshot,
   getBoardSignal,

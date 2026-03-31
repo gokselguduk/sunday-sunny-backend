@@ -29,7 +29,7 @@ function deriveFirsatFromKriptoAnaliz(ka, signal) {
   if (sez === SEZON.BOGA) skor += 12;
   else if (sez === SEZON.NOTR) skor += 5;
   else if (sez === SEZON.KORKU) skor += 4;
-  else if (sez === SEZON.AYI) skor -= 18;
+  else if (sez === SEZON.AYI) skor -= 12;
 
   const rr = ka.riskOzet?.riskReward;
   if (Number.isFinite(rr)) {

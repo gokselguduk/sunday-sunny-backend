@@ -236,6 +236,7 @@ app.get('/api/scan/latest', async (req, res) => {
     signals: scanner.getLatestSignals(),
     coinList: scanner.getCoinList(),
     scan: scanner.getScanState(),
+    scannerConfig: scanner.getScannerConfig(),
     lastNadirPushAt,
     nadirTrail,
     storage: memory.getStorageInfo(),

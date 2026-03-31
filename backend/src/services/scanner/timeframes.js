@@ -68,10 +68,15 @@ function getTimeframeDirections(tf) {
   };
 }
 
+/**
+ * Sadece “üst TF’ler birlikte long’a karşı” ise elenir.
+ * Eski: 1H long + tek başına 4H ayı yeterdi → çoğu altcoin chop’ta sıfır sinyal.
+ */
 function hasDirectionConflict(dirs) {
-  if (dirs.dir1h > 0 && dirs.dir4h < 0) return true;
-  if (dirs.dir1h > 0 && dirs.dir1d < 0) return true;
-  if (dirs.hasWeekly && dirs.dir1h > 0 && dirs.dir1w < 0) return true;
+  if (dirs.dir1h <= 0) return false;
+  const upperAgainst = dirs.dir4h < 0 && dirs.dir1d < 0;
+  if (upperAgainst) return true;
+  if (dirs.hasWeekly && dirs.dir1h > 0 && dirs.dir1w < 0 && dirs.dir1d < 0) return true;
   return false;
 }
 

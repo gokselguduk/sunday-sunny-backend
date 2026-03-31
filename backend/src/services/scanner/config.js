@@ -29,8 +29,8 @@ if (minTp1Raw !== undefined && minTp1Raw !== '') {
 const CONFIG = {
   SCAN_DELAY_MS: 1000,
   SCAN_INTERVAL_MS: 45 * 60 * 1000,
-  /** Tahta eşiği yalnızca PPT motoru (`kriptoAnalizSistemi`) fırsat skoru; .env: MIN_FIRSAT */
-  MIN_FIRSAT: Number.isFinite(minFirsatEnv) ? Math.min(95, Math.max(10, minFirsatEnv)) : 35,
+  /** Tahta eşiği: PPT fırsat skoru. Railway’de çok yüksek (ör. 50+) tahtayı boşaltır; .env: MIN_FIRSAT */
+  MIN_FIRSAT: Number.isFinite(minFirsatEnv) ? Math.min(95, Math.max(10, minFirsatEnv)) : 32,
   /** Sunucuda TP1 alt sınırı; yalnızca .env ile (MIN_TP1_PCT) tanımlı ve >0 ise uygulanır. Aksi halde 0 = kapalı (UI filtresi kullanılır). */
   MIN_TP1_PCT: minTp1Pct,
   OHLCV_LIMITS,
