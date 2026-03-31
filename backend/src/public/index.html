@@ -103,6 +103,15 @@ html[data-theme="light"] .board-hm-tog.active{background:rgba(0,136,170,0.12);bo
 .board-hm-frame--tall{min-height:240px;max-height:min(58vw,380px)}
 .board-hm-svg{display:block;width:100%;height:100%;min-height:200px;max-height:min(52vw,340px)}
 .board-hm-frame--tall .board-hm-svg{min-height:240px;max-height:min(58vw,380px)}
+.harita-zoom-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:0 0 8px}
+.harita-zoom-hint{flex:1;min-width:140px;font-size:10px;color:var(--text3);line-height:1.4}
+.harita-zoom-pct{font-size:10px;font-weight:700;color:var(--text2);font-family:'Space Mono',monospace;min-width:40px}
+.harita-zoom-bar .filtre-btn{padding:6px 12px;font-size:11px}
+.harita-zoom-viewport{overflow:auto;-webkit-overflow-scrolling:touch;border-radius:14px;border:1px solid var(--border);background:var(--bg2);max-height:min(72vh,580px);touch-action:pan-x pan-y;overscroll-behavior:contain}
+.harita-zoom-inner{min-width:100%;max-width:none}
+.harita-zoom-inner .board-hm-frame{border:none;border-radius:0;background:transparent;min-height:0;max-height:none}
+.harita-zoom-inner .board-hm-svg{max-height:none;display:block;width:100%}
+.unified-yorum-p{font-size:13px;line-height:1.65;color:var(--text1);margin:0;font-weight:500}
 .board-hm-frame--dash{min-height:140px;max-height:200px}
 .board-hm-frame--dash .board-hm-svg{min-height:140px;max-height:200px}
 .dash-harita-block{margin:0 16px 14px;padding:12px 14px;border-radius:14px;border:1px solid var(--border);background:var(--bg2)}
@@ -606,10 +615,10 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
   <div class="page" id="page-analiz">
     <div class="analiz-page">
       <div class="section-hdr">Analiz merkezi</div>
-      <p style="font-size:11px;color:var(--text3);padding:0 0 12px;line-height:1.5">Seçtiğiniz paritenin motor katmanlarını tek senaryoda birleştirirsiniz. Ralli öncesi profil eşleşmeleri için <button type="button" onclick="goPage('gelir')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Gelir+</button>. Yatırım tavsiyesi değildir.</p>
+      <p style="font-size:11px;color:var(--text3);padding:0 0 12px;line-height:1.5">Sembol yazıp <strong>Özet yükle</strong> veya <kbd style="font-size:10px;padding:1px 5px;border-radius:4px;border:1px solid var(--border)">Enter</kbd> ile detaylı katmanlar gelir; en altta otomatik <strong>Yorum</strong> özeti oluşur. Ralli öncesi profil için <button type="button" onclick="goPage('gelir')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Gelir+</button>. Yatırım tavsiyesi değildir.</p>
       <div id="analiz-panel-parite">
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
-          <input class="arama-input" id="analiz-parite-input" placeholder="Sembol (örn. BTC)" style="flex:1;min-width:140px;margin:0" maxlength="16">
+          <input class="arama-input" id="analiz-parite-input" placeholder="Sembol (örn. BTC) · Enter ile yükle" style="flex:1;min-width:140px;margin:0" maxlength="16" onkeydown="if(event.key==='Enter'){event.preventDefault();analizPariteYukle();}">
           <button type="button" class="filtre-btn" onclick="analizPariteYukle()">Özet yükle</button>
           <button type="button" class="filtre-btn" onclick="analizPariteTarama()" title="Sunucuda tek coin tam analiz">Taramayı yenile</button>
         </div>
@@ -621,21 +630,39 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
   <div class="page" id="page-harita">
     <div class="analiz-page">
       <div class="section-hdr">Isı haritası</div>
-      <p style="font-size:11px;color:var(--text3);padding:0 0 14px;line-height:1.55">İki treemap: <strong>piyasa</strong> için Binance TR USDT-M paritelerinde 24 saatlik yüzde hareket; <strong>sinyaller</strong> için tahtadaki kurulumlarda ATR hedeflerinden türetilen ağırlıklı kazanç beklentisi (½·TP1 + 0,35·TP2 + 0,15·TP3). Hacim / market cap kullanılmaz. Yatırım tavsiyesi değildir.</p>
+      <p style="font-size:11px;color:var(--text3);padding:0 0 14px;line-height:1.55">İki treemap: <strong>piyasa</strong> (24s %) ve <strong>sinyaller</strong> (ATR TP beklentisi). Haritada <strong>çift parmak pinch</strong> ile zoom; tek parmakla kaydırın. Hacim / market cap yok. Yatırım tavsiyesi değildir.</p>
 
       <div class="board-hm-wrap" style="padding-bottom:18px">
         <p class="board-hm-title" style="max-width:none;margin-bottom:4px">Piyasa · TR pariteler (24s %)</p>
         <p class="board-hm-legend" id="harita-piyasa-legend">Yükleniyor…</p>
-        <div class="board-hm-frame board-hm-frame--tall">
-          <svg class="board-hm-svg" id="harita-piyasa-svg" role="img" aria-label="Piyasa ısı haritası"></svg>
+        <div class="harita-zoom-bar">
+          <span class="harita-zoom-hint">İki parmakla sıkıştırarak yakınlaştır / uzaklaştır; tek parmakla kaydırın.</span>
+          <span class="harita-zoom-pct" id="harita-piyasa-zoom-lbl">100%</span>
+          <button type="button" class="filtre-btn" onclick="haritaZoomReset('piyasa')" title="Zoom ve kaydırma sıfır">Sıfırla</button>
+        </div>
+        <div class="harita-zoom-viewport" id="harita-piyasa-viewport">
+          <div class="harita-zoom-inner" id="harita-piyasa-inner">
+            <div class="board-hm-frame board-hm-frame--tall">
+              <svg class="board-hm-svg" id="harita-piyasa-svg" role="img" aria-label="Piyasa ısı haritası" shape-rendering="geometricPrecision"></svg>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="board-hm-wrap" style="padding-bottom:24px">
         <p class="board-hm-title" style="max-width:none;margin-bottom:4px">Sinyaller · kazanç beklentisi (ATR TP)</p>
         <p class="board-hm-legend" id="harita-sinyal-legend"></p>
-        <div class="board-hm-frame board-hm-frame--tall">
-          <svg class="board-hm-svg" id="harita-sinyal-svg" role="img" aria-label="Sinyal treemap"></svg>
+        <div class="harita-zoom-bar">
+          <span class="harita-zoom-hint">İki parmakla sıkıştırarak yakınlaştır / uzaklaştır; tek parmakla kaydırın.</span>
+          <span class="harita-zoom-pct" id="harita-sinyal-zoom-lbl">100%</span>
+          <button type="button" class="filtre-btn" onclick="haritaZoomReset('sinyal')" title="Zoom ve kaydırma sıfır">Sıfırla</button>
+        </div>
+        <div class="harita-zoom-viewport" id="harita-sinyal-viewport">
+          <div class="harita-zoom-inner" id="harita-sinyal-inner">
+            <div class="board-hm-frame board-hm-frame--tall">
+              <svg class="board-hm-svg" id="harita-sinyal-svg" role="img" aria-label="Sinyal treemap" shape-rendering="geometricPrecision"></svg>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -909,6 +936,75 @@ function boardHmClick(idx){
   const n=parseInt(idx,10);
   if(Number.isFinite(n)&&sig[n])modalAc(n);
 }
+window._haritaZoom={piyasa:1,sinyal:1};
+function haritaTouchDistance(a,b){
+  var dx=a.clientX-b.clientX,dy=a.clientY-b.clientY;
+  return Math.sqrt(dx*dx+dy*dy);
+}
+function haritaPinchBind(which){
+  var vp=document.getElementById('harita-'+which+'-viewport');
+  if(!vp||vp.dataset.haritaPinch)return;
+  vp.dataset.haritaPinch='1';
+  var startD=0,startZ=1;
+  vp.addEventListener('touchstart',function(e){
+    if(e.touches.length===2){
+      startD=haritaTouchDistance(e.touches[0],e.touches[1]);
+      startZ=window._haritaZoom[which]||1;
+      if(startD<8)startD=8;
+      vp.style.touchAction='none';
+    }
+  },{passive:true});
+  vp.addEventListener('touchmove',function(e){
+    if(e.touches.length!==2||startD<8)return;
+    e.preventDefault();
+    var d=haritaTouchDistance(e.touches[0],e.touches[1]);
+    if(d<8)return;
+    var z=startZ*(d/startD);
+    z=Math.max(0.5,Math.min(3,Math.round(z*100)/100));
+    window._haritaZoom[which]=z;
+    haritaZoomApply(which);
+  },{passive:false});
+  function endPinch(e){
+    if(!e.touches||e.touches.length<2){
+      startD=0;
+      vp.style.touchAction='';
+    }
+  }
+  vp.addEventListener('touchend',endPinch,{passive:true});
+  vp.addEventListener('touchcancel',endPinch,{passive:true});
+}
+function haritaPinchEnsure(){
+  if(window._haritaPinchReady)return;
+  window._haritaPinchReady=true;
+  haritaPinchBind('piyasa');
+  haritaPinchBind('sinyal');
+}
+function haritaZoomBaseH(){
+  return Math.min(Math.round(window.innerHeight*0.62),520);
+}
+function haritaZoomApply(which){
+  var z=window._haritaZoom[which]||1;
+  var el=document.getElementById('harita-'+which+'-inner');
+  var vp=document.getElementById('harita-'+which+'-viewport');
+  var lbl=document.getElementById('harita-'+which+'-zoom-lbl');
+  if(vp&&el){
+    var w=Math.max(280,vp.clientWidth||360);
+    el.style.width=Math.round(w*z)+'px';
+    var svg=el.querySelector('.board-hm-svg');
+    if(svg){
+      var h=Math.round(haritaZoomBaseH()*z);
+      svg.style.height=h+'px';
+      svg.style.minHeight=h+'px';
+    }
+  }
+  if(lbl)lbl.textContent=Math.round(z*100)+'%';
+}
+function haritaZoomReset(which){
+  window._haritaZoom[which]=1;
+  haritaZoomApply(which);
+  var vp=document.getElementById('harita-'+which+'-viewport');
+  if(vp){vp.scrollTop=0;vp.scrollLeft=0;}
+}
 function haritaPiyasaClick(rawBase){
   const b=String(rawBase||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,14);
   if(!b)return;
@@ -992,13 +1088,16 @@ function paintTreemapIntoSvg(svg,items){
   const rects=treemapSliceDice(sorted,0,0,100,100,true);
   svg.setAttribute('viewBox','0 0 100 100');
   svg.setAttribute('preserveAspectRatio','none');
+  const id=svg.id||'';
+  const haritaHi=(id==='harita-piyasa-svg'||id==='harita-sinyal-svg');
+  const fsMul=haritaHi?1.28:1;
   const parts=[];
   for(let j=0;j<rects.length;j++){
     const r=rects[j];
     if(r.w<0.12||r.h<0.12)continue;
     const extra=r.click?(' '+r.click):'';
     parts.push('<rect class="board-hm-cell" tabindex="0" role="button" x="'+r.x+'" y="'+r.y+'" width="'+r.w+'" height="'+r.h+'" fill="'+r.fill+'"'+extra+'/>');
-    const fsz=Math.min(4.2,Math.max(1.65,Math.min(r.w,r.h)*0.36));
+    const fsz=Math.min(4.2,Math.max(1.65,Math.min(r.w,r.h)*0.36))*fsMul;
     const fsz2=Math.min(3,fsz*0.58);
     if(r.w>=5.2&&r.h>=4.2){
       parts.push('<text class="board-hm-txt" x="'+(r.x+r.w/2)+'" y="'+(r.y+r.h/2-fsz2*0.28)+'" text-anchor="middle" font-size="'+fsz+'">'+escSvgText(r.sym)+'</text>');
@@ -1039,6 +1138,7 @@ function renderHaritaSinyalTreemap(){
   }
   if(b.empty){if(svg)svg.innerHTML='';return;}
   paintTreemapIntoSvg(svg,b.items);
+  requestAnimationFrame(function(){haritaZoomApply('sinyal');});
 }
 function renderDashMiniSinyalTreemap(){
   const svg=document.getElementById('dash-mini-sinyal');
@@ -1083,6 +1183,7 @@ function fetchHaritaPiyasaTreemap(){
       window._ssHaritaPiyasaCacheItems=items;
       window._ssHaritaPiyasaAt=Date.now();
       applyPiyasaTreemapItems(items);
+      requestAnimationFrame(function(){haritaZoomApply('piyasa');});
     })
     .catch(function(){
       if(leg)leg.textContent='İstek başarısız; ağı kontrol edip tekrar deneyin.';
@@ -1090,9 +1191,14 @@ function fetchHaritaPiyasaTreemap(){
     });
 }
 function renderHaritaPage(){
+  haritaPinchEnsure();
   renderHaritaSinyalTreemap();
   window._ssHaritaPiyasaAt=Date.now();
   fetchHaritaPiyasaTreemap();
+  requestAnimationFrame(function(){
+    haritaZoomApply('piyasa');
+    haritaZoomApply('sinyal');
+  });
 }
 function renderHaritaPageIfActive(){
   if(!document.getElementById('page-harita')?.classList.contains('active'))return;
@@ -1100,6 +1206,7 @@ function renderHaritaPageIfActive(){
   const t=Date.now(),last=window._ssHaritaPiyasaAt||0;
   if(t-last<22000&&window._ssHaritaPiyasaCacheItems){
     applyPiyasaTreemapItems(window._ssHaritaPiyasaCacheItems);
+    requestAnimationFrame(function(){haritaZoomApply('piyasa');});
     return;
   }
   window._ssHaritaPiyasaAt=Date.now();
@@ -1863,6 +1970,30 @@ function analizPariteSembol(){
   return String(v&&v.value?v.value:'').trim().toUpperCase().replace(/\/USDT$/i,'').replace(/USDT$/i,'');
 }
 function escU(s){return String(s==null?'':s).replace(/</g,'&lt;').replace(/&/g,'&amp;');}
+/** Analiz merkezi: tüm kutulardan sonra otomatik sentez yorum (tavsiye değildir). */
+function buildUnifiedClosingYorum(u,sec,mtf,fr,motor){
+  if(!u||u.ok===false)return'';
+  var sym=u.base||String(u.symbol||'').replace(/USDT$/i,'')||'Parite';
+  var bias=u.scenarioBias;
+  var bTxt=bias==='bullish'?'yapıcı (özet yükseliş lehine)':bias==='cautious'?'temkinli (risk katmanları öne çıkıyor)':(bias==='unknown'?'belirsiz':'karışık / dengeli');
+  var fs=fr&&fr.skor!=null?fr.skor:null;
+  var fsTxt=fs!=null?(' Fırsat skoru '+fs+(fr.seviye?' ('+fr.seviye+')':'')+'.'):'';
+  var mtfOk=mtf&&mtf.allAligned;
+  var mtfTxt=mtfOk?(mtf.hasWeekly?' Çoklu zaman dilimi haftalık dahil uyumlu.':' Çoklu zaman dilimi uyumlu.'):' Zaman dilimleri tek yönde değil; kısa ve orta vadeyi birlikte okuyun.';
+  var motTxt='';
+  if(motor)motTxt=motor.aligned?' Motor ile özet genelde örtüşüyor.':' Fırsat/net skor ile özet cümle ayrışıyor; sayısal kutulara ağırlık verin.';
+  var confs=u.conflicts||[];
+  var hi=confs.some(function(c){return c.severity==='high';});
+  var confTxt=confs.length?(hi?' Yüksek önemde uyarılar var; pozisyon öncesi dikkat.':(' '+confs.length+' uyarı bayrağı işlendi.')):'';
+  var stale=u.freshness&&u.freshness.isStale;
+  var stTxt=stale?' Veri bayat sayılabilir; güncel tur önerilir.':'';
+  var boardTxt=u.onBoard===false?' Parite tahta dışı özet (son turda eşik altı veya yalnızca liste).':'';
+  var par=sym+' için birleşik yorum: senaryo '+bTxt+'.'+fsTxt+mtfTxt+(motTxt?' '+motTxt:'')+confTxt+stTxt+boardTxt+' Bu metin otomatik derlenmiştir; yatırım tavsiyesi değildir.';
+  return'<div class="unified-sec unified-yorum" style="border-color:rgba(123,92,255,0.35);margin-top:14px;background:linear-gradient(180deg,rgba(123,92,255,0.07),transparent)">'+
+    '<div class="unified-sec-h">Yorum</div>'+
+    '<p class="unified-yorum-p">'+escU(par)+'</p>'+
+    '<p style="font-size:10px;color:var(--text3);margin:12px 0 0;line-height:1.45">Veriler teknik motor çıktısıdır; kararı kendi risk ve planınıza göre verin.</p></div>';
+}
 function renderUnifiedHTML(u){
   if(!u||u.ok===false)return'<p style="color:var(--red);font-size:12px">Özet alınamadı.</p>';
   var bias=u.scenarioBias==='bullish'?'var(--green)':u.scenarioBias==='cautious'?'var(--amber)':'var(--text2)';
@@ -1936,19 +2067,25 @@ function renderUnifiedHTML(u){
   var lead=u.narrativeLead||'';
   var detail=u.narrativeDetail||u.narrative||'';
   var detailBlock=(detail&&!bul)?'<p class="unified-narr" style="margin-top:8px;font-size:12px">'+escU(detail)+'</p>':'';
-  return ver+staleBanner+
-    '<div style="font-size:10px;color:'+bias+';font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">'+(u.scenarioBias==='bullish'?'Senaryo eğilimi: yapıcı':u.scenarioBias==='cautious'?'Senaryo eğilimi: temkinli':(u.scenarioBias==='unknown'?'Senaryo: —':'Senaryo eğilimi: karışık'))+'</div>'+
+  var narrativeBlock=
     (lead?'<p class="unified-narr" style="font-weight:600">'+escU(lead)+'</p>':'')+
     detailBlock+
-    (bul?'<ul class="unified-bul">'+bul+'</ul>':'')+
-    backdrop+confBlock+motorBlock+
+    (bul?'<div class="unified-sec" style="margin-top:12px"><div class="unified-sec-h">Detay özeti (madde madde)</div><ul class="unified-bul" style="margin:0">'+bul+'</ul></div>':'');
+  var yorumBlock=buildUnifiedClosingYorum(u,sec,mtf,fr,motor);
+  return ver+staleBanner+
+    '<div style="font-size:10px;color:'+bias+';font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">'+(u.scenarioBias==='bullish'?'Senaryo eğilimi: yapıcı':u.scenarioBias==='cautious'?'Senaryo eğilimi: temkinli':(u.scenarioBias==='unknown'?'Senaryo: —':'Senaryo eğilimi: karışık'))+'</div>'+
+    backdrop+
     '<div class="unified-sec"><div class="unified-sec-h">Tazelik</div>'+escU(freshLine)+'</div>'+
     '<div class="unified-sec"><div class="unified-sec-h">MTF</div>'+mtfLine+'</div>'+
     '<div class="unified-sec"><div class="unified-sec-h">Fırsat &amp; runner</div>'+firsatLine+' · '+runLine+'</div>'+
     diagBlock+learnBlock+stBlock+
     (sec.horizon?'<div class="unified-sec"><div class="unified-sec-h">Hedef süre</div>'+escU(sec.horizon.label||sec.horizon.summary||'—')+'</div>':'')+
     kaBlock+
+    motorBlock+
+    confBlock+
+    narrativeBlock+
     aiBlock+
+    yorumBlock+
     (!u.hasFullDetail?'<p style="font-size:11px;color:var(--amber);margin-top:12px">Tam gövde yok; liste özeti veya tarama sonrası tekrar deneyin.</p>':'');
 }
 function analizPariteYukle(){
