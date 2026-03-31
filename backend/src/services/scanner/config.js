@@ -19,12 +19,20 @@ const OHLCV_LIMITS = {
 const regMaxMissedEnv = parseInt(process.env.REGISTRY_MAX_MISSED_SCANS, 10);
 const priceRefreshEnv = parseInt(process.env.REGISTRY_PRICE_REFRESH_MS, 10);
 const minFirsatEnv = parseInt(process.env.MIN_FIRSAT, 10);
+const minTp1Raw = process.env.MIN_TP1_PCT;
+let minTp1Pct = 0;
+if (minTp1Raw !== undefined && minTp1Raw !== '') {
+  const n = parseFloat(minTp1Raw);
+  if (Number.isFinite(n) && n > 0) minTp1Pct = Math.min(50, Math.max(0.5, n));
+}
 
 const CONFIG = {
   SCAN_DELAY_MS: 1000,
   SCAN_INTERVAL_MS: 45 * 60 * 1000,
   /** Tahta eşiği yalnızca PPT motoru (`kriptoAnalizSistemi`) fırsat skoru; .env: MIN_FIRSAT */
   MIN_FIRSAT: Number.isFinite(minFirsatEnv) ? Math.min(95, Math.max(10, minFirsatEnv)) : 35,
+  /** Sunucuda TP1 alt sınırı; yalnızca .env ile (MIN_TP1_PCT) tanımlı ve >0 ise uygulanır. Aksi halde 0 = kapalı (UI filtresi kullanılır). */
+  MIN_TP1_PCT: minTp1Pct,
   OHLCV_LIMITS,
   /** İki kline isteği arası (ms); rate limit + daha büyük yanıtlar için hafif artırıldı */
   OHLCV_REQUEST_GAP_MS: 250,

@@ -471,20 +471,6 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
 .hm-legend{display:flex;align-items:center;gap:12px;font-size:10px;color:var(--text3);flex-wrap:wrap;padding-top:4px;border-top:1px dashed var(--border);margin-top:4px}
 .hm-legend-bar{height:10px;flex:1;min-width:100px;max-width:240px;border-radius:6px;border:1px solid var(--border)}
 .hm-hint{font-size:10px;color:var(--text3);line-height:1.45;margin-bottom:10px}
-.tr-movers-wrap{padding:0 16px 12px}
-.tr-movers-hdr{display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px}
-.tr-movers-time{font-family:'Space Mono',monospace;font-size:9px;opacity:0.85}
-.tr-movers-row{display:flex;flex-wrap:wrap;gap:6px}
-.tr-mv-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:999px;padding:5px 10px;background:var(--bg2);cursor:pointer;font:inherit;color:var(--text1)}
-.tr-mv-chip.tr-mv-up{border-color:rgba(0,230,118,0.28)}
-.tr-mv-chip.tr-mv-dn{border-color:rgba(255,71,87,0.25)}
-.tr-mv-sym{font-family:'Space Mono',monospace;font-size:11px;font-weight:800}
-.tr-mv-pct{font-family:'Space Mono',monospace;font-size:10px;font-weight:700}
-.tr-mv-up .tr-mv-pct{color:var(--green)}
-.tr-mv-dn .tr-mv-pct{color:var(--red)}
-.tr-movers-retro{margin-top:10px;font-size:10px;color:var(--text3);line-height:1.45}
-.tr-movers-retro summary{cursor:pointer;color:var(--accent);font-weight:600}
-.tr-movers-hint{font-size:10px;color:var(--text3);margin:0;line-height:1.45}
 </style>
 <script>
 (function(){
@@ -530,9 +516,10 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
       <div class="stat-box"><div class="stat-num" id="s-kur" style="color:var(--amber)">—</div><div class="stat-lbl">USD/TRY</div></div>
     </div>
     <p id="board-hint" style="font-size:10px;color:var(--text3);text-align:center;padding:0 16px 10px;line-height:1.45"></p>
-    <div class="tr-movers-wrap" id="dash-tr-movers-wrap">
-      <div class="section-hdr" style="font-size:12px;margin-bottom:4px">TR pariteler · 24 saatlik hareket (Binance)</div>
-      <div id="dash-tr-movers"><p class="tr-movers-hint">Yükleniyor…</p></div>
+    <div style="padding:0 16px 10px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:center">
+      <label for="filtre-min-tp1" style="font-size:11px;color:var(--text2);white-space:nowrap">TP1 min. (ATR %)</label>
+      <input class="arama-input" id="filtre-min-tp1" type="text" inputmode="decimal" autocomplete="off" placeholder="Boş = tümü" title="ATR TP1 bu yüzden küçük olanları gizle. Boş: sunucudaki tüm tahta. Kayıt: bu cihaz (localStorage)." style="width:88px;max-width:40%;padding:8px 10px;margin:0" onchange="onMinTp1UiChange()" onkeydown="if(event.key==='Enter'){event.preventDefault();onMinTp1UiChange();}">
+      <span style="font-size:10px;color:var(--text3);line-height:1.35;max-width:220px">Örn. <strong>3</strong> yazıp Enter — sadece görünüm (tarayıcıda saklanır).</span>
     </div>
     <p style="font-size:11px;color:var(--text2);text-align:center;padding:0 16px 12px;line-height:1.45"><button type="button" onclick="goPage('harita')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Isı haritası</button> · <button type="button" onclick="goPage('analiz')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Analiz merkezi</button> · <button type="button" onclick="goPage('nakit')" style="background:none;border:none;color:var(--accent);font:inherit;cursor:pointer;text-decoration:underline;padding:0">Nakit rehberi</button> · sol üst <strong style="color:var(--text1)">☀️/🌙</strong> tema</p>
     <div class="section-hdr" style="margin-top:2px">Tahta özeti · profil &amp; potansiyel</div>
@@ -1109,8 +1096,9 @@ function paintTreemapIntoSvg(svg,items){
   svg.innerHTML=parts.join('');
 }
 function buildHaritaSinyalTreemapItems(){
-  const fresh=sig.filter(function(s){return!s.absentThisScan;});
-  const list=fresh.length?fresh.slice():sig.slice();
+  const fresh=sig.filter(function(s){return!s.absentThisScan&&signalPassesUiMinTp1(s);});
+  const pool=fresh.length?fresh:sig.filter(signalPassesUiMinTp1);
+  const list=pool.slice();
   if(!list.length)return{items:[],empty:true};
   const items=list.map(function(s){
     const sym=coinBaseFromSignal(s)||'';
@@ -1212,9 +1200,9 @@ function renderHaritaPageIfActive(){
   window._ssHaritaPiyasaAt=Date.now();
   fetchHaritaPiyasaTreemap();
 }
-/** Ana sayfa kartları: her zaman tüm tahta (Sinyaller sekmesindeki Nadir/Güçlü filtresi uygulanmaz). */
+/** Ana sayfa kartları: sunucu tahtası + isteğe bağlı TP1 min. (UI) filtresi. */
 function dashKartListesi(){
-  return sig.slice();
+  return sig.filter(signalPassesUiMinTp1);
 }
 function refreshDashHaritaUi(){
   renderDashMiniSinyalTreemap();
@@ -1344,7 +1332,7 @@ function handleEliteSetupAlerts(){
 function renderInvestPanel(){
   const root=document.getElementById('invest-guidance-root');
   if(!root)return;
-  const fresh=sig.filter(function(s){return!s.absentThisScan;});
+  const fresh=sig.filter(function(s){return!s.absentThisScan&&signalPassesUiMinTp1(s);});
   const disc='<p class="invest-disclaimer">Özet; tahtadaki göstergelerin otomatik birleşimidir. <strong>Yatırım tavsiyesi değildir.</strong></p>';
   if(!fresh.length){
     root.innerHTML=disc+'<p class="invest-prof-meta">Güncel turda tahta boş veya kayıtlar önceki tur; tam tarama bekleyin.</p>';
@@ -1704,44 +1692,42 @@ function coinBaseFromSignal(s){
   const b=String(s.base||'').trim().toUpperCase();
   return b||'';
 }
-var _trMoversFetchedAt=0;
-function _escMini(s){
-  return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+function initUiMinTp1Once(){
+  var inp=document.getElementById('filtre-min-tp1');
+  if(!inp||inp.dataset._tp1init)return;
+  inp.dataset._tp1init='1';
+  try{
+    var v=localStorage.getItem('ss_min_tp1_pct');
+    if(v!=null)inp.value=v;
+  }catch(e){}
 }
-function renderTrMovers24h(j){
-  const root=document.getElementById('dash-tr-movers');
-  if(!root)return;
-  if(!j||!j.ok||!j.movers||!j.movers.length){
-    root.innerHTML='<p class="tr-movers-hint">TR 24s verisi yok veya liste boş.</p>';
-    return;
+function getUiMinTp1Pct(){
+  var inp=document.getElementById('filtre-min-tp1');
+  var raw=inp?String(inp.value||'').trim().replace(',','.'):'';
+  if(raw==='')return 0;
+  var n=parseFloat(raw);
+  return Number.isFinite(n)&&n>0?Math.min(50,n):0;
+}
+function signalPassesUiMinTp1(s){
+  var m=getUiMinTp1Pct();
+  if(m<=0)return true;
+  var t=Number(s&&s.atr&&s.atr.tp1Pct);
+  return Number.isFinite(t)&&t>=m;
+}
+function onMinTp1UiChange(){
+  var inp=document.getElementById('filtre-min-tp1');
+  if(inp){
+    try{localStorage.setItem('ss_min_tp1_pct',String(inp.value||'').trim());}catch(e){}
   }
-  const time=j.updatedAt?new Date(j.updatedAt).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'}):'';
-  const chips=j.movers.map(function(m){
-    var b=String(m.base||'').replace(/[^A-Z0-9]/gi,'').slice(0,14);
-    if(!b)return'';
-    var p=m.change24hPct!=null&&Number.isFinite(Number(m.change24hPct))?Number(m.change24hPct):0;
-    var cls=p>=0?'tr-mv-up':'tr-mv-dn';
-    return'<button type="button" class="tr-mv-chip '+cls+'" onclick="gelirDetayAc(\''+b+'\')"><span class="tr-mv-sym">'+b+'</span><span class="tr-mv-pct">'+(p>=0?'+':'')+p.toFixed(1)+'%</span></button>';
-  }).filter(Boolean).join('');
-  var note=j.retroNoteTr||'';
-  root.innerHTML='<div class="tr-movers-hdr"><span>En çok yükselenler (özet)</span><span class="tr-movers-time">'+_escMini(time)+'</span></div>'+
-    '<div class="tr-movers-row">'+chips+'</div>'+
-    '<details class="tr-movers-retro"><summary>Geriye dönük kontrol (DAR vb.)</summary><p class="tr-movers-hint">'+_escMini(note)+'</p></details>';
-}
-function refreshTrMovers24h(){
-  if(Date.now()-_trMoversFetchedAt<40000)return;
-  _trMoversFetchedAt=Date.now();
-  fetch(BASE_URL+'/api/market/tr-24h-movers?limit=14&sort=gainers')
-    .then(function(r){return r.json();})
-    .then(renderTrMovers24h)
-    .catch(function(){
-      const root=document.getElementById('dash-tr-movers');
-      if(root)root.innerHTML='<p class="tr-movers-hint">TR movers isteği başarısız.</p>';
-    });
+  try{guncelle();}catch(e){
+    try{renderTop();renderSinyallerSafe();refreshDashHaritaUi();renderHaritaPageIfActive();}catch(e2){}
+  }
 }
 function guncelle(){
-  const fresh=sig.filter(s=>!s.absentThisScan);
-  const t=sig.length,nadir=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=80).length,guclu=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=65).length;
+  initUiMinTp1Once();
+  const vis=sig.filter(signalPassesUiMinTp1);
+  const fresh=vis.filter(s=>!s.absentThisScan);
+  const t=vis.length,nadir=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=80).length,guclu=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=65).length;
   const fg=sig[0]?.sentiment?.value||14;
   document.getElementById('s-sinyal').textContent=t;
   document.getElementById('s-nadir').textContent=nadir;
@@ -1749,7 +1735,7 @@ function guncelle(){
   document.getElementById('s-badge').textContent=t;
   document.getElementById('b-nadir-sayi').textContent=nadir;
   document.getElementById('b-guclu-sayi').textContent=guclu;
-  const listForNames=fresh.length?fresh:sig;
+  const listForNames=fresh.length?fresh:vis;
   const bases=listForNames.map(coinBaseFromSignal).filter(Boolean);
   const uniq=[];
   for(const b of bases){if(!uniq.includes(b))uniq.push(b);}
@@ -1785,7 +1771,7 @@ function guncelle(){
   const b=document.getElementById('fg-badge');
   b.textContent='F&G: '+fg;
   b.className='fg-badge '+(fg<=40?'fg-fear':fg>=60?'fg-greed':'fg-neutral');
-  applyLogoMood(fg,sig);
+  applyLogoMood(fg,vis);
   handleEliteSetupAlerts();
   void refreshPushBtn();
   try{renderInvestPanel();}catch(e){console.error('renderInvestPanel',e);}
@@ -1793,7 +1779,6 @@ function guncelle(){
   renderSinyallerSafe();
   try{renderRapor();}catch(e){console.error('renderRapor',e);}
   try{renderHaritaPageIfActive();refreshDashHaritaUi();}catch(e){console.error('harita refresh',e);}
-  if(document.getElementById('page-dashboard')?.classList.contains('active'))refreshTrMovers24h();
   syncHeaderOffset();
 }
 
@@ -1951,7 +1936,7 @@ function sayfa(id,btn){
   if(id==='analiz')void analizPageEnter();
   if(id==='harita'){window.scrollTo(0,0);void renderHaritaPage();}
   if(id==='gelir')void gelirWinnerPattern(false);
-  if(id==='dashboard'){_trMoversFetchedAt=0;refreshTrMovers24h();refreshDashHaritaUi();}
+  if(id==='dashboard'){refreshDashHaritaUi();}
   if(id==='rapor'){
     renderRapor();
     raporJumpFetch(false);
@@ -2410,7 +2395,7 @@ function horizonKartHTML(s){
   return'<div class="kart-horizon"><strong>⏱ Öngörü</strong> (1H volatilite): '+p.join(' · ')+'</div>';
 }
 function fList(){
-  let l=[...sig];
+  let l=sig.filter(signalPassesUiMinTp1);
   if(aktifF==='nadir')l=l.filter(s=>(s.firsatSkoru?.skor||0)>=80);
   if(aktifF==='nadirhist')l=l.filter(s=>(nadirTrail[s.symbol]?.maxSkor||0)>=80);
   if(aktifF==='guclu')l=l.filter(s=>(s.firsatSkoru?.skor||0)>=65);
@@ -2531,6 +2516,10 @@ function renderTop(){
   }
   const list=dashKartListesi();
   const head=scanLiveBannerHTML();
+  if(!list.length){
+    el.innerHTML=head+'<div class="bos">TP1 min. (ATR %) filtresine uygun satır yok.<br>Üstteki alanı boşaltın veya eşiği düşürün.</div>';
+    return;
+  }
   el.innerHTML=head+list.map(kartHTML).join('');
 }
 function renderSinyallerSafe(){
@@ -2556,7 +2545,7 @@ function renderSinyallerSafe(){
         const eta=scanMeta.etaSeconds?` ~${scanMeta.etaSeconds}s`:'';
         el.innerHTML=`<div class="bos">Filtrede henüz sonuç yok<br>Tarama sürüyor (${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0})${eta}</div>`;
       }else{
-        el.innerHTML=aktifF==='nadirhist'?'<div class="bos">Bu taramada geçmişte Nadir görülmüş coin yok<br>14 gün içinde 80+ olanlar burada listelenir</div>':'<div class="bos">Bu filtrede sinyal yok</div>';
+        el.innerHTML=aktifF==='nadirhist'?'<div class="bos">Bu taramada geçmişte Nadir görülmüş coin yok<br>14 gün içinde 80+ olanlar burada listelenir</div>':'<div class="bos">Bu filtrede sinyal yok'+(getUiMinTp1Pct()>0?' · Dashboard’da TP1 min. alanını kontrol edin':'')+'</div>';
       }
       return;
     }
@@ -2816,6 +2805,7 @@ function listeReasonTr(code){
     DUSUK_SKOR:'Teknik skor eşik altı',
     AI_MANIP:'AI manipülasyon riski',
     FIRSAT_ESIK:'Fırsat skoru eşik altı',
+    DUSUK_TP1:'TP1 (ATR) min. yüzde eşiği altı',
     HATA:'Tarama hatası'
   };
   return m[code]||code||'—';

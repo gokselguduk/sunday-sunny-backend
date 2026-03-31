@@ -292,6 +292,19 @@ async function scanSingle(coin, sentiment, analizCtx = {}, opts = {}) {
       priceChange24h: signal.priceChange24h
     });
 
+    if (CONFIG.MIN_TP1_PCT > 0) {
+      const tp1Pct = Number(signal.atr?.tp1Pct);
+      if (!Number.isFinite(tp1Pct) || tp1Pct < CONFIG.MIN_TP1_PCT) {
+        return {
+          qualified: false,
+          snapshot: {
+            ...baseSnapshot(coin, { listReason: 'DUSUK_TP1' }),
+            listDetail: signal
+          }
+        };
+      }
+    }
+
     signal.kriptoAnaliz = buildKriptoAnaliz(signal, analizCtx);
     signal.firsatSkoru = deriveFirsatFromKriptoAnaliz(signal.kriptoAnaliz, signal);
     signal.runnerPotential = runnerFromKripto(signal.kriptoAnaliz);
@@ -328,7 +341,7 @@ async function scanSingle(coin, sentiment, analizCtx = {}, opts = {}) {
       signal.memoryKey = prev?.memoryKey || null;
     }
 
-    console.log(`✅ ${coin.pair}: Skor=${netScore} Fırsat=${firsatSkoru.skor} ${firsatSkoru.emoji} ${firsatSkoru.seviye}${saveHistory ? '' : ' (tahta güncelleme)'}`);
+    console.log(`✅ ${coin.pair}: Skor=${dirScore} Fırsat=${firsatSkoru.skor} ${firsatSkoru.emoji} ${firsatSkoru.seviye}${saveHistory ? '' : ' (tahta güncelleme)'}`);
     return { qualified: true, signal };
 
   } catch (err) {
