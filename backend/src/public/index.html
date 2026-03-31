@@ -2930,11 +2930,16 @@ function raporJumpFetch(refresh){
       }
       const arch=j.archetype||{};
       const med=arch.median||{};
+      const sd=arch.spikeDayMedian||{};
       const archHtml='<details style="margin-bottom:12px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:var(--bg1)"><summary style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:600">Küresel sıcrama öncesi 5g · medyan</summary>'+
         '<p style="font-size:11px;color:var(--text3);margin:10px 0 0;line-height:1.55">Olay sayısı: '+(arch.trainingEvents||'—')+' · Parite çeşidi: '+(arch.distinctPairs||'—')+
         ' · Eşik: ≥%'+(arch.spikeMinDayPct||'—')+' günlük · Geçmiş sıçrama medyanı: <strong>%'+(arch.historicalMedianSpikePct!=null?arch.historicalMedianSpikePct:'—')+'</strong> · Üst çeyrek: %'+(arch.historicalP75SpikePct!=null?arch.historicalP75SpikePct:'—')+'</p>'+
-        '<p style="font-size:10px;color:var(--text3);margin:8px 0 0;font-family:\'Space Mono\',monospace">meanRet '+escU(String(med.meanRet!=null?med.meanRet:'—'))+' · cumRet '+escU(String(med.cumRet!=null?med.cumRet:'—'))+' · rangeAvg '+escU(String(med.rangeAvg!=null?med.rangeAvg:'—'))+' · vol× '+escU(String(med.volRatio!=null?med.volRatio:'—'))+' · RSI '+escU(String(med.rsiEnd!=null?med.rsiEnd:'—'))+'</p></details>';
+        '<p style="font-size:10px;color:var(--text3);margin:8px 0 0;font-family:\'Space Mono\',monospace">meanRet '+escU(String(med.meanRet!=null?med.meanRet:'—'))+' · cumRet '+escU(String(med.cumRet!=null?med.cumRet:'—'))+' · rangeAvg '+escU(String(med.rangeAvg!=null?med.rangeAvg:'—'))+' · vol× '+escU(String(med.volRatio!=null?med.volRatio:'—'))+' · RSI '+escU(String(med.rsiEnd!=null?med.rsiEnd:'—'))+'</p>'+
+        (sd.sampleSize>=8?'<p style="font-size:10px;color:var(--text3);margin:8px 0 0;line-height:1.45"><strong>Sıçrama günü (medyan)</strong> · baz hacim ×20g: '+escU(String(sd.volRatioVs20d!=null?sd.volRatioVs20d:'—'))+
+        ' · quote ×20g: '+escU(String(sd.quoteVolRatioVs20d!=null?sd.quoteVolRatioVs20d:'—'))+' · işlem ×20g: '+escU(String(sd.tradesRatioVs20d!=null?sd.tradesRatioVs20d:'—'))+
+        ' · taker alım %: '+escU(String(sd.takerBuyRatio!=null?Math.round(sd.takerBuyRatio*1000)/10:'—'))+' (önceki 5g ort. '+escU(String(sd.pre5dTakerBuyRatioAvg!=null?Math.round(sd.pre5dTakerBuyRatioAvg*1000)/10:'—'))+') · n='+escU(String(sd.sampleSize))+'</p>':'')+'</details>';
       const narr='<div style="font-size:11px;color:var(--text2);line-height:1.55;margin-bottom:10px;white-space:pre-wrap">'+escU(j.narrativeTr||'')+'</div>';
+      const role=j.roleModelTr?'<details style="margin-bottom:12px;border:1px solid var(--border);border-radius:12px;padding:10px 12px;background:var(--bg2)"><summary style="font-size:11px;color:var(--accent);cursor:pointer;font-weight:600">Rol modeli — 2 yıl ≥%40 sıçrama (ön 5g + sıçrama günü hacim &amp; agresif alım)</summary><div style="font-size:10px;color:var(--text2);margin:10px 0 0;line-height:1.55;white-space:pre-wrap">'+escU(j.roleModelTr)+'</div></details>':'';
       const meth=j.methodNoteTr?'<p style="font-size:10px;color:var(--text3);line-height:1.45;margin:0 0 10px">'+escU(j.methodNoteTr)+'</p>':'';
       const filt=j.filterSummaryTr?'<p style="font-size:10px;color:var(--text3);margin:0 0 10px">'+escU(j.filterSummaryTr)+'</p>':'';
       const rows=(j.candidates||[]).map(function(p){
@@ -2952,7 +2957,7 @@ function raporJumpFetch(refresh){
       }).join('');
       const empty=!rows?'<p style="font-size:11px;color:var(--text3)">Şu an bu profile yeterince yakın parite yok veya filtreler sıkı.</p>':'';
       const hzBlock=j.horizonNoteTr?'<p style="font-size:10px;color:var(--text3);margin:10px 0 6px;line-height:1.45">'+escU(j.horizonNoteTr)+'</p>':'';
-      out.innerHTML=narr+meth+filt+archHtml+hzBlock+empty+rows+
+      out.innerHTML=narr+role+meth+filt+archHtml+hzBlock+empty+rows+
         '<p style="font-size:10px;color:var(--text3);margin-top:12px">'+(j.note?escU(j.note):'')+(j.durationMs!=null?' · '+Math.round(j.durationMs/1000)+' sn':'')+' · Parite: '+(j.symbolCount||'—')+'</p>';
     })
     .catch(function(){

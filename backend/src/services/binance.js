@@ -132,13 +132,19 @@ async function getOHLCV(symbol, interval, limit) {
       params: { symbol: symbol.toUpperCase(), interval, limit },
       timeout: 8000
     });
-    return res.data.map(k => ({
-      time:   k[0],
-      open:   parseFloat(k[1]),
-      high:   parseFloat(k[2]),
-      low:    parseFloat(k[3]),
-      close:  parseFloat(k[4]),
+    return res.data.map((k) => ({
+      time: k[0],
+      open: parseFloat(k[1]),
+      high: parseFloat(k[2]),
+      low: parseFloat(k[3]),
+      close: parseFloat(k[4]),
       volume: parseFloat(k[5]),
+      /** USDT hacmi (futures kline alan 7) */
+      quoteVolume: k[7] != null ? parseFloat(k[7]) : null,
+      /** İşlem sayısı (alan 8) */
+      trades: k[8] != null ? parseFloat(k[8]) : null,
+      /** Agresif alım hacmi — baz varlık (alan 9); volume ile oran ≈ para girişi eğilimi */
+      takerBuyBase: k[9] != null ? parseFloat(k[9]) : null,
       closed: true
     }));
   } catch (err) {

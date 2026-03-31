@@ -101,6 +101,72 @@ function windowMetrics(candles, endIdx, winLen) {
   return { meanRet, cumRet, rangeAvg, volRatio, rsiEnd };
 }
 
+/**
+ * Sıçrama günü (indeks i): hacim / işlem / USDT hacmi — önceki 20 güne göre oranlar;
+ * taker buy / volume = agresif alım payı (para girişi vekili, order flow değil).
+ */
+function spikeDayFlowMetrics(candles, spikeIdx) {
+  if (spikeIdx < 21 || spikeIdx >= candles.length) return null;
+  const c = candles[spikeIdx];
+  if (!c || !Number.isFinite(c.volume) || c.volume <= 0) return null;
+
+  const slice = [];
+  for (let j = spikeIdx - 20; j < spikeIdx; j++) {
+    const x = candles[j];
+    if (x && Number.isFinite(x.volume) && x.volume > 0) {
+      slice.push({
+        vol: x.volume,
+        trades: Number.isFinite(x.trades) ? x.trades : null,
+        quote: Number.isFinite(x.quoteVolume) ? x.quoteVolume : null
+      });
+    }
+  }
+  if (slice.length < 10) return null;
+
+  const medVol = median(slice.map((s) => s.vol));
+  if (!(medVol > 0)) return null;
+
+  const tradesArr = slice.map((s) => s.trades).filter((t) => Number.isFinite(t) && t > 0);
+  const quoteArr = slice.map((s) => s.quote).filter((q) => Number.isFinite(q) && q > 0);
+  const medTrades = tradesArr.length >= 10 ? median(tradesArr) : null;
+  const medQuote = quoteArr.length >= 10 ? median(quoteArr) : null;
+
+  const volRatioSpike = c.volume / medVol;
+  const takerBuyRatioSpike =
+    Number.isFinite(c.takerBuyBase) && c.volume > 0 ? c.takerBuyBase / c.volume : null;
+
+  let tradesRatioSpike = null;
+  if (medTrades > 0 && Number.isFinite(c.trades) && c.trades > 0) {
+    tradesRatioSpike = c.trades / medTrades;
+  }
+
+  let quoteRatioSpike = null;
+  if (medQuote > 0 && Number.isFinite(c.quoteVolume) && c.quoteVolume > 0) {
+    quoteRatioSpike = c.quoteVolume / medQuote;
+  }
+
+  let sumTb = 0;
+  let nTb = 0;
+  for (let j = spikeIdx - 5; j < spikeIdx; j++) {
+    const x = candles[j];
+    if (x && Number.isFinite(x.volume) && x.volume > 0 && Number.isFinite(x.takerBuyBase)) {
+      sumTb += x.takerBuyBase / x.volume;
+      nTb++;
+    }
+  }
+  const takerBuyRatioPre5dAvg = nTb > 0 ? sumTb / nTb : null;
+
+  if (!Number.isFinite(volRatioSpike) || !Number.isFinite(takerBuyRatioSpike)) return null;
+
+  return {
+    volRatioSpike,
+    takerBuyRatioSpike,
+    tradesRatioSpike,
+    quoteRatioSpike,
+    takerBuyRatioPre5dAvg
+  };
+}
+
 function statsFromProfiles(profiles) {
   const keys = ['meanRet', 'cumRet', 'rangeAvg', 'volRatio', 'rsiEnd'];
   const med = {};
@@ -165,6 +231,40 @@ function spikePromiseFromTraining(enriched, candidateSim) {
   };
 }
 
+function buildJumpRoleModelTr({ lookbackDays, spikePct, trainingN, flowN, pre5d, spikeDay }) {
+  const a = pre5d;
+  const s = spikeDay || {};
+  const f2 = (x) => (x == null || !Number.isFinite(x) ? '—' : String(Math.round(x * 100) / 100));
+  const f1 = (x) => (x == null || !Number.isFinite(x) ? '—' : String(Math.round(x * 10) / 10));
+  const r4 = (x) => (x == null || !Number.isFinite(x) ? '—' : String(Math.round(x * 10000) / 10000));
+
+  let txt = `ROL MODELİ — ≥%${spikePct} tek günlük sıçrama, ~${lookbackDays} gün gerçek veri\n\n`;
+  txt += `A) Sıçramadan ÖNCE (son 5 işlem günü, ${trainingN} olayın teknik medyanı)\n`;
+  txt += `• Günlük ort. getiri meanRet ${r4(a.meanRet)} · Kümülatif cumRet ${r4(a.cumRet)} · Mum genişliği rangeAvg ${r4(a.rangeAvg)}\n`;
+  txt += `• Ön-gün hacim oranı (son gün / ~20g medyan) vol× ${f2(a.volRatio)} · RSI ${f1(a.rsiEnd)}\n\n`;
+
+  if (!flowN || flowN < 8) {
+    txt += `B) Sıçrama günü — hacim / agresif alım / USDT hacmi: yeterli tam kline örneği yok (${flowN || 0}/${trainingN}).\n`;
+    txt += `C) Zincir üstü para akışı yok; vekil: taker buy + quote volume (Binance USDT-M günlük mum).`;
+    return txt;
+  }
+
+  txt += `B) Sıçrama GÜNÜ (${flowN} olay medyanı; kıyas: sıçramadan önceki 20 işlem günü)\n`;
+  txt += `• Baz hacim ≈ ${f2(s.volRatioVs20d)}× medyan — ilgi patlaması\n`;
+  txt += `• USDT hacmi (quote) ≈ ${f2(s.quoteVolRatioVs20d)}× medyan\n`;
+  txt += `• İşlem adedi ≈ ${f2(s.tradesRatioVs20d)}× medyan\n`;
+  const tb = s.takerBuyRatio == null ? '—' : `${Math.round(s.takerBuyRatio * 1000) / 10}%`;
+  const tb5 = s.pre5dTakerBuyRatioAvg == null ? '—' : `${Math.round(s.pre5dTakerBuyRatioAvg * 1000) / 10}%`;
+  txt += `• Agresif alım payı (taker buy ÷ volume) sıçrama günü ≈ ${tb}; önceki 5 gün ort. ≈ ${tb5}\n`;
+  if (s.takerBuyLiftVsPre5d != null && Number.isFinite(s.takerBuyLiftVsPre5d)) {
+    const liftPct = Math.round(s.takerBuyLiftVsPre5d * 1000) / 10;
+    txt += `• Sıçrama günü agresif alım, önceki 5 güne göre ortanca +${liftPct} puan (yüzde birimi)\n`;
+  }
+  txt += `\nC) Bu özet “rol model”dir; gelecek aynısı değildir. Delist/manipülasyon/haber fiyatı değiştirir.`;
+
+  return txt;
+}
+
 async function computeJumpArchetypeAnalysis(forceRefresh) {
   const now = Date.now();
   if (!forceRefresh && cache.payload && now - cache.at < CACHE_MS) {
@@ -199,7 +299,8 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
         if (r < spikeTh) continue;
         const pre = windowMetrics(candles, i - 1, winLen);
         if (!pre) continue;
-        training.push({ symbol: c.pair, profile: pre, spikeReturn: r });
+        const spikeFlow = spikeDayFlowMetrics(candles, i);
+        training.push({ symbol: c.pair, profile: pre, spikeReturn: r, spikeFlow });
       }
     } catch (e) {
       /* atla */
@@ -230,6 +331,35 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
   const globalP75Spike = percentile(allSpikePcts, 75);
   const uniqueSyms = new Set(enriched.map((t) => t.symbol)).size;
 
+  const flowRows = training.map((t) => t.spikeFlow).filter(Boolean);
+  const flowN = flowRows.length;
+  const mFlow = (pick) => {
+    const arr = flowRows.map(pick).filter((x) => Number.isFinite(x));
+    return arr.length ? median(arr) : null;
+  };
+  const takerLifts = [];
+  for (const t of training) {
+    const f = t.spikeFlow;
+    if (!f || !Number.isFinite(f.takerBuyRatioSpike) || !Number.isFinite(f.takerBuyRatioPre5dAvg)) continue;
+    takerLifts.push(f.takerBuyRatioSpike - f.takerBuyRatioPre5dAvg);
+  }
+  const takerBuyLiftMedian = takerLifts.length ? median(takerLifts) : null;
+
+  const mv = mFlow((f) => f.volRatioSpike);
+  const mtb = mFlow((f) => f.takerBuyRatioSpike);
+  const mtr = mFlow((f) => f.tradesRatioSpike);
+  const mqt = mFlow((f) => f.quoteRatioSpike);
+  const mpre = mFlow((f) => f.takerBuyRatioPre5dAvg);
+  const spikeDayMedian = {
+    volRatioVs20d: mv != null ? Math.round(mv * 100) / 100 : null,
+    takerBuyRatio: mtb != null ? Math.round(mtb * 1000) / 1000 : null,
+    tradesRatioVs20d: mtr != null ? Math.round(mtr * 100) / 100 : null,
+    quoteVolRatioVs20d: mqt != null ? Math.round(mqt * 100) / 100 : null,
+    pre5dTakerBuyRatioAvg: mpre != null ? Math.round(mpre * 1000) / 1000 : null,
+    takerBuyLiftVsPre5d: takerBuyLiftMedian != null ? Math.round(takerBuyLiftMedian * 1000) / 1000 : null,
+    sampleSize: flowN
+  };
+
   const archetype = {
     median: {
       meanRet: Math.round(med.meanRet * 10000) / 10000,
@@ -238,12 +368,22 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
       volRatio: Math.round(med.volRatio * 100) / 100,
       rsiEnd: Math.round(med.rsiEnd * 10) / 10
     },
+    spikeDayMedian,
     trainingEvents: enriched.length,
     distinctPairs: uniqueSyms,
     spikeMinDayPct: SPIKE_MIN_DAY_PCT,
     historicalMedianSpikePct: Math.round(globalMedianSpike * 100) / 100,
     historicalP75SpikePct: Math.round(globalP75Spike * 100) / 100
   };
+
+  const roleModelTr = buildJumpRoleModelTr({
+    lookbackDays: LOOKBACK_DAYS,
+    spikePct: SPIKE_MIN_DAY_PCT,
+    trainingN: enriched.length,
+    flowN,
+    pre5d: archetype.median,
+    spikeDay: spikeDayMedian
+  });
 
   const narrativeTr =
     `Son **${LOOKBACK_DAYS} gün** ve **${uniqueSyms}** paritede toplam **${enriched.length}** adet günlük sıçrama (≥**%${SPIKE_MIN_DAY_PCT}** tek gün kapanış hareketi) tarandı. ` +
@@ -322,8 +462,9 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
 
   const methodNoteTr =
     `Tüm TR USDT-M perpetual pariteleri taranır; tek gün kapanış getirisi ≥%${SPIKE_MIN_DAY_PCT} olan her gün “sıçrama” sayılır ve önceki 5 gün profili havuza eklenir. ` +
+    'Günlük mumdan ayrıca quote volume, işlem sayısı ve taker buy (agresif alım) okunur; rol modeli bunların sıçrama günü medyanlarını özetler. ' +
     'Arketip medyan + sapmadır. Vaat: benzer geçmiş profillerdeki sıçrama büyüklüğünün medyanı. ' +
-    'Liste sırası: Binance **24 saatlik** işlem verisi (fiyat değişimi + hacim) ile profil benzerliği birleştirilerek “potansiyel” skoru üretilir (anlık ticker; günlük modelle birlikte okunmalı).';
+    'Liste sırası: Binance **24 saatlik** ticker + profil benzerliği (anlık; günlük modelle birlikte okunmalı).';
 
   const filterSummaryTr =
     `Ön süzgeç: benzerlik ≥%${MIN_SIMILARITY}, yapı taşı ≥${MIN_STRUCTURAL_HITS} (veya ≥%${HIGH_SIM_ESCAPE}), yatay 5g elendi. ` +
@@ -337,6 +478,7 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
     symbolCount: bySymbol.size,
     durationMs: Date.now() - started,
     narrativeTr: narrativeTr.replace(/\*\*/g, ''),
+    roleModelTr,
     methodNoteTr,
     filterSummaryTr,
     horizonNoteTr,
