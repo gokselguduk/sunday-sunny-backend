@@ -3,7 +3,7 @@
  * motor hizası, piyasa arka planı ve tüm önemli analiz katmanlarının birleşik özeti.
  */
 
-const UNIFIED_SCHEMA_VERSION = '2.0.0';
+const UNIFIED_SCHEMA_VERSION = '2.3.0';
 
 const { CONFIG } = require('./scanner/config');
 
@@ -305,10 +305,15 @@ function buildUnifiedFromSnapshot(snap, opts = {}) {
   }
 
   if (mtf.allAligned) {
-    bullets.push('MTF: 15m–1h–4h–1d yönü uyumlu.');
-  } else {
     bullets.push(
-      `MTF: ${mtf.dir15m || '—'} / ${mtf.dir1h || '—'} / ${mtf.dir4h || '—'} / ${mtf.dir1d || '—'} — tam hizalı değil.`
+      mtf.hasWeekly
+        ? 'MTF: 15m–1h–4h–1d–1w yönü uyumlu.'
+        : 'MTF: 15m–1h–4h–1d yönü uyumlu (haftalık veri yok).'
+    );
+  } else {
+    const w = mtf.hasWeekly ? ` / ${mtf.dir1w || '—'} (1w)` : '';
+    bullets.push(
+      `MTF: ${mtf.dir15m || '—'} / ${mtf.dir1h || '—'} / ${mtf.dir4h || '—'} / ${mtf.dir1d || '—'}${w} — tam hizalı değil.`
     );
   }
 
@@ -321,6 +326,13 @@ function buildUnifiedFromSnapshot(snap, opts = {}) {
 
   if (run != null && typeof run === 'object' && Number.isFinite(run.score)) {
     bullets.push(`Runner potansiyeli ${run.score}/100.`);
+  }
+
+  if (s.kriptoAnaliz?.sezon?.etiket) {
+    const ka = s.kriptoAnaliz;
+    bullets.push(
+      `Kripto analiz sistemi (PPT): sezon “${ka.sezon.etiket}”, MTF “${ka.mtfUyumu?.kararKodu || '—'}”, hacim–fiyat “${ka.hacimFiyat?.profil || '—'}”.`
+    );
   }
 
   if (div.bullish || div.hidden_bullish) {
@@ -450,10 +462,13 @@ function buildUnifiedFromSnapshot(snap, opts = {}) {
     sections: {
       mtf: {
         allAligned: !!mtf.allAligned,
+        hasWeekly: !!mtf.hasWeekly,
         dir15m: mtf.dir15m,
         dir1h: mtf.dir1h,
         dir4h: mtf.dir4h,
         dir1d: mtf.dir1d,
+        dir1w: mtf.dir1w,
+        score1w: s.score1w != null ? s.score1w : null,
         momentumBoost: mtf.momentumBoost
       },
       firsat: s.firsatSkoru || null,
@@ -496,6 +511,68 @@ function buildUnifiedFromSnapshot(snap, opts = {}) {
       horizon: hz || null,
       ai: ai.verdict
         ? { verdict: ai.verdict, manipulationRisk: ai.manipulationRisk, summary: ai.summary }
+        : null,
+      kriptoAnaliz: s.kriptoAnaliz
+        ? {
+            sezon: s.kriptoAnaliz.sezon,
+            mtfUyumu: {
+              kararKodu: s.kriptoAnaliz.mtfUyumu?.kararKodu,
+              kararMetni: s.kriptoAnaliz.mtfUyumu?.kararMetni,
+              guven: s.kriptoAnaliz.mtfUyumu?.guven
+            },
+            hacimFiyat: {
+              profil: s.kriptoAnaliz.hacimFiyat?.profil,
+              aciklama: s.kriptoAnaliz.hacimFiyat?.aciklama
+            },
+            makroKatman: s.kriptoAnaliz.makroKatman
+              ? {
+                  entegre: !!s.kriptoAnaliz.makroKatman.entegre,
+                  uyumlulukLong: s.kriptoAnaliz.makroKatman.uyumlulukLong ?? null,
+                  ozet: s.kriptoAnaliz.makroKatman.ozet ?? null
+                }
+              : null,
+            onChainKatman: s.kriptoAnaliz.onChainKatman
+              ? (() => {
+                  const o = s.kriptoAnaliz.onChainKatman;
+                  let oz = o.ozet;
+                  if (oz == null && o.entegre) {
+                    const m = o.metrikler;
+                    const z = Array.isArray(m) ? m.find((x) => x.kod === 'MVRV_Z') : null;
+                    oz =
+                      z && Number.isFinite(z.deger)
+                        ? `MVRV Z ≈ ${z.deger}`
+                        : 'BTC on-chain (Glassnode) bağlı';
+                  } else if (oz == null && !o.entegre) {
+                    oz = o.reason || o.pariteNot || null;
+                  }
+                  return { entegre: !!o.entegre, ozet: oz };
+                })()
+              : null,
+            riskOzet: s.kriptoAnaliz.riskOzet,
+            checklistOzet: s.kriptoAnaliz.checklist20?.ozet,
+            checklistMaddeler: Array.isArray(s.kriptoAnaliz.checklist20?.maddeler)
+              ? s.kriptoAnaliz.checklist20.maddeler.map((m) => ({
+                  no: m.no,
+                  katman: m.katman,
+                  soru: m.soru,
+                  durum: m.durum,
+                  kaynak: m.kaynak
+                }))
+              : [],
+            makroEntegre: !!s.kriptoAnaliz.makroKatman?.entegre,
+            onChainEntegre: !!s.kriptoAnaliz.onChainKatman?.entegre,
+            pptAsamaSayisi: Array.isArray(s.kriptoAnaliz.pptAsamalari) ? s.kriptoAnaliz.pptAsamalari.length : 0,
+            pptAsamalari: Array.isArray(s.kriptoAnaliz.pptAsamalari)
+              ? s.kriptoAnaliz.pptAsamalari.map((a) => ({
+                  slayt: a.slayt,
+                  kod: a.kod,
+                  baslik: a.baslik,
+                  durum: a.durum,
+                  ozet: a.ozet
+                }))
+              : [],
+            firsatKaynak: s.firsatSkoru?.kaynak || null
+          }
         : null
     }
   };

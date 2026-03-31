@@ -111,6 +111,8 @@ async function refreshBtcPulse() {
         dir1h: dirs.dir1h,
         dir4h: dirs.dir4h,
         dir1d: dirs.dir1d,
+        dir1w: dirs.dir1w,
+        hasWeekly: dirs.hasWeekly,
         allAligned: dirs.allAligned,
         mtfKonfirm: dirs.mtfKonfirm,
         mtfScore: dirs.mtfScore,

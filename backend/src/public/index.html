@@ -1871,11 +1871,26 @@ function renderUnifiedHTML(u){
   var fr=sec.firsat||{};
   var rn=sec.runner||{};
   var bul=(u.bullets||[]).map(function(b){return'<li>'+escU(b)+'</li>';}).join('');
-  var mtfLine=mtf.allAligned?'Tüm TF uyumlu':'15m '+escU(mtf.dir15m||'—')+' · 1h '+escU(mtf.dir1h||'—')+' · 4h '+escU(mtf.dir4h||'—')+' · 1d '+escU(mtf.dir1d||'—');
+  var mtfLine=mtf.allAligned
+    ?(mtf.hasWeekly?'Tüm TF uyumlu (1w dahil)':'Tüm TF uyumlu')
+    :'15m '+escU(mtf.dir15m||'—')+' · 1h '+escU(mtf.dir1h||'—')+' · 4h '+escU(mtf.dir4h||'—')+' · 1d '+escU(mtf.dir1d||'—')+(mtf.hasWeekly?' · 1w '+escU(mtf.dir1w||'—'):'');
   var firsatLine=fr.skor!=null?('Skor '+fr.skor+' '+escU(fr.seviye||'')+' '+escU(fr.emoji||'')):'—';
   var runLine=rn&&rn.score!=null?('Runner '+rn.score+'/100'):'—';
   var ai=sec.ai;
   var aiBlock=ai&&ai.verdict?('<div class="unified-sec"><div class="unified-sec-h">AI</div><strong style="color:var(--text1)">'+escU(ai.verdict)+'</strong>'+(ai.summary?'<div style="margin-top:6px;color:var(--text3)">'+escU(ai.summary)+'</div>':'')+'</div>'):'';
+  var kaz=sec.kriptoAnaliz;
+  var kaBlock='';
+  if(kaz&&(kaz.pptAsamalari&&kaz.pptAsamalari.length||kaz.checklistOzet)){
+    var kL=[];
+    if(kaz.makroKatman&&kaz.makroEntegre)kL.push('Makro (FRED): '+escU(kaz.makroKatman.uyumlulukLong||'—')+' — '+escU(kaz.makroKatman.ozet||''));
+    else kL.push('Makro: FRED_API_KEY yok veya veri gelmedi.');
+    if(kaz.onChainKatman)kL.push('On-chain: '+escU(kaz.onChainKatman.ozet||'')+(kaz.onChainEntegre?'':' (Glassnode kapalı)'));
+    if(kaz.checklistOzet)kL.push('Checklist (otomatik yaklaşık): '+escU(String(kaz.checklistOzet.otomatikPuanYaklasik||'—'))+'/20');
+    if(kaz.pptAsamalari&&kaz.pptAsamalari.length){
+      kL.push('PPT: '+kaz.pptAsamalari.length+' aşama — detay için sinyal kartında modal.');
+    }
+    kaBlock='<div class="unified-sec"><div class="unified-sec-h">PPT · makro · on-chain</div><div style="font-size:11px;line-height:1.55;color:var(--text2)">'+kL.map(function(x){return'<p style="margin:0 0 6px">'+x+'</p>';}).join('')+'</div></div>';
+  }
   var lifeTr={NO_DETAIL:'Detay yok',LIST_ONLY:'Liste özeti (tahta dışı)',BOARD_FRESH:'Tahtada · güncel tur',BOARD_STALE:'Tahtada · son turda eşik altı'};
   var lifeLbl=lifeTr[u.lifecycleStatus]||escU(u.lifecycleStatus||'—');
   var frsh=u.freshness||{};
@@ -1932,6 +1947,7 @@ function renderUnifiedHTML(u){
     '<div class="unified-sec"><div class="unified-sec-h">Fırsat &amp; runner</div>'+firsatLine+' · '+runLine+'</div>'+
     diagBlock+learnBlock+stBlock+
     (sec.horizon?'<div class="unified-sec"><div class="unified-sec-h">Hedef süre</div>'+escU(sec.horizon.label||sec.horizon.summary||'—')+'</div>':'')+
+    kaBlock+
     aiBlock+
     (!u.hasFullDetail?'<p style="font-size:11px;color:var(--amber);margin-top:12px">Tam gövde yok; liste özeti veya tarama sonrası tekrar deneyin.</p>':'');
 }
@@ -2304,7 +2320,7 @@ function kartHTML(s){
   if(tr&&tr.maxSkor>=80&&fs<80){
     bd.push('<span class="badge badge-nadir-hist" title="Son Nadir: '+(tr.lastSeen||'')+'">⭐ Tepe '+tr.maxSkor+'</span>');
   }
-  if(s.mtfDetay?.allAligned)bd.push('<span class="badge b-green">4TF ⚡</span>');
+  if(s.mtfDetay?.allAligned)bd.push('<span class="badge b-green">'+(s.mtfDetay?.hasWeekly?'5TF':'4TF')+' ⚡</span>');
   if(s.divergence?.bullish)bd.push('<span class="badge b-blue">DIV 📊</span>');
   if(s.divergence?.hidden_bullish)bd.push('<span class="badge b-blue">Gizli 👁</span>');
   if(s.fvg?.inBullishFVG)bd.push('<span class="badge b-purple">FVG 🎯</span>');
@@ -2352,6 +2368,7 @@ function kartHTML(s){
       <div class="ind"><div class="ind-lbl">1h</div><div class="ind-val" style="color:${(s.score1h||0)>=0?'var(--green)':'var(--red)'}">${(s.score1h||0)>=0?'+':''}${s.score1h||0}</div></div>
       <div class="ind"><div class="ind-lbl">4h</div><div class="ind-val" style="color:${(s.score4h||0)>=0?'var(--green)':'var(--red)'}">${(s.score4h||0)>=0?'+':''}${s.score4h||0}</div></div>
       <div class="ind"><div class="ind-lbl">1d</div><div class="ind-val" style="color:${(s.score1d||0)>=0?'var(--green)':'var(--red)'}">${(s.score1d||0)>=0?'+':''}${s.score1d||0}</div></div>
+      ${s.mtfDetay?.hasWeekly&&s.score1w!=null?`<div class="ind"><div class="ind-lbl">1w</div><div class="ind-val" style="color:${(s.score1w||0)>=0?'var(--green)':'var(--red)'}">${(s.score1w||0)>=0?'+':''}${s.score1w}</div></div>`:''}
       <div class="ind"><div class="ind-lbl">R/R</div><div class="ind-val" style="color:${(s.atr?.riskReward||0)>=1.5?'var(--green)':'var(--text3)'}">${s.atr?.riskReward||'—'}</div></div>
     </div>
   </div>`;
@@ -2416,6 +2433,48 @@ function renderSinyaller(){
   renderSinyallerSafe();
 }
 
+function kriptoPptModalHTML(s){
+  var ka=s.kriptoAnaliz;
+  if(!ka)return'';
+  var stages=(ka.pptAsamalari&&ka.pptAsamalari.length)
+    ?ka.pptAsamalari.map(function(a){
+      var st=String(a.durum||'');
+      var col='var(--text2)';
+      if(/ENTEGRE|AKTIF|UYGULANDI|UYGUN|TAM|REFERANS/.test(st))col='var(--green)';
+      else if(/BEKLIYOR|ZAYIF|TEKNIK_ONLY|KONTROL/.test(st))col='var(--amber)';
+      return'<div style="border-left:3px solid '+col+';padding:8px 10px;margin-bottom:8px;background:var(--bg3);border-radius:8px">'+
+        '<div style="font-size:10px;color:var(--text3)">Slayt '+escU(String(a.slayt))+(a.kod?' · '+escU(a.kod):'')+'</div>'+
+        '<div style="font-size:12px;font-weight:600;color:var(--text1)">'+escU(a.baslik||'')+'</div>'+
+        '<div style="font-size:10px;color:'+col+';font-weight:600;margin-top:2px">'+escU(st)+'</div>'+
+        '<div style="font-size:11px;color:var(--text2);margin-top:4px;line-height:1.45">'+escU(a.ozet||'')+'</div></div>';
+    }).join('')
+    :'';
+  var cl=ka.checklist20;
+  var checklist='';
+  if(cl&&cl.maddeler&&cl.maddeler.length){
+    checklist='<div class="modal-sec-title" style="margin-top:12px">Checklist (20 madde)</div>'+
+      '<p style="font-size:10px;color:var(--text3);line-height:1.45;margin:-4px 0 8px">Otomatik maddeler işaretlendi; kullanıcı onaylı olanlar bilinmiyor.</p>'+
+      '<div style="max-height:240px;overflow-y:auto;font-size:11px;line-height:1.35">'+
+      cl.maddeler.map(function(m){
+        var dc=String(m.durum||'');
+        var c='var(--amber)';
+        if(/EVET|UYUMLU|AYI_UYGUN/.test(dc))c='var(--green)';
+        else if(/HAYIR|CELIKI|ASIRI_ALIM/.test(dc))c='var(--red)';
+        else if(dc==='BILINMIYOR')c='var(--text3)';
+        return'<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid var(--border)">'+
+          '<span style="flex:0 0 24px;color:var(--text3);font-weight:600">'+m.no+'</span>'+
+          '<span style="flex:1;color:var(--text2)">'+escU(m.soru)+'</span>'+
+          '<span style="flex:0 0 auto;font-weight:600;color:'+c+';font-size:10px;max-width:38%;text-align:right">'+escU(dc)+'</span></div>';
+      }).join('')+'</div>';
+    if(cl.ozet&&cl.ozet.yorum)checklist+='<p style="font-size:11px;color:var(--text2);margin-top:10px;line-height:1.5">'+escU(cl.ozet.yorum)+'</p>';
+    if(cl.ozet&&cl.ozet.pptOlcek)checklist+='<p style="font-size:10px;color:var(--text3);margin-top:6px">'+escU(cl.ozet.pptOlcek)+'</p>';
+  }
+  if(!stages&&!checklist)return'';
+  return'<div class="modal-sec">'+
+    '<div class="modal-sec-title">Kripto analiz (PPT)</div>'+
+    '<p style="font-size:10px;color:var(--text3);line-height:1.45;margin:-4px 0 10px">Sunum aşamaları ve 20 maddelik checklist özeti.</p>'+
+    stages+checklist+'</div>';
+}
 function openSignalModal(s){
   if(!s||!s.symbol)return;
   aktifModal=s;
@@ -2579,6 +2638,8 @@ function openSignalModal(s){
         </div>
       </div>
     </div>
+
+    ${kriptoPptModalHTML(s)}
 
     <div class="modal-sec">
       <div class="modal-sec-title">Teknik Göstergeler</div>

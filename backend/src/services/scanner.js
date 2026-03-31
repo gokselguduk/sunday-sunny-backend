@@ -1,11 +1,9 @@
 const binance        = require('./binance');
 const indicators     = require('../indicators');
 const memory         = require('./memory');
-const aiAnalyzer     = require('./aiAnalyzer');
 const autoResolver   = require('./autoResolver');
 const { getFootprintDelta } = require('../indicators/footprint');
 const { calcArbitraj }      = require('../indicators/arbitraj');
-const { calcFirsatSkoru }   = require('../indicators');
 const { CONFIG } = require('./scanner/config');
 const { analyzeOrderBook } = require('./scanner/orderBook');
 const {
@@ -13,14 +11,17 @@ const {
   getTimeframeDirections,
   hasDirectionConflict
 } = require('./scanner/timeframes');
-const {
-  resolveRegime,
-  calculateExtraScore,
-  applyAnomalyPenalty
-} = require('./scanner/scoring');
+const { resolveRegime, applyAnomalyPenalty } = require('./scanner/scoring');
 const { buildDiagnostics } = require('./scanner/diagnostics');
-const { computeRunnerPotential } = require('./scanner/runnerPotential');
 const { estimateTargetHorizon } = require('../indicators/targetHorizon');
+const {
+  buildKriptoAnaliz,
+  deriveFirsatFromKriptoAnaliz,
+  runnerFromKripto,
+  aiOzetiFromKripto
+} = require('./kriptoAnalizSistemi');
+const { fetchMacroSnapshot } = require('./macroSnapshot');
+const { fetchBtcOnChainSnapshot } = require('./onChainSnapshot');
 
 /** Parite → son tam tarama sinyali (taramalar arası birleşik tahta) */
 const signalRegistry = new Map();
@@ -165,7 +166,7 @@ function baseSnapshot(coin, partial = {}) {
   };
 }
 
-async function scanSingle(coin, sentiment, opts = {}) {
+async function scanSingle(coin, sentiment, analizCtx = {}, opts = {}) {
   const saveHistory = opts.saveHistory !== false;
   try {
     const tf = await getMultiTimeframe(coin.pair, { binance, indicators });
@@ -209,9 +210,8 @@ async function scanSingle(coin, sentiment, opts = {}) {
     }
 
     const { regime, regimeScore } = resolveRegime(tf, priceChange24h);
-    let extraScore = calculateExtraScore({ sentiment, dirs, footprint, arbitraj, orderBook, regimeScore });
 
-    const anomalyAdjusted = applyAnomalyPenalty(tf, extraScore);
+    const anomalyAdjusted = applyAnomalyPenalty(tf, 0);
     if (anomalyAdjusted.reject) {
       console.log(`ANOMALİ [MANIP] ${coin.pair}: Z=${tf.h1.anomaly.zScore}`);
       return {
@@ -226,36 +226,32 @@ async function scanSingle(coin, sentiment, opts = {}) {
         })
       };
     }
-    extraScore = anomalyAdjusted.extraScore;
-
-    const netScore = (tf.h1.score||0) + dirs.mtfScore + extraScore + dirs.momentumBoost;
-    if (netScore < CONFIG.MIN_SCORE) {
-      return {
-        qualified: false,
-        snapshot: baseSnapshot(coin, {
-          listReason: 'DUSUK_SKOR',
-          lastClose: tf.h1.lastClose,
-          score: netScore,
-          score1h: tf.h1.score,
-          overallSignal: tf.h1.overallSignal,
-          signalStrength: tf.h1.signalStrength,
-          priceChange24h
-        })
-      };
-    }
 
     const learningData = await memory.getLearningData(coin.symbol);
+
+    const dirScore = (tf.h1.score || 0) + dirs.mtfScore + dirs.momentumBoost;
 
     const signal = {
       symbol:         coin.pair,
       currency:       'USDT',
       lastClose:      tf.h1.lastClose,
-      score:          netScore,
+      score:          dirScore,
       score1h:        tf.h1.score,
       score4h:        tf.h4?.score,
       score15m:       tf.m15?.score,
       score1d:        tf.d1?.score,
-      mtfKonfirm: dirs.mtfKonfirm, mtfDetay:{ dir15m:dirs.dir15m,dir1h:dirs.dir1h,dir4h:dirs.dir4h,dir1d:dirs.dir1d,allAligned:dirs.allAligned,momentumBoost:dirs.momentumBoost },
+      score1w:        tf.w1?.score,
+      mtfKonfirm: dirs.mtfKonfirm,
+      mtfDetay: {
+        dir15m: dirs.dir15m,
+        dir1h: dirs.dir1h,
+        dir4h: dirs.dir4h,
+        dir1d: dirs.dir1d,
+        dir1w: dirs.dir1w,
+        hasWeekly: dirs.hasWeekly,
+        allAligned: dirs.allAligned,
+        momentumBoost: dirs.momentumBoost
+      },
       regime:         { type:regime, regimeScore },
       overallSignal:  tf.h1.overallSignal,
       signalStrength: tf.h1.signalStrength,
@@ -296,11 +292,13 @@ async function scanSingle(coin, sentiment, opts = {}) {
       priceChange24h: signal.priceChange24h
     });
 
-    const aiResult = await aiAnalyzer.analyzeSignal(signal, learningData);
-    signal.ai = aiResult;
+    signal.kriptoAnaliz = buildKriptoAnaliz(signal, analizCtx);
+    signal.firsatSkoru = deriveFirsatFromKriptoAnaliz(signal.kriptoAnaliz, signal);
+    signal.runnerPotential = runnerFromKripto(signal.kriptoAnaliz);
+    signal.ai = aiOzetiFromKripto(signal.kriptoAnaliz, signal);
 
-    if (aiResult.manipulationRisk >= 8) {
-      console.log(`AI MANİP [${coin.pair}]: ${aiResult.manipulationRisk}/10`);
+    if (signal.ai.manipulationRisk >= 8) {
+      console.log(`MANİP [${coin.pair}]: ${signal.ai.manipulationRisk}/10`);
       return {
         qualified: false,
         snapshot: {
@@ -310,9 +308,7 @@ async function scanSingle(coin, sentiment, opts = {}) {
       };
     }
 
-    const firsatSkoru = calcFirsatSkoru(signal);
-    signal.firsatSkoru = firsatSkoru;
-    signal.runnerPotential = computeRunnerPotential(signal);
+    const firsatSkoru = signal.firsatSkoru;
 
     if (firsatSkoru.skor < CONFIG.MIN_FIRSAT) {
       return {
@@ -400,9 +396,19 @@ async function scanMarket() {
   scanState.phase = 'scanning';
   scanState.updatedAt = new Date().toISOString();
 
+  let analizCtx = {};
+  try {
+    const [makro, onChain] = await Promise.all([fetchMacroSnapshot(), fetchBtcOnChainSnapshot()]);
+    analizCtx = { makro, onChain };
+    if (makro.entegre) console.log(`Makro (FRED): ${makro.uyumlulukLong || '—'} · ${makro.maddeler?.length || 0} seri`);
+    if (onChain.entegre) console.log('On-chain (Glassnode): BTC metrikleri alındı');
+  } catch (e) {
+    console.error('Makro/on-chain ön yüklemesi:', e.message);
+  }
+
   for (let i = 0; i < allCoins.length; i++) {
     const coin = allCoins[i];
-    const result = await scanSingle(coin, sentiment);
+    const result = await scanSingle(coin, sentiment, analizCtx);
     if (result?.snapshot) listRegistry.set(coin.pair, result.snapshot);
     if (result?.qualified) {
       qualifiedThisScanRun += 1;
@@ -531,8 +537,12 @@ async function refreshSymbol(rawSymbol) {
     return { ok: false, error: 'Tam tarama sürüyor; bitince tekrar deneyin.' };
   }
 
-  const sentiment = await binance.getFearGreed();
-  const out = await scanSingle(coin, sentiment, { saveHistory: false });
+  const [sentiment, makro, onChain] = await Promise.all([
+    binance.getFearGreed(),
+    fetchMacroSnapshot(),
+    fetchBtcOnChainSnapshot()
+  ]);
+  const out = await scanSingle(coin, sentiment, { makro, onChain }, { saveHistory: false });
   if (out?.snapshot) listRegistry.set(pair, out.snapshot);
   if (out?.qualified) {
     mergeQualifiedSignal(out.signal);
