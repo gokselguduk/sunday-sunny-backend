@@ -231,13 +231,15 @@ app.get('/api/market/tr-24h-movers', async (req, res) => {
 app.get('/api/scan/latest', async (req, res) => {
   const lastNadirPushAt = await memory.getNadirPushLastAt();
   const nadirTrail = await memory.getNadirTrail();
+  const performance = await memory.getPerformanceSnapshot();
   res.json({
     signals: scanner.getLatestSignals(),
     coinList: scanner.getCoinList(),
     scan: scanner.getScanState(),
     lastNadirPushAt,
     nadirTrail,
-    storage: memory.getStorageInfo()
+    storage: memory.getStorageInfo(),
+    performance
   });
 });
 
@@ -349,6 +351,16 @@ app.get('/api/performance/tiers', async (req, res) => {
   const limit = parseInt(req.query.limit, 10);
   const data = await memory.getTierPerformance(limit);
   res.json(data);
+});
+
+/** Sinyal geçmişi özeti: kuyruk boyu + TP/SL sayaçları (Redis; kalıcılık için REDIS_URL). */
+app.get('/api/performance/summary', async (req, res) => {
+  try {
+    const performance = await memory.getPerformanceSnapshot();
+    res.json({ ok: true, storage: memory.getStorageInfo(), ...performance });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message || 'summary hatası' });
+  }
 });
 
 app.post('/api/signal/resolve', async (req, res) => {

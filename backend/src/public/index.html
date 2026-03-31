@@ -209,8 +209,9 @@ html[data-theme="light"] .kart{box-shadow:0 2px 10px rgba(15,30,60,0.06)}
 @media (max-width:400px){
   .kart-signal-prices{grid-template-columns:1fr;gap:8px}
 }
-.fiyat-usdt{font-family:'Space Mono',monospace;font-size:13px;font-weight:700}
-.fiyat-try{font-size:11px;color:var(--text2);background:var(--bg3);padding:2px 7px;border-radius:6px}
+.fiyat-try{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--text1)}
+.fiyat-usdt{font-size:11px;font-weight:500;color:var(--text3)}
+.fiyat-usdt-ref{font-size:10px;color:var(--text3);font-weight:500}
 .fiyat-deg{font-size:11px;font-weight:600;padding:2px 6px;border-radius:5px}
 .deg-p{background:rgba(0,230,118,0.1);color:var(--green)}
 .deg-n{background:rgba(255,71,87,0.1);color:var(--red)}
@@ -237,8 +238,8 @@ html[data-theme="light"] .kart{box-shadow:0 2px 10px rgba(15,30,60,0.06)}
 .sev-tablo tr:last-child{border-bottom:none}
 .sev-tablo td{padding:10px 0;font-size:12px;vertical-align:middle}
 .sev-tablo td:first-child{color:var(--text3);font-size:10px;text-transform:uppercase;letter-spacing:0.3px;width:75px}
-.sev-tablo td:nth-child(2){font-family:'Space Mono',monospace;font-size:13px;font-weight:700}
-.sev-tablo td:nth-child(3){font-size:11px;color:var(--text3);padding-left:8px}
+.sev-tablo td:nth-child(2){font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--text1)}
+.sev-tablo td:nth-child(3){font-size:10px;color:var(--text3);padding-left:8px;font-weight:500}
 .sev-tablo td:last-child{text-align:right;font-size:11px;font-weight:600}
 .firsat-bar{height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:10px}
 .firsat-bar-fill{height:100%;border-radius:3px;transition:width 1s ease}
@@ -842,7 +843,7 @@ let scanMeta=null;
 let perfMeta=null;
 let pushConfig=null;
 let pollIntervalId=null;
-let nadirTrail={},storageHint={},livePrices={},livePricesAt=null;
+let nadirTrail={},storageHint={},performanceSnap=null,livePrices={},livePricesAt=null;
 let fiyatIntervalId=null;
 
 function f5(n){
@@ -853,11 +854,24 @@ function f5(n){
   if(Math.abs(x)>=1)return x.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:4});
   return x.toLocaleString('tr-TR',{minimumFractionDigits:4,maximumFractionDigits:8});
 }
-function tryF(n){
-  if(n==null||n===''||!Number.isFinite(Number(n)))return'—';
+function tryFactorFor(s){
+  if(s&&s.tryFrame&&Number.isFinite(s.tryFrame.factor)&&s.tryFrame.factor>0)return s.tryFrame.factor;
   const k=typeof kur==='number'&&kur>0?kur:38;
-  const x=Number(n)*k;
+  return k;
+}
+/** USDT (futures) → ₺: önce sunucu tryFrame (Binance spot BASETRY orta / futures), yoksa USDT/TRY. */
+function tryF(n,s){
+  if(n==null||n===''||!Number.isFinite(Number(n)))return'—';
+  const x=Number(n)*tryFactorFor(s);
   return'₺'+x.toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function liraAbs(n){
+  if(n==null||!Number.isFinite(Number(n)))return'—';
+  return'₺'+Number(n).toLocaleString('tr-TR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function usdtRefLabel(n){
+  if(n==null||n===''||!Number.isFinite(Number(n)))return'—';
+  return'≈ $'+f5(n)+' USDT';
 }
 
 function schedulePoll(){
@@ -1422,10 +1436,10 @@ function signalPriceBarHTML(s){
   }
   const pctStr=pctOk&&pctNum!=null?(pctNum>=0?'+':'')+pctNum.toFixed(2)+'%':'—';
   const pctCol=pctOk&&pctNum!=null?(pctNum>=0?'var(--green)':'var(--red)'):'var(--text3)';
-  const tryA=tryF(anc),tryP=tryF(px);
+  const tryA=tryF(anc,s),tryP=tryF(px,s);
   return'<div class="kart-signal-prices">'+
-    '<div><div class="kart-sp-lbl">Sinyal / tarama fiyatı</div><div class="kart-sp-val">$'+f5(anc)+'</div><div class="kart-sp-sub">'+tryA+'</div></div>'+
-    '<div><div class="kart-sp-lbl">Güncel fiyat</div><div class="kart-sp-val" style="color:var(--accent)">$'+f5(px)+'</div><div class="kart-sp-sub">'+tryP+(canliFiyatVar(s)?' · <span class="fiyat-canli">canlı</span>':'')+'</div></div>'+
+    '<div><div class="kart-sp-lbl">Sinyal / tarama fiyatı</div><div class="kart-sp-val">'+tryA+'</div><div class="kart-sp-sub">'+usdtRefLabel(anc)+'</div></div>'+
+    '<div><div class="kart-sp-lbl">Güncel fiyat</div><div class="kart-sp-val" style="color:var(--accent)">'+tryP+'</div><div class="kart-sp-sub">'+usdtRefLabel(px)+(canliFiyatVar(s)?' · <span class="fiyat-canli">canlı</span>':'')+'</div></div>'+
     '<div><div class="kart-sp-lbl">Fark</div><div class="kart-sp-val" style="color:'+pctCol+'">'+pctStr+'</div><div class="kart-sp-sub">Tarama sonrası</div></div>'+
     '</div>';
 }
@@ -1595,6 +1609,7 @@ function veriCek(){
       scanMeta=scanMeta||{isScanning:false,totalCoins:0,scannedCoins:0};
       sig=[];
       coinList=[];
+      performanceSnap=null;
       try{guncelle();}catch(e){console.error('guncelle',e);renderSinyallerSafe();renderTop();}
       renderRapor();
       const jm=document.getElementById('rapor-jump-meta');
@@ -1610,6 +1625,7 @@ function veriCek(){
     }
     nadirTrail=scanData.nadirTrail||{};
     storageHint=scanData.storage||{};
+    performanceSnap=scanData.performance&&typeof scanData.performance==='object'?scanData.performance:null;
     const incoming=Array.isArray(scanData.signals)?scanData.signals:[];
     const httpScanning=!!scanData.scan?.isScanning;
     if(incoming.length>0){
@@ -2347,8 +2363,8 @@ function fmtCtxPct(n){
 }
 function modalSeviyeAciklamaHTML(){
   return'<details class="modal-seviye-aciklama"><summary>Seviyeler nasıl okunur?</summary><div class="modal-aciklama-ic">'+
-'<p><strong>Güncel fiyat:</strong> Anlık USDT (canlı ticker). <strong>Sinyal / tarama fiyatı:</strong> Son uygun turda tahtaya girerken kaydedilen kapanış; SL/TP yüzdeleri bu tarama bazına göre hesaplanır.</p>'+
-'<p><strong>Stop ve TP1–3:</strong> 1 saatlik ATR’ye göre son kapanıştan yüzde mesafe. Spread, kayma ve haberler gerçek doldurmayı değiştirir; sabit emir tavsiyesi değildir.</p>'+
+'<p><strong>Güncel fiyat:</strong> Canlı USDT-M; arayüzde ₺, Binance spot <strong>BASE/TRY</strong> orta fiyatı ile (yoksa USDT/TRY) çevrilir.</p>'+
+'<p><strong>Stop ve TP1–3:</strong> 1H ATR’ye göre yüzde mesafe; ₺ sütunu aynı çarpanla. Spread ve kayma gerçek doldurmayı değiştirir.</p>'+
 '<p><strong>Destek / direnç:</strong> Yaklaşık son 100 adet 1H mumda aranan pivot dipler ve tepeler. Fiyatın tepki ihtimali olan <em>bölge</em> fikri verir.</p>'+
 '<p><strong>Fibonacci:</strong> Seçilen salınımın klasik geri çekilme oranları (ör. %38.2, %78.6).</p>'+
 '<p><strong>VWAP / POC:</strong> Oturum ağırlıklı ortalama ve hacim yoğunluk merkezi — yapı bağlamı için.</p>'+
@@ -2369,22 +2385,22 @@ function kartTradeZoneHTML(s){
   let srMid='';
   if(supOk||resOk){
     srMid='<div class="kart-sr-flow">'+
-      '<div class="kart-sr-box kart-sr-sup"><div class="kart-sr-ttl">Destek</div><div class="kart-sr-pr">'+(supOk?'$'+f5(sup):'—')+'</div><div class="kart-sr-sub">'+(sd!=null&&Number.isFinite(sd)?sd.toFixed(2)+'% aşağıda':'pivot altı')+'</div></div>'+
-      '<div class="kart-sr-box kart-sr-px"><div class="kart-sr-ttl">Fiyat</div><div class="kart-sr-pr" style="color:var(--accent)">$'+f5(px)+'</div><div class="kart-sr-sub">Anlık</div></div>'+
-      '<div class="kart-sr-box kart-sr-res"><div class="kart-sr-ttl">Direnç</div><div class="kart-sr-pr">'+(resOk?'$'+f5(res):'—')+'</div><div class="kart-sr-sub">'+(rd!=null&&Number.isFinite(rd)?rd.toFixed(2)+'% yukarıda':'pivot üstü')+'</div></div>'+
+      '<div class="kart-sr-box kart-sr-sup"><div class="kart-sr-ttl">Destek</div><div class="kart-sr-pr">'+(supOk?tryF(sup,s):'—')+'</div><div class="kart-sr-sub">'+(supOk?usdtRefLabel(sup)+' · ':'')+(sd!=null&&Number.isFinite(sd)?sd.toFixed(2)+'% aşağıda':'pivot altı')+'</div></div>'+
+      '<div class="kart-sr-box kart-sr-px"><div class="kart-sr-ttl">Fiyat</div><div class="kart-sr-pr" style="color:var(--accent)">'+tryF(px,s)+'</div><div class="kart-sr-sub">'+usdtRefLabel(px)+' · Anlık</div></div>'+
+      '<div class="kart-sr-box kart-sr-res"><div class="kart-sr-ttl">Direnç</div><div class="kart-sr-pr">'+(resOk?tryF(res,s):'—')+'</div><div class="kart-sr-sub">'+(resOk?usdtRefLabel(res)+' · ':'')+(rd!=null&&Number.isFinite(rd)?rd.toFixed(2)+'% yukarıda':'pivot üstü')+'</div></div>'+
     '</div>';
   }else{
     srMid='<div class="kart-sr-flow"><div class="kart-sr-box" style="flex:1"><div class="kart-sr-ttl">Destek / Direnç</div><div class="kart-sr-sub" style="font-size:10px;padding-top:4px">Bu aralıkta net pivot çıkmadı veya fiyat dışında. Tablo için karta dokunun.</div></div></div>';
   }
   return'<div class="kart-section-title">Stop loss · TP1 · TP2 · TP3 (ATR) · destek / direnç</div>'+
   '<div class="kart-atr-grid">'+
-    '<div class="kart-atr-cell kart-atr-entry"><div class="kart-atr-lbl">Tarama bazı</div><div class="kart-atr-val">$'+f5(baseRef)+'</div><div class="kart-atr-sub">ATR seviyeleri bu fiyata göre</div></div>'+
-    '<div class="kart-atr-cell kart-atr-sl"><div class="kart-atr-lbl">Stop</div><div class="kart-atr-val" style="color:var(--red)">$'+f5(a.stopLoss)+'</div><div class="kart-atr-sub">-'+(a.stopLossPct!=null?Number(a.stopLossPct).toFixed(2):'0')+'%</div></div>'+
-    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP1</div><div class="kart-atr-val" style="color:var(--green)">$'+f5(a.takeProfit1)+'</div><div class="kart-atr-sub">+'+(a.tp1Pct!=null?Number(a.tp1Pct).toFixed(2):'0')+'%</div></div>'+
-    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP2</div><div class="kart-atr-val" style="color:var(--green)">$'+f5(a.takeProfit2)+'</div><div class="kart-atr-sub">+'+(a.tp2Pct!=null?Number(a.tp2Pct).toFixed(2):'0')+'%</div></div>'+
+    '<div class="kart-atr-cell kart-atr-entry"><div class="kart-atr-lbl">Tarama bazı</div><div class="kart-atr-val">'+tryF(baseRef,s)+'</div><div class="kart-atr-sub">'+usdtRefLabel(baseRef)+' · ATR bu fiyata göre</div></div>'+
+    '<div class="kart-atr-cell kart-atr-sl"><div class="kart-atr-lbl">Stop</div><div class="kart-atr-val" style="color:var(--red)">'+tryF(a.stopLoss,s)+'</div><div class="kart-atr-sub">'+usdtRefLabel(a.stopLoss)+' · -'+(a.stopLossPct!=null?Number(a.stopLossPct).toFixed(2):'0')+'%</div></div>'+
+    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP1</div><div class="kart-atr-val" style="color:var(--green)">'+tryF(a.takeProfit1,s)+'</div><div class="kart-atr-sub">'+usdtRefLabel(a.takeProfit1)+' · +'+(a.tp1Pct!=null?Number(a.tp1Pct).toFixed(2):'0')+'%</div></div>'+
+    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP2</div><div class="kart-atr-val" style="color:var(--green)">'+tryF(a.takeProfit2,s)+'</div><div class="kart-atr-sub">'+usdtRefLabel(a.takeProfit2)+' · +'+(a.tp2Pct!=null?Number(a.tp2Pct).toFixed(2):'0')+'%</div></div>'+
   '</div>'+
   '<div class="kart-atr-grid" style="padding-top:0;grid-template-columns:1fr 1fr">'+
-    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP3</div><div class="kart-atr-val" style="color:var(--accent)">$'+f5(a.takeProfit3)+'</div><div class="kart-atr-sub">+'+(a.tp3Pct!=null?Number(a.tp3Pct).toFixed(2):'0')+'% · R/R '+(a.riskReward!=null&&Number.isFinite(Number(a.riskReward))?Number(a.riskReward).toFixed(2):'—')+'</div></div>'+
+    '<div class="kart-atr-cell kart-atr-tp"><div class="kart-atr-lbl">TP3</div><div class="kart-atr-val" style="color:var(--accent)">'+tryF(a.takeProfit3,s)+'</div><div class="kart-atr-sub">'+usdtRefLabel(a.takeProfit3)+' · +'+(a.tp3Pct!=null?Number(a.tp3Pct).toFixed(2):'0')+'% · R/R '+(a.riskReward!=null&&Number.isFinite(Number(a.riskReward))?Number(a.riskReward).toFixed(2):'—')+'</div></div>'+
     '<div class="kart-atr-cell"><div class="kart-atr-lbl">Not</div><div class="kart-atr-val" style="font-size:9px;line-height:1.35;color:var(--text2);font-weight:600">ATR planı; kırılımda güncellenir</div><div class="kart-atr-sub"> </div></div>'+
   '</div>'+
   '<div class="kart-section-title" style="margin-top:2px">Yapı (1H pivot)</div>'+
@@ -2482,8 +2498,8 @@ function kartHTML(s){
     </div>
     <div class="kart-fiyat">
       <div class="fiyat-row">
-        <span class="fiyat-usdt" style="color:${r}">$${f5(px)}</span>
-        <span class="fiyat-try">${tryF(px)}</span>
+        <span class="fiyat-try" style="color:${r}">${tryF(px,s)}</span>
+        <span class="fiyat-usdt">${usdtRefLabel(px)}</span>
         ${canli?'<span class="fiyat-canli">canlı</span>':''}
       </div>
       <span class="fiyat-deg ${chg>=0?'deg-p':'deg-n'}">24s ${chg>=0?'+':''}${chg.toFixed(2)}%</span>
@@ -2624,8 +2640,8 @@ function openSignalModal(s){
         <div>
           <div class="modal-sym">${sym}/USDT</div>
           <div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap">
-            <span style="font-family:'Space Mono',monospace;font-size:16px;font-weight:700;color:${r}">$${f5(px)}</span>
-            <span style="font-size:12px;color:var(--text2);background:var(--bg3);padding:2px 8px;border-radius:6px">${tryF(px)}</span>${liveLbl}
+            <span style="font-family:'Space Mono',monospace;font-size:17px;font-weight:700;color:${r}">${tryF(px,s)}</span>
+            <span class="fiyat-usdt-ref">${usdtRefLabel(px)}</span>${liveLbl}
             <span style="font-size:11px;font-weight:600;padding:2px 6px;border-radius:5px;background:${(s.priceChange24h||0)>=0?'rgba(0,230,118,0.1)':'rgba(255,71,87,0.1)'};color:${(s.priceChange24h||0)>=0?'var(--green)':'var(--red)'}">
               ${(s.priceChange24h||0)>=0?'+':''}${(s.priceChange24h||0).toFixed(2)}%
             </span>
@@ -2653,94 +2669,96 @@ function openSignalModal(s){
     })()}
 
     <div class="modal-sec">
-      <div class="modal-sec-title">Al / Sat Seviyeleri (ATR)</div>
-      <p style="font-size:10px;color:var(--text3);line-height:1.45;margin:-4px 0 10px">Yüzdeler son kapanışa göre ATR ile hesaplanır; gerçek emirde kayma olabilir.</p>
+      <div class="modal-sec-title">Al / Sat Seviyeleri (ATR) — TL</div>
+      <p style="font-size:10px;color:var(--text3);line-height:1.45;margin:-4px 0 10px">₺ sütunu birincil. Çarpan: Binance spot <strong>BASE/TRY</strong> orta fiyat ÷ USDT-M fiyat (yoksa USDT/TRY). Yüzdeler tarama bazına göre ATR.</p>
       <table class="sev-tablo">
         <tr style="background:rgba(255,71,87,0.04)">
           <td>Stop Loss</td>
-          <td style="color:var(--red)">$${f5(s.atr?.stopLoss)}</td>
-          <td style="color:var(--text3)">${tryF(s.atr?.stopLoss)}</td>
+          <td style="color:var(--red)">${tryF(s.atr?.stopLoss,s)}</td>
+          <td>${usdtRefLabel(s.atr?.stopLoss)}</td>
           <td style="color:var(--red)">-${(s.atr?.stopLossPct||0).toFixed(2)}%</td>
         </tr>
         <tr style="background:rgba(0,212,255,0.03)">
           <td style="color:var(--accent)">Giriş</td>
-          <td style="color:var(--text1)">$${f5(px)}</td>
-          <td style="color:var(--text3)">${tryF(px)}</td>
+          <td style="color:var(--text1)">${tryF(px,s)}</td>
+          <td>${usdtRefLabel(px)}</td>
           <td style="color:var(--text3)">Şu an</td>
         </tr>
         <tr style="background:rgba(0,230,118,0.03)">
           <td>Hedef 1</td>
-          <td style="color:var(--green)">$${f5(s.atr?.takeProfit1)}</td>
-          <td style="color:var(--text3)">${tryF(s.atr?.takeProfit1)}</td>
+          <td style="color:var(--green)">${tryF(s.atr?.takeProfit1,s)}</td>
+          <td>${usdtRefLabel(s.atr?.takeProfit1)}</td>
           <td style="color:var(--green)">+${(s.atr?.tp1Pct||0).toFixed(2)}%</td>
         </tr>
         <tr style="background:rgba(0,230,118,0.03)">
           <td>Hedef 2</td>
-          <td style="color:var(--green)">$${f5(s.atr?.takeProfit2)}</td>
-          <td style="color:var(--text3)">${tryF(s.atr?.takeProfit2)}</td>
+          <td style="color:var(--green)">${tryF(s.atr?.takeProfit2,s)}</td>
+          <td>${usdtRefLabel(s.atr?.takeProfit2)}</td>
           <td style="color:var(--green)">+${(s.atr?.tp2Pct||0).toFixed(2)}%</td>
         </tr>
         <tr style="background:rgba(0,212,255,0.03)">
           <td>Hedef 3</td>
-          <td style="color:var(--accent)">$${f5(s.atr?.takeProfit3)}</td>
-          <td style="color:var(--text3)">${tryF(s.atr?.takeProfit3)}</td>
+          <td style="color:var(--accent)">${tryF(s.atr?.takeProfit3,s)}</td>
+          <td>${usdtRefLabel(s.atr?.takeProfit3)}</td>
           <td style="color:var(--accent)">+${(s.atr?.tp3Pct||0).toFixed(2)}%</td>
         </tr>
       </table>
-      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--text3);padding-top:8px;border-top:1px solid var(--border)">
+      ${(()=>{const L=s.spotLiquidityTry||{};if(L.bidTry==null&&L.askTry==null)return'';return'<p style="font-size:11px;color:var(--text2);margin:10px 0 0;line-height:1.5"><strong>USDT-M kitap (TL):</strong> En iyi alış (bid) <strong style="color:var(--text1)">'+liraAbs(L.bidTry)+'</strong> · En iyi satış (ask) <strong style="color:var(--text1)">'+liraAbs(L.askTry)+'</strong></p>';})()}
+      ${s.tryFrame?.spotPair?'<p style="font-size:9px;color:var(--text3);margin:6px 0 0;line-height:1.4">Spot TRY: '+String(s.tryFrame.spotPair).replace(/</g,'')+' · Kaynak: '+(s.tryFrame.source==='BINANCE_TRY'?'Binance spot':'USDT/TRY')+'</p>':''}
+      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--text3);padding-top:8px;border-top:1px solid var(--border);flex-wrap:wrap;gap:6px">
         <span>Risk/Ödül: <span style="color:${(s.atr?.riskReward||0)>=1.5?'var(--green)':'var(--amber)'}">1 : ${s.atr?.riskReward||'—'}</span></span>
-        <span>ATR: $${f5(s.atr?.lastATR)}</span>
+        <span>ATR: ${tryF(s.atr?.lastATR,s)} <span class="fiyat-usdt-ref">${usdtRefLabel(s.atr?.lastATR)}</span></span>
       </div>
     </div>
 
     ${horizonModalBlock(s)}
 
     <div class="modal-sec">
-      <div class="modal-sec-title">Destek / Direnç · VWAP · POC</div>
-      <p style="font-size:10px;color:var(--text3);line-height:1.45;margin:-4px 0 10px">Pivotlar 1H mumlardan; Fib seviyeleri son salınıma göre. Aşağıdaki kutuda her satırın ne anlama geldiğini okuyabilirsin.</p>
+      <div class="modal-sec-title">Destek / Direnç · VWAP · POC — TL</div>
+      <p style="font-size:10px;color:var(--text3);line-height:1.45;margin:-4px 0 10px">Pivotlar 1H mumlardan; Fib son salınıma göre. ₺ birincil, USDT referans.</p>
       <table class="sev-tablo">
         <tr>
           <td>Direnç 2</td>
-          <td style="color:var(--red)">$${f5(fib.fib786||null)}</td>
-          <td>${tryF(fib.fib786||null)}</td>
+          <td style="color:var(--red)">${tryF(fib.fib786||null,s)}</td>
+          <td>${usdtRefLabel(fib.fib786||null)}</td>
           <td style="color:var(--red)">Fib 78.6%</td>
         </tr>
         <tr>
           <td>Direnç 1</td>
-          <td style="color:var(--red)">$${f5(sr.nearestResistance)}</td>
-          <td>${tryF(sr.nearestResistance)}</td>
+          <td style="color:var(--red)">${tryF(sr.nearestResistance,s)}</td>
+          <td>${usdtRefLabel(sr.nearestResistance)}</td>
           <td style="color:var(--red)">${sr.resistanceDistance!=null?sr.resistanceDistance.toFixed(2)+'% uzak':'—'}</td>
         </tr>
         <tr style="background:rgba(0,212,255,0.04)">
           <td style="color:var(--accent)">VWAP</td>
-          <td style="color:var(--accent)">$${f5(s.vwap?.vwap)}</td>
-          <td>${tryF(s.vwap?.vwap)}</td>
+          <td style="color:var(--accent)">${tryF(s.vwap?.vwap,s)}</td>
+          <td>${usdtRefLabel(s.vwap?.vwap)}</td>
           <td style="color:${s.vwap?.bullish?'var(--green)':'var(--red)'}">${s.vwap?.priceVsVWAP||'—'}</td>
         </tr>
         <tr style="background:rgba(255,179,0,0.04)">
           <td style="color:var(--amber)">POC</td>
-          <td style="color:var(--amber)">$${f5(s.volumeProfile?.poc)}</td>
-          <td>${tryF(s.volumeProfile?.poc)}</td>
+          <td style="color:var(--amber)">${tryF(s.volumeProfile?.poc,s)}</td>
+          <td>${usdtRefLabel(s.volumeProfile?.poc)}</td>
           <td style="color:var(--text3)">${s.volumeProfile?.pocDistance!=null?s.volumeProfile.pocDistance.toFixed(2)+'%':'—'}</td>
         </tr>
         <tr>
           <td>Destek 1</td>
-          <td style="color:var(--green)">$${f5(sr.nearestSupport)}</td>
-          <td>${tryF(sr.nearestSupport)}</td>
+          <td style="color:var(--green)">${tryF(sr.nearestSupport,s)}</td>
+          <td>${usdtRefLabel(sr.nearestSupport)}</td>
           <td style="color:var(--green)">${sr.supportDistance!=null?sr.supportDistance.toFixed(2)+'% uzak':'—'}</td>
         </tr>
         <tr>
           <td>Destek 2</td>
-          <td style="color:var(--green)">$${f5(fib.fib382||null)}</td>
-          <td>${tryF(fib.fib382||null)}</td>
+          <td style="color:var(--green)">${tryF(fib.fib382||null,s)}</td>
+          <td>${usdtRefLabel(fib.fib382||null)}</td>
           <td style="color:var(--green)">Fib 38.2%</td>
         </tr>
       </table>
       ${modalSeviyeAciklamaHTML()}
       ${s.fvg?.nearestBullish?`<div style="margin-top:8px;background:rgba(123,92,255,0.08);border:1px solid rgba(123,92,255,0.2);border-radius:8px;padding:8px;font-size:11px">
-        <span style="color:var(--accent2);font-weight:600">🎯 FVG Bölgesi:</span>
-        <span style="margin-left:6px;color:var(--text2)">$${f5(s.fvg.nearestBullish.bottom)} — $${f5(s.fvg.nearestBullish.top)}</span>
-        <div style="color:var(--text3);margin-top:2px">${tryF(s.fvg.nearestBullish.bottom)} — ${tryF(s.fvg.nearestBullish.top)}</div>
+        <span style="color:var(--accent2);font-weight:600">🎯 FVG Bölgesi (TL):</span>
+        <span style="margin-left:6px;color:var(--text1);font-weight:700">${tryF(s.fvg.nearestBullish.bottom,s)} — ${tryF(s.fvg.nearestBullish.top,s)}</span>
+        <div class="fiyat-usdt-ref" style="margin-top:4px">${usdtRefLabel(s.fvg.nearestBullish.bottom)} — ${usdtRefLabel(s.fvg.nearestBullish.top)}</div>
       </div>`:''}
     </div>
 
@@ -2844,7 +2862,7 @@ function listeKartHTML(row){
       <div class="kart-sag"><span style="font-family:'Space Mono',monospace;font-size:18px;font-weight:700;color:${r}">${fs}</span><div style="font-size:9px;color:var(--text3)">Fırsat</div></div>
     </div>
     <div class="kart-fiyat">
-      <div class="fiyat-row"><span class="fiyat-usdt" style="color:${r}">$${f5(pxShow)}</span><span class="fiyat-try">${tryF(pxShow)}</span>${lp!=null?'<span class="fiyat-canli">canlı</span>':''}</div>
+      <div class="fiyat-row"><span class="fiyat-try" style="color:${r}">${tryF(pxShow)}</span><span class="fiyat-usdt">${usdtRefLabel(pxShow)}</span>${lp!=null?'<span class="fiyat-canli">canlı</span>':''}</div>
       <span class="fiyat-deg ${chg>=0?'deg-p':'deg-n'}">24s ${typeof chg==='number'?(chg>=0?'+':'')+chg.toFixed(2)+'%':'—'}</span>
     </div>
     <div style="font-size:10px;color:var(--text3);padding:8px 12px 12px;line-height:1.4">Skor: ${row.score!=null?row.score:'—'} · ${row.overallSignal||'—'} · ${row.scannedAt?new Date(row.scannedAt).toLocaleString('tr-TR',{dateStyle:'short',timeStyle:'short'}):'—'}</div>
@@ -2872,7 +2890,7 @@ function modalListeAc(fullSym){
 function fav(e,symbol){
   e.stopPropagation();
   const i=favs.indexOf(symbol);
-  if(i===-1){favs.push(symbol);const s=sig.find(s=>s.symbol===symbol);if(s){const px=pxFor(s);const f=JSON.parse(localStorage.getItem('ss_ff')||'{}');f[symbol]={usdt:px,try:px*kur,t:new Date().toISOString()};localStorage.setItem('ss_ff',JSON.stringify(f))}}
+  if(i===-1){favs.push(symbol);const s=sig.find(s=>s.symbol===symbol);if(s){const px=pxFor(s);const f=JSON.parse(localStorage.getItem('ss_ff')||'{}');f[symbol]={usdt:px,try:px*tryFactorFor(s),t:new Date().toISOString()};localStorage.setItem('ss_ff',JSON.stringify(f))}}
   else favs.splice(i,1);
   localStorage.setItem('ss_fav',JSON.stringify(favs));
   renderSinyaller();renderTop();
@@ -2984,6 +3002,13 @@ function renderRapor(){
   const raporUyari=stR.persistent===false
     ?`<div class="dash-hint" style="margin-bottom:10px;padding:10px 12px;font-size:10px;line-height:1.5"><strong>Kalıcılık:</strong> Redis yok; istatistikler restart’ta sıfırlanabilir. Kalıcı veri için REDIS_URL.</div>`
     :`<div class="dash-hint" style="margin-bottom:10px;padding:10px 12px;font-size:10px;line-height:1.5"><strong>Not:</strong> Başarı oranları geçmiş kayıtlardan gelir; yeni tarama sayaçları sıfırlamaz.</div>`;
+  const ps=performanceSnap||{};
+  const pStats=ps.stats||{};
+  const histN=ps.historyListLength!=null?ps.historyListLength:'—';
+  const perfSnapLine=pStats.total>0
+    ?`Kapanmış: <strong>${pStats.total}</strong> · TP (TP1/2/3’e ulaşan): <strong>${pStats.success}</strong> · SL: <strong>${pStats.fail}</strong> · TP oranı: <strong>%${pStats.successRate!=null?pStats.successRate:'—'}</strong>`
+    :`Sayaçta henüz kapanmış kayıt yok. Geçmiş listesinde <strong>${histN}</strong> kayıt anahtarı (çoğu fiyat bekliyor olabilir).`;
+  const perfSnapHtml=`<div class="rapor-compact" style="margin-bottom:10px"><div class="rapor-compact-t">Kayıtlı sinyaller · başarı sayaçları</div><p style="font-size:11px;color:var(--text2);margin:0 0 6px;line-height:1.5">${perfSnapLine}</p>${ps.noteTr?'<p style="font-size:9px;color:var(--text3);margin:0;line-height:1.45">'+escU(ps.noteTr)+'</p>':''}</div>`;
   const perfHero=!perfMeta
     ?`<div class="rapor-hero"><div class="rapor-hero-t">Geçmiş performans</div><p class="rapor-hero-p" style="margin:0">Performans API’si yüklenemedi; sayfayı yenileyin.</p></div>`
     :aggResolved===0
@@ -2997,7 +3022,7 @@ function renderRapor(){
       </div>
       <p class="rapor-hero-p" style="margin:8px 0 0;font-size:10px;color:var(--text3)">Örneklem (kuyruk): ${sampleN!=null?sampleN:'—'} kayıt${unkTier!=null&&unkTier>0?' · 50– skor (dilim dışı): '+unkTier:''}.</p></div>`;
   const digerAi=Math.max(0,t-ag-aa);
-  el.innerHTML=`<div class="rapor-shell">`+raporUyari+perfHero+`
+  el.innerHTML=`<div class="rapor-shell">`+raporUyari+perfSnapHtml+perfHero+`
     <div class="rapor-compact">
       <div class="rapor-compact-t">Bu tarama · tahta</div>
       <div class="rapor-mosaic">
@@ -3030,8 +3055,8 @@ function renderRapor(){
         const sb=favFf[s.symbol];
         const px=pxFor(s);const fark=sb?((px-sb.usdt)/sb.usdt*100):null;
         return`<div class="rapor-fav-line">
-          <div style="min-width:0;flex:1"><div class="sym">${s.symbol.replace('USDT','')}</div>${sb?`<div class="rapor-fav-meta">Alış $${f5(sb.usdt)} · ₺${sb.try?.toFixed(5)||'—'}</div>`:''}</div>
-          <div style="text-align:right;flex-shrink:0"><div class="sym">$${f5(px)}</div><div class="rapor-fav-meta">${tryF(px)}</div>${fark!=null?`<div style="font-size:10px;font-weight:700;color:${fark>=0?'var(--green)':'var(--red)'}">${fark>=0?'+':''}${fark.toFixed(2)}%</div>`:''}</div>
+          <div style="min-width:0;flex:1"><div class="sym">${s.symbol.replace('USDT','')}</div>${sb?`<div class="rapor-fav-meta">Kayıtlı alış: ${tryF(sb.usdt,s)} · ${usdtRefLabel(sb.usdt)}</div>`:''}</div>
+          <div style="text-align:right;flex-shrink:0"><div class="sym">${tryF(px,s)}</div><div class="rapor-fav-meta">${usdtRefLabel(px)}</div>${fark!=null?`<div style="font-size:10px;font-weight:700;color:${fark>=0?'var(--green)':'var(--red)'}">${fark>=0?'+':''}${fark.toFixed(2)}%</div>`:''}</div>
         </div>`;
       }).join('')}
     </div>`:''}

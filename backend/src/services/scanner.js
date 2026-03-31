@@ -35,6 +35,7 @@ let isScanning  = false;
 let allCoins    = [];
 let priceRefreshTimer = null;
 let qualifiedThisScanRun = 0;
+let lastPendingResolveAt = 0;
 
 let scanState = {
   isScanning: false,
@@ -198,15 +199,59 @@ async function scanSingle(coin, sentiment, analizCtx = {}, opts = {}) {
       getFootprintDelta(coin.pair)
     ]);
 
-    const orderBook      = analyzeOrderBook(depth);
+    const orderBookRaw = analyzeOrderBook(depth);
     const priceChange24h = ticker ? parseFloat(ticker.priceChangePercent) : 0;
-    const diagnostics    = buildDiagnostics({ tf, orderBook });
-    const usdTryRate     = await binance.getUSDTRY();
+    const usdTryRate = await binance.getUSDTRY();
+    const tryBook = opts.tryBookMap?.[coin.symbol];
+    const last = tf.h1.lastClose;
+    let tryFactor = usdTryRate;
+    let tryFrame = {
+      factor: tryFactor,
+      source: 'USDTTRY',
+      spotPair: null,
+      spotBidTry: null,
+      spotAskTry: null,
+      spotMidTry: null,
+      noteTr:
+        'Futures USDT seviyeleri USDT/TRY kuru ile TL’ye çevrildi. Bu parite için spot BASETRY kitabı yoksa kur kullanılır; kitap varsa orta fiyat (bid+ask)/2 ile ölçeklenir.',
+      usdtTryRate
+    };
+    if (tryBook?.mid > 0 && last > 0) {
+      tryFactor = tryBook.mid / last;
+      tryFrame = {
+        factor: tryFactor,
+        source: 'BINANCE_TRY',
+        spotPair: tryBook.symbolTry || `${coin.symbol}TRY`,
+        spotBidTry: tryBook.bid,
+        spotAskTry: tryBook.ask,
+        spotMidTry: tryBook.mid,
+        noteTr:
+          'Futures USDT fiyatları, Binance spot ' +
+          (tryBook.symbolTry || `${coin.symbol}TRY`) +
+          ' orta fiyatına göre TL’ye ölçeklendi. USDT-M derinlik bid/ask aynı çarpanla TL gösterilir.',
+        usdtTryRate
+      };
+    }
+    const orderBook = { ...orderBookRaw };
+    if (Number.isFinite(orderBook.buyWallPrice)) {
+      orderBook.buyWallTry = orderBook.buyWallPrice * tryFactor;
+    }
+    if (Number.isFinite(orderBook.sellWallPrice)) {
+      orderBook.sellWallTry = orderBook.sellWallPrice * tryFactor;
+    }
+    const bid0 = depth.bids?.[0] ? parseFloat(depth.bids[0][0]) : NaN;
+    const ask0 = depth.asks?.[0] ? parseFloat(depth.asks[0][0]) : NaN;
+    const spotLiquidityTry = {};
+    if (Number.isFinite(bid0) && bid0 > 0) spotLiquidityTry.bidTry = bid0 * tryFactor;
+    if (Number.isFinite(ask0) && ask0 > 0) spotLiquidityTry.askTry = ask0 * tryFactor;
 
-    const majorCoins = ['BTC','ETH','BNB','SOL','XRP','ADA','AVAX','DOT'];
+    const diagnostics = buildDiagnostics({ tf, orderBook });
+
+    const majorCoins = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOT'];
     let arbitraj = null;
+    const trPxForArb = tryBook?.mid > 0 ? tryBook.mid : last * usdTryRate;
     if (majorCoins.includes(coin.symbol)) {
-      arbitraj = await calcArbitraj(coin.pair, tf.h1.lastClose, usdTryRate);
+      arbitraj = await calcArbitraj(coin.pair, trPxForArb, usdTryRate);
     }
 
     const { regime, regimeScore } = resolveRegime(tf, priceChange24h);
@@ -279,6 +324,8 @@ async function scanSingle(coin, sentiment, analizCtx = {}, opts = {}) {
       isHighPotential: (tf.h1.atr?.tp3Pct||0) >= 5,
       learningData,
       usdTryRate,
+      tryFrame,
+      spotLiquidityTry,
       scannedAt: new Date().toISOString()
     };
 
@@ -390,6 +437,14 @@ async function scanMarket() {
     console.log(`AutoResolver (baslangic): ${preResolve.resolved}/${preResolve.checked} sinyal kapatildi`);
   }
 
+  let tryBookMap = {};
+  try {
+    tryBookMap = await binance.getTryPairBookMap();
+    console.log(`Spot TRY çiftleri: ${Object.keys(tryBookMap).length} (futures TL ölçeklemesi)`);
+  } catch (e) {
+    console.error('TRY spot kitap haritası:', e.message);
+  }
+
   markEntireBoardAbsentThisScan();
   const preBoard = buildSortedBoard();
   liveSignals = preBoard;
@@ -421,7 +476,7 @@ async function scanMarket() {
 
   for (let i = 0; i < allCoins.length; i++) {
     const coin = allCoins[i];
-    const result = await scanSingle(coin, sentiment, analizCtx);
+    const result = await scanSingle(coin, sentiment, analizCtx, { tryBookMap });
     if (result?.snapshot) listRegistry.set(coin.pair, result.snapshot);
     if (result?.qualified) {
       qualifiedThisScanRun += 1;
@@ -533,6 +588,23 @@ async function tickRegistryPrices() {
     scan: { ...scanState },
     time: new Date().toISOString()
   });
+
+  const resolveMinMsEnv = parseInt(process.env.PENDING_RESOLVE_MIN_MS, 10);
+  const resolveMinMs = Number.isFinite(resolveMinMsEnv)
+    ? Math.max(45000, Math.min(resolveMinMsEnv, 900000))
+    : 120000;
+  const now = Date.now();
+  if (now - lastPendingResolveAt >= resolveMinMs) {
+    lastPendingResolveAt = now;
+    try {
+      const pr = await autoResolver.resolvePendingSignals();
+      if (pr.resolved > 0) {
+        console.log(`AutoResolver (tarama arasi ~${Math.round(resolveMinMs / 1000)}s): ${pr.resolved}/${pr.checked} kapatildi`);
+      }
+    } catch (e) {
+      console.error('AutoResolver (tick):', e.message);
+    }
+  }
 }
 
 /**
@@ -550,12 +622,14 @@ async function refreshSymbol(rawSymbol) {
     return { ok: false, error: 'Tam tarama sürüyor; bitince tekrar deneyin.' };
   }
 
-  const [sentiment, makro, onChain] = await Promise.all([
+  const [sentiment, makro, onChain, tryRow] = await Promise.all([
     binance.getFearGreed(),
     fetchMacroSnapshot(),
-    fetchBtcOnChainSnapshot()
+    fetchBtcOnChainSnapshot(),
+    binance.getTryBookForBase(base)
   ]);
-  const out = await scanSingle(coin, sentiment, { makro, onChain }, { saveHistory: false });
+  const tryBookMap = tryRow ? { [base]: tryRow } : {};
+  const out = await scanSingle(coin, sentiment, { makro, onChain }, { saveHistory: false, tryBookMap });
   if (out?.snapshot) listRegistry.set(pair, out.snapshot);
   if (out?.qualified) {
     mergeQualifiedSignal(out.signal);

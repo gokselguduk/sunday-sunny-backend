@@ -1,10 +1,54 @@
 const axios = require('axios');
 
 const BASE  = 'https://fapi.binance.com/fapi/v1';
+const SPOT  = 'https://api.binance.com/api/v3';
 const DELAY = 500;
 
 function bekle(ms) {
   return new Promise(r => setTimeout(r, ms));
+}
+
+/**
+ * Binance spot tüm BASETRY çiftlerinin kitap fiyatı (tek istek).
+ * Binance.tr API bazı bölgelerde kapalı; TRY çiftleri global spot ile aynı köprüyü verir.
+ */
+async function getTryPairBookMap() {
+  const res = await axios.get(`${SPOT}/ticker/bookTicker`, { timeout: 26000 });
+  const arr = Array.isArray(res.data) ? res.data : [];
+  const map = {};
+  for (const row of arr) {
+    const sym = row.symbol;
+    if (!sym || !sym.endsWith('TRY') || sym === 'USDTTRY') continue;
+    const base = sym.slice(0, -3);
+    if (!/^[A-Z0-9]{2,20}$/.test(base)) continue;
+    const bid = parseFloat(row.bidPrice);
+    const ask = parseFloat(row.askPrice);
+    if (!Number.isFinite(bid) || !Number.isFinite(ask) || bid <= 0 || ask <= 0) continue;
+    map[base] = { bid, ask, mid: (bid + ask) / 2, symbolTry: sym };
+  }
+  return map;
+}
+
+/** Tek coin için spot BASETRY kitabı (tek coin yenilemede). */
+async function getTryBookForBase(base) {
+  const b = String(base || '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, '');
+  if (!b) return null;
+  const sym = `${b}TRY`;
+  try {
+    const res = await axios.get(`${SPOT}/ticker/bookTicker`, {
+      params: { symbol: sym },
+      timeout: 7000
+    });
+    const row = res.data;
+    const bid = parseFloat(row.bidPrice);
+    const ask = parseFloat(row.askPrice);
+    if (!Number.isFinite(bid) || !Number.isFinite(ask) || bid <= 0 || ask <= 0) return null;
+    return { bid, ask, mid: (bid + ask) / 2, symbolTry: sym };
+  } catch {
+    return null;
+  }
 }
 
 async function getUSDTRY() {
@@ -193,6 +237,8 @@ module.exports = {
   getOrderBook,
   getFearGreed,
   getUSDTRY,
+  getTryPairBookMap,
+  getTryBookForBase,
   bekle,
   DELAY
 };

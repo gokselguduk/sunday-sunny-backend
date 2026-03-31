@@ -20,23 +20,31 @@ function resolveResult(signal, currentPrice) {
 }
 
 async function resolvePendingSignals() {
-  const pending = await memory.listPendingSignals(1500);
+  const pending = await memory.listPendingSignals(2500);
   if (!pending.length) return { checked: 0, resolved: 0 };
+
+  let tickers = {};
+  try {
+    tickers = await binance.getAllFutures24hTickers();
+  } catch (_) {
+    tickers = {};
+  }
+  if (!tickers || typeof tickers !== 'object') {
+    return { checked: pending.length, resolved: 0, error: 'TICKERS_UNAVAILABLE' };
+  }
 
   let resolved = 0;
   for (const signal of pending) {
     try {
-      const ticker = await binance.get24hTicker(signal.symbol);
-      const currentPrice = parseFloat(
-        ticker?.lastPrice ?? ticker?.last ?? ticker?.close ?? 0
-      );
+      const row = tickers[signal.symbol];
+      const currentPrice = row?.lastPrice;
       if (!Number.isFinite(currentPrice) || currentPrice <= 0) continue;
       const result = resolveResult(signal, currentPrice);
       if (!result) continue;
       await memory.updateSignalResult(signal.key, result, currentPrice);
       resolved += 1;
     } catch (err) {
-      // best-effort resolver, skip faulty symbols
+      // best-effort
     }
   }
   return { checked: pending.length, resolved };

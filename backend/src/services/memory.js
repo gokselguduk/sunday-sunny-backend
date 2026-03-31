@@ -25,6 +25,10 @@ function createInMemoryRedis() {
       const e = Number.isFinite(stop) ? stop : arr.length - 1;
       return arr.slice(s, e + 1);
     },
+    llen: async (k) => {
+      const arr = cache.get(k) || [];
+      return arr.length;
+    },
     incr: async (k) => {
       const v = (parseInt(cache.get(k), 10) || 0) + 1;
       cache.set(k, String(v));
@@ -80,6 +84,10 @@ async function saveSignal(signal) {
       tp2:           signal.atr?.takeProfit2,
       tp3:           signal.atr?.takeProfit3,
       sl:            signal.atr?.stopLoss,
+      tp1Pct:        signal.atr?.tp1Pct ?? null,
+      tp2Pct:        signal.atr?.tp2Pct ?? null,
+      tp3Pct:        signal.atr?.tp3Pct ?? null,
+      stopLossPct:   signal.atr?.stopLossPct ?? null,
       quality:       signal.quality?.grade,
       patterns:      signal.candlePatterns?.patterns?.map(p => p.name),
       divergence:    signal.divergence,
@@ -220,6 +228,24 @@ async function getStats() {
   } catch (err) {
     return { success: 0, fail: 0, total: 0, successRate: null };
   }
+}
+
+/** Rapor / API: genel sayaçlar + kuyruk boyu (hafif; tam tarama yanıtına eklenebilir). */
+async function getPerformanceSnapshot() {
+  let historyListLength = 0;
+  try {
+    const r = getRedis();
+    historyListLength = await r.llen('signals:history');
+  } catch (_) {
+    historyListLength = 0;
+  }
+  const stats = await getStats();
+  return {
+    stats,
+    historyListLength: Number.isFinite(historyListLength) ? historyListLength : 0,
+    noteTr:
+      'Tahtaya giren her sinyal tam taramada Redis’e yazılır (BEKLIYOR). Canlı fiyat TP1/TP2/TP3 veya SL’yi kestiğinde kayıt kapanır; sayaçlar ve dilim tabloları buna göre güncellenir. Motor çoğunlukla long yapı arar; ekrandaki yükseliş özetleri “otomatik yön” değil — gerçek başarı oranı aşağıdaki kapanmış kayıtlardan türetilir.'
+  };
 }
 
 async function getTierPerformance(limit) {
@@ -700,6 +726,7 @@ module.exports = {
   updateSignalResult,
   getLearningData,
   getStats,
+  getPerformanceSnapshot,
   getTierPerformance,
   listPendingSignals,
   savePushSubscription,
