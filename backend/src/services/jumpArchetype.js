@@ -265,6 +265,47 @@ function buildJumpRoleModelTr({ lookbackDays, spikePct, trainingN, flowN, pre5d,
   return txt;
 }
 
+function computeSpikeFollowThrough(candles, spikeIdx) {
+  const out = { next1dUp: null, fwd5Pos: null };
+  const cSpike = candles[spikeIdx]?.close;
+  if (!Number.isFinite(cSpike) || cSpike <= 0) return out;
+  if (spikeIdx + 1 < candles.length) {
+    const c1 = candles[spikeIdx + 1].close;
+    if (Number.isFinite(c1)) {
+      out.next1dUp = (c1 - cSpike) / cSpike > 0;
+    }
+  }
+  if (spikeIdx + 5 < candles.length) {
+    const c5 = candles[spikeIdx + 5].close;
+    if (Number.isFinite(c5)) {
+      out.fwd5Pos = (c5 - cSpike) / cSpike > 0;
+    }
+  }
+  return out;
+}
+
+function summarizeFollowThrough(stats) {
+  const pct = (pos, n) => (n > 0 ? Math.round((pos / n) * 1000) / 10 : null);
+  return {
+    pctCloseHigherNextDay: pct(stats.next1d.pos, stats.next1d.n),
+    sampleNextDay: stats.next1d.n,
+    pctPositiveCum5dAfterSpike: pct(stats.fwd5.pos, stats.fwd5.n),
+    sampleFwd5d: stats.fwd5.n
+  };
+}
+
+function buildFollowThroughTr(ft, spikePct) {
+  const a = ft.pctCloseHigherNextDay;
+  const b = ft.pctPositiveCum5dAfterSpike;
+  if (ft.sampleNextDay === 0 && ft.sampleFwd5d === 0) return '';
+  return (
+    `GEÇMİŞTE DEVAM (≥%${spikePct} sıçrama kapanışından sonra, aynı 2y veri — işlem başarısı değil)\n` +
+    `• Ertesi işlem günü kapanışı, sıçrama günü kapanışının ÜSTÜNDE: %${a != null ? a : '—'} (örnek n=${ft.sampleNextDay})\n` +
+    `• +5 işlem günü sonunda kümülatif getiri (sıçrama kapanışından) POZİTİF: %${b != null ? b : '—'} (örnek n=${ft.sampleFwd5d})\n` +
+    `• Platformdaki TP1/2/3 “başarı oranı” bununla aynı değil; o oran yalnızca tahta sinyalleri Redis kayıtlarından üretilir.`
+  );
+}
+
 async function computeJumpArchetypeAnalysis(forceRefresh) {
   const now = Date.now();
   if (!forceRefresh && cache.payload && now - cache.at < CACHE_MS) {
@@ -280,6 +321,10 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
   /** @type {{symbol:string,profile:object,spikeReturn:number,simToArchetype?:number}[]} */
   const training = [];
   const bySymbol = new Map();
+  const followStats = {
+    next1d: { pos: 0, n: 0 },
+    fwd5: { pos: 0, n: 0 }
+  };
 
   for (const c of coins) {
     try {
@@ -300,6 +345,15 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
         const pre = windowMetrics(candles, i - 1, winLen);
         if (!pre) continue;
         const spikeFlow = spikeDayFlowMetrics(candles, i);
+        const ft = computeSpikeFollowThrough(candles, i);
+        if (ft.next1dUp !== null) {
+          followStats.next1d.n++;
+          if (ft.next1dUp) followStats.next1d.pos++;
+        }
+        if (ft.fwd5Pos !== null) {
+          followStats.fwd5.n++;
+          if (ft.fwd5Pos) followStats.fwd5.pos++;
+        }
         training.push({ symbol: c.pair, profile: pre, spikeReturn: r, spikeFlow });
       }
     } catch (e) {
@@ -376,6 +430,10 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
     historicalP75SpikePct: Math.round(globalP75Spike * 100) / 100
   };
 
+  const followThrough = summarizeFollowThrough(followStats);
+  archetype.spikeFollowThrough = followThrough;
+  const followThroughTr = buildFollowThroughTr(followThrough, SPIKE_MIN_DAY_PCT);
+
   const roleModelTr = buildJumpRoleModelTr({
     lookbackDays: LOOKBACK_DAYS,
     spikePct: SPIKE_MIN_DAY_PCT,
@@ -384,6 +442,8 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
     pre5d: archetype.median,
     spikeDay: spikeDayMedian
   });
+
+  const roleModelFullTr = [roleModelTr, followThroughTr].filter(Boolean).join('\n\n');
 
   const narrativeTr =
     `Son **${LOOKBACK_DAYS} gün** ve **${uniqueSyms}** paritede toplam **${enriched.length}** adet günlük sıçrama (≥**%${SPIKE_MIN_DAY_PCT}** tek gün kapanış hareketi) tarandı. ` +
@@ -478,7 +538,9 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
     symbolCount: bySymbol.size,
     durationMs: Date.now() - started,
     narrativeTr: narrativeTr.replace(/\*\*/g, ''),
-    roleModelTr,
+    roleModelTr: roleModelFullTr,
+    followThrough,
+    followThroughTr,
     methodNoteTr,
     filterSummaryTr,
     horizonNoteTr,
