@@ -1,0 +1,9 @@
+# Railway: Root Directory = repo kökü (.) iken kullanılır.
+[variables]
+NODE_VERSION = "20"
+
+[phases.install]
+cmds = ["cd backend && (npm ci --omit=dev || npm install --omit=dev)"]
+
+[start]
+cmd = "cd backend && node src/index.js"

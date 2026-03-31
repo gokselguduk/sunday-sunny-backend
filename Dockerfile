@@ -1,9 +1,9 @@
-# Monorepo kökünden: Railway'de Root Directory = repo kökü (.) olmalı.
-FROM node:20-bookworm-slim
+# Yerel / isteğe bağlı Docker. Railway varsayılanı artık Nixpacks (railway.toml).
+FROM node:20-bookworm
 WORKDIR /app
 
 COPY backend/package.json backend/package-lock.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev || npm install --omit=dev
 
 COPY backend/ ./
 

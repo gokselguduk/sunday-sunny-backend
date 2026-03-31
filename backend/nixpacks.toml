@@ -1,0 +1,9 @@
+# Railway: Root Directory = "backend" iken bu klasör kök olur.
+[variables]
+NODE_VERSION = "20"
+
+[phases.install]
+cmds = ["npm ci --omit=dev || npm install --omit=dev"]
+
+[start]
+cmd = "node src/index.js"

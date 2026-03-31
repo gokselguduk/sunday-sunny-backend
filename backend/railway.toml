@@ -1,11 +1,6 @@
-# Railway Root Directory = "backend" ise bu ayar + bu klasördeki Dockerfile kullanılır.
-# Root Directory = repo kökü (.) ise üst dizindeki Dockerfile + üst railway.toml geçerlidir.
-
+# Root Directory = "backend" — bu klasördeki nixpacks.toml ile uyumlu
 [build]
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+builder = "NIXPACKS"
 
 [deploy]
 restartPolicyType = "ON_FAILURE"
-healthcheckPath = "/health"
-healthcheckTimeout = 300

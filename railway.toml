@@ -1,10 +1,7 @@
-# Railway → Service → Settings:
-# - Root Directory: boş veya "." (repo kökü). "backend" seçilirse bu dosya + Dockerfile göz ardı edilir.
+# Root Directory = "." (repo kökü) — Nixpacks + kök nixpacks.toml
+# Docker kullanmak istersen: builder = "DOCKERFILE" + dockerfilePath = "Dockerfile"
 [build]
-builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+builder = "NIXPACKS"
 
 [deploy]
 restartPolicyType = "ON_FAILURE"
-healthcheckPath = "/health"
-healthcheckTimeout = 300
