@@ -249,6 +249,33 @@ html[data-theme="light"] .kart{box-shadow:0 2px 10px rgba(15,30,60,0.06)}
 .ai-r::before{content:'▸';color:var(--accent);flex-shrink:0}
 @keyframes spin{to{transform:rotate(360deg)}}
 .modal-close{margin:14px 20px;width:calc(100% - 40px);padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;color:var(--text1);font-size:14px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif}
+.rapor-shell{max-width:480px;margin:0 auto}
+.rapor-hero{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.rapor-hero-t{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:0.45px;margin-bottom:6px}
+.rapor-hero-p{font-size:11px;color:var(--text2);line-height:1.5;margin:0 0 8px}
+.rapor-hero-row{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:baseline}
+.rapor-hero-k{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.3px}
+.rapor-hero-v{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--text1);margin-top:2px}
+.rapor-hero-v.ok{color:var(--green)}
+.rapor-hero-v.bad{color:var(--red)}
+.rapor-compact{background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:10px 10px 8px;margin-bottom:8px}
+.rapor-compact-t{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;margin:0 0 8px}
+.rapor-mosaic{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.rapor-cell{background:var(--bg2);border-radius:8px;padding:6px 4px;text-align:center;min-width:0}
+.rapor-cell-v{font-family:'Space Mono',monospace;font-size:13px;font-weight:700;line-height:1.15;color:var(--text1)}
+.rapor-cell-l{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:0.2px;margin-top:3px;line-height:1.2}
+.rapor-tier-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:4px}
+@media(max-width:420px){.rapor-tier-wrap{grid-template-columns:1fr}}
+.rapor-tier-mini{border:1px solid var(--border);border-radius:10px;padding:8px 8px 6px;background:var(--bg1);min-width:0}
+.rapor-tier-name{font-size:10px;font-weight:700;margin-bottom:6px;line-height:1.2}
+.rapor-tier-rows{font-size:10px;color:var(--text2);line-height:1.45}
+.rapor-tier-rows div{display:flex;justify-content:space-between;gap:6px;padding:2px 0;border-top:1px solid var(--border)}
+.rapor-tier-rows div:first-child{border-top:none;padding-top:0}
+.rapor-tier-rows span:last-child{font-family:'Space Mono',monospace;color:var(--text1);font-weight:600}
+.rapor-fav-compact .rapor-fav-line{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:11px}
+.rapor-fav-compact .rapor-fav-line:last-child{border-bottom:none;padding-bottom:0}
+.rapor-fav-compact .sym{font-family:'Space Mono',monospace;font-weight:700;font-size:12px}
+.rapor-fav-meta{font-size:9px;color:var(--text3);margin-top:2px}
 .rapor-kart{background:var(--bg1);border-radius:14px;padding:14px;margin-bottom:10px;border:1px solid var(--border)}
 .rapor-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .rapor-item{background:var(--bg2);border-radius:10px;padding:10px;text-align:center}
@@ -704,12 +731,12 @@ window.SS_SW_URL='/sw.js';
   }
   async function checkDeployAndRegister(){
     try{
-      /* v7: shell şeması — veriCek/sinyal listesi dayanıklılığı; bir kerelik önbellek süpürme */
+      /* v8: shell şeması — rapor kompakt + performans özeti; bir kerelik önbellek süpürme */
       var schema=null;
       try{schema=localStorage.getItem('ss_shell_schema');}catch(e){}
-      if(schema!=='7'){
+      if(schema!=='8'){
         await clearSwAndCaches();
-        try{localStorage.setItem('ss_shell_schema','7');}catch(e){}
+        try{localStorage.setItem('ss_shell_schema','8');}catch(e){}
         try{localStorage.removeItem('ss_deploy_id');}catch(e){}
         await hardNavigateReload();
         return;
@@ -2730,74 +2757,89 @@ function renderRapor(){
   const gucluPerf=pTiers.guclu||{};
   const iyiPerf=pTiers.iyi||{};
   const pctOrDash=(v,resolved)=>((resolved||0)>0&&Number.isFinite(Number(v))?Number(v).toFixed(1):'—');
-  const perfBox=(name,p,color)=>{
+  let aggResolved=0,aggPending=0,aggSl=0;
+  for(const k of ['nadir','guclu','iyi']){
+    const p=pTiers[k]||{};
+    aggResolved+=p.resolved||0;
+    aggPending+=p.pending||0;
+    aggSl+=p.sl||0;
+  }
+  const aggWinPct=aggResolved>0?((aggResolved-aggSl)/aggResolved*100).toFixed(1):null;
+  const sampleN=perfMeta?.sampleSize;
+  const unkTier=perfMeta?.unknownTier;
+  const perfTierMini=function(name,p,color){
     const res=p.resolved||0;
     const tp1=pctOrDash(p.tp1Rate,res);
     const tp2=pctOrDash(p.tp2Rate,res);
     const tp3=pctOrDash(p.tp3Rate,res);
     const sl=pctOrDash(p.slRate,res);
-    return`<div class="rapor-kart">
-      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">${name} Başarı Oranı</div>
-      <div class="rapor-grid">
-        <div class="rapor-item"><div class="rapor-sayi" style="color:${color}">${tp1==='—'?'—':'%'+tp1}</div><div class="rapor-lbl">TP1</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:${color}">${tp2==='—'?'—':'%'+tp2}</div><div class="rapor-lbl">TP2</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:${color}">${tp3==='—'?'—':'%'+tp3}</div><div class="rapor-lbl">TP3</div></div>
+    return`<div class="rapor-tier-mini" style="border-left:3px solid ${color}">
+      <div class="rapor-tier-name" style="color:${color}">${name}</div>
+      <div class="rapor-tier-rows">
+        <div><span>En az TP1</span><span style="color:var(--green)">${tp1==='—'?'—':'%'+tp1}</span></div>
+        <div><span>En az TP2</span><span>${tp2==='—'?'—':'%'+tp2}</span></div>
+        <div><span>TP3</span><span>${tp3==='—'?'—':'%'+tp3}</span></div>
+        <div><span>SL</span><span style="color:var(--red)">${sl==='—'?'—':'%'+sl}</span></div>
+        <div><span>Sonuçlanan / bekleyen</span><span>${res} / ${p.pending||0}</span></div>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:11px;color:var(--text3)">
-        <span>Sonuçlanan: ${res}</span>
-        <span>Bekleyen: ${p.pending||0}</span>
-        <span>SL: ${sl==='—'?'—':'%'+sl}</span>
-      </div>
-      ${res===0?'<p style="font-size:10px;color:var(--text3);margin-top:8px;line-height:1.4">Sonuçlanan sayısı: her tam taramada (başta ve sonda) canlı fiyat ATR TP/SL seviyelerini kestiğinde kayıt otomatik kapanır. Burada hâlâ 0 ise ya henüz fiyat o seviyelere gelmedi ya da <strong>Redis yok</strong> (veri istekler arası tutulmuyordu; düzeltildi — yine de kalıcılık için REDIS_URL önerilir). Manuel: <code style=font-size:9px>POST /api/signal/resolve</code>.</p>':''}
     </div>`;
   };
   const stR=storageHint||{};
   const raporUyari=stR.persistent===false
-    ?`<div class="dash-hint" style="margin-bottom:12px"><strong>Kalıcılık uyarısı:</strong> Sunucuda Redis yok; başarı sayaçları RAM’de tutuluyor ve <strong>deploy/restart’ta sıfırlanır</strong>. Kalıcı istatistik için Railway’e Redis ekle ve REDIS_URL ortam değişkenini tanımla.</div>`
-    :`<div class="dash-hint" style="margin-bottom:12px"><strong>Başarı oranları</strong> geçmiş sinyal kayıtlarından hesaplanır; her yeni tarama bu sayıları <strong>sıfırlamaz</strong>. TP/SL sonucunu API veya ileride arayüzden işlersen güncellenir.</div>`;
-  el.innerHTML=raporUyari+`
-    <div class="rapor-kart">
-      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Fırsat Özeti</div>
-      <div class="rapor-grid">
-        <div class="rapor-item"><div class="rapor-sayi" style="color:var(--green)">🔥${nadir}</div><div class="rapor-lbl">Nadir 80+</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:var(--accent)">✅${guclu}</div><div class="rapor-lbl">Güçlü 65+</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:var(--accent2)">👍${iyi}</div><div class="rapor-lbl">İyi 50+</div></div>
+    ?`<div class="dash-hint" style="margin-bottom:10px;padding:10px 12px;font-size:10px;line-height:1.5"><strong>Kalıcılık:</strong> Redis yok; istatistikler restart’ta sıfırlanabilir. Kalıcı veri için REDIS_URL.</div>`
+    :`<div class="dash-hint" style="margin-bottom:10px;padding:10px 12px;font-size:10px;line-height:1.5"><strong>Not:</strong> Başarı oranları geçmiş kayıtlardan gelir; yeni tarama sayaçları sıfırlamaz.</div>`;
+  const perfHero=!perfMeta
+    ?`<div class="rapor-hero"><div class="rapor-hero-t">Geçmiş performans</div><p class="rapor-hero-p" style="margin:0">Performans API’si yüklenemedi; sayfayı yenileyin.</p></div>`
+    :aggResolved===0
+    ?`<div class="rapor-hero"><div class="rapor-hero-t">Geçmiş performans</div><p class="rapor-hero-p">Henüz <strong>sonuçlanan</strong> sinyal yok (TP1/TP2/TP3 veya SL). Fiyat ATR seviyelerini kestiğinde kayıt kapanır.${sampleN?` Şu an geçmiş kuyruğunda ~<strong>${sampleN}</strong> kayıt var; çoğu bekliyor olabilir.`:' Redis yoksa kayıt tutulmayabilir.'}</p><p class="rapor-hero-p" style="margin:0;font-size:10px;color:var(--text3)">Bekleyen (tüm dilimler): <strong>${aggPending}</strong>${unkTier!=null&&unkTier>0?' · Skor dilimi dışı kayıt: '+unkTier:''}</p></div>`
+    :`<div class="rapor-hero"><div class="rapor-hero-t">Geçmiş performans · özet</div><p class="rapor-hero-p" style="margin-bottom:10px">Aşağıdaki yüzdeler, Redis’teki geçmiş sinyallerde <strong>en az TP1</strong> ve <strong>SL</strong> oranlarıdır (sonuçlananlar üzerinden).</p>
+      <div class="rapor-hero-row">
+        <div><div class="rapor-hero-k">Sonuçlanan</div><div class="rapor-hero-v">${aggResolved}</div></div>
+        <div><div class="rapor-hero-k">En az TP1</div><div class="rapor-hero-v ok">%${aggWinPct}</div></div>
+        <div><div class="rapor-hero-k">SL</div><div class="rapor-hero-v bad">%${aggResolved>0?((aggSl/aggResolved)*100).toFixed(1):'—'}</div></div>
+        <div><div class="rapor-hero-k">Bekleyen</div><div class="rapor-hero-v">${aggPending}</div></div>
+      </div>
+      <p class="rapor-hero-p" style="margin:8px 0 0;font-size:10px;color:var(--text3)">Örneklem (kuyruk): ${sampleN!=null?sampleN:'—'} kayıt${unkTier!=null&&unkTier>0?' · 50– skor (dilim dışı): '+unkTier:''}.</p></div>`;
+  const digerAi=Math.max(0,t-ag-aa);
+  el.innerHTML=`<div class="rapor-shell">`+raporUyari+perfHero+`
+    <div class="rapor-compact">
+      <div class="rapor-compact-t">Bu tarama · tahta</div>
+      <div class="rapor-mosaic">
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--green)">${nadir}</div><div class="rapor-cell-l">Nadir 80+</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent)">${guclu}</div><div class="rapor-cell-l">Güçlü 65+</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent2)">${iyi}</div><div class="rapor-cell-l">İyi 50+</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent2)">${aligned}</div><div class="rapor-cell-l">4TF</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent)">${div}</div><div class="rapor-cell-l">Div</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent2)">${fvg}</div><div class="rapor-cell-l">FVG</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--amber)">${arb}</div><div class="rapor-cell-l">Arb</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--red)">${anom}</div><div class="rapor-cell-l">Anom</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--text2)">${t}</div><div class="rapor-cell-l">Toplam</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--green)">${ag}</div><div class="rapor-cell-l">G.AL</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent)">${aa}</div><div class="rapor-cell-l">AL</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--amber)">${digerAi}</div><div class="rapor-cell-l">Diğer</div></div>
       </div>
     </div>
-    <div class="rapor-kart">
-      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Katman Analizi</div>
-      <div class="rapor-grid">
-        <div class="rapor-item"><div class="rapor-sayi" style="color:var(--accent2)">${aligned}</div><div class="rapor-lbl">4TF Hizalı</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:var(--accent)">${div}</div><div class="rapor-lbl">Divergence</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:var(--accent2)">${fvg}</div><div class="rapor-lbl">FVG</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:var(--amber)">${arb}</div><div class="rapor-lbl">Arbitraj</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:var(--red)">${anom}</div><div class="rapor-lbl">Anomali</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:var(--text2)">${t}</div><div class="rapor-lbl">Toplam</div></div>
+    <div class="rapor-compact">
+      <div class="rapor-compact-t">Skor dilimine göre geçmiş başarı</div>
+      <div class="rapor-tier-wrap">
+        ${perfTierMini('Nadir 80+',nadirPerf,'var(--green)')}
+        ${perfTierMini('Güçlü 65–79',gucluPerf,'var(--accent)')}
+        ${perfTierMini('İyi 50–64',iyiPerf,'var(--accent2)')}
       </div>
+      ${aggResolved===0?'<p style="font-size:9px;color:var(--text3);margin:8px 0 0;line-height:1.45">Sonuçlanan 0 iken tablolar “—” gösterir. Redis ve fiyat tetiklemesi geldikçe dolar.</p>':''}
     </div>
-    <div class="rapor-kart">
-      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">AI Sonuçları</div>
-      <div class="rapor-grid">
-        <div class="rapor-item"><div class="rapor-sayi" style="color:var(--green)">${ag}</div><div class="rapor-lbl">Güçlü AL</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:var(--accent)">${aa}</div><div class="rapor-lbl">AL</div></div>
-        <div class="rapor-item"><div class="rapor-sayi" style="color:var(--amber)">${t-ag-aa}</div><div class="rapor-lbl">Diğer</div></div>
-      </div>
-    </div>
-    ${perfBox('🔥 Nadir (80+)',nadirPerf,'var(--green)')}
-    ${perfBox('✅ Güçlü (65-79)',gucluPerf,'var(--accent)')}
-    ${perfBox('👍 İyi (50-64)',iyiPerf,'var(--accent2)')}
-    ${favSig.length?`<div class="rapor-kart">
-      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Favorilerim</div>
+    ${favSig.length?`<div class="rapor-compact rapor-fav-compact">
+      <div class="rapor-compact-t">Favorilerim</div>
       ${favSig.map(s=>{
         const sb=favFf[s.symbol];
         const px=pxFor(s);const fark=sb?((px-sb.usdt)/sb.usdt*100):null;
-        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
-          <div><div style="font-family:'Space Mono',monospace;font-size:14px;font-weight:700">${s.symbol.replace('USDT','')}</div>${sb?`<div style="font-size:10px;color:var(--text3)">Alış: $${f5(sb.usdt)} · ₺${sb.try?.toFixed(5)||'—'}</div>`:''}</div>
-          <div style="text-align:right"><div style="font-family:'Space Mono',monospace;font-size:13px">$${f5(px)}</div><div style="font-size:10px;color:var(--text3)">${tryF(px)}</div>${fark!=null?`<div style="font-size:11px;font-weight:600;color:${fark>=0?'var(--green)':'var(--red)'}">${fark>=0?'+':''}${fark.toFixed(2)}%</div>`:''}</div>
+        return`<div class="rapor-fav-line">
+          <div style="min-width:0;flex:1"><div class="sym">${s.symbol.replace('USDT','')}</div>${sb?`<div class="rapor-fav-meta">Alış $${f5(sb.usdt)} · ₺${sb.try?.toFixed(5)||'—'}</div>`:''}</div>
+          <div style="text-align:right;flex-shrink:0"><div class="sym">$${f5(px)}</div><div class="rapor-fav-meta">${tryF(px)}</div>${fark!=null?`<div style="font-size:10px;font-weight:700;color:${fark>=0?'var(--green)':'var(--red)'}">${fark>=0?'+':''}${fark.toFixed(2)}%</div>`:''}</div>
         </div>`;
       }).join('')}
     </div>`:''}
-    <div style="height:20px"></div>`;
+    <div style="height:16px"></div></div>`;
   }catch(e){
     console.error('renderRapor',e);
     el.innerHTML='<p style="color:var(--red);font-size:12px">Rapor çizilirken hata: '+escU(e.message||String(e))+'</p>';
