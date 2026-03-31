@@ -214,7 +214,7 @@ async function scanSingle(coin, sentiment, analizCtx = {}, opts = {}) {
       spotMidTry: null,
       noteTr:
         'Futures USDT seviyeleri USDT/TRY kuru ile TL’ye çevrildi. Bu parite için spot BASETRY kitabı yoksa kur kullanılır; kitap varsa orta fiyat (bid+ask)/2 ile ölçeklenir.',
-      usdtTryRate
+      usdtTryRate: usdTryRate
     };
     if (tryBook?.mid > 0 && last > 0) {
       tryFactor = tryBook.mid / last;
@@ -229,7 +229,7 @@ async function scanSingle(coin, sentiment, analizCtx = {}, opts = {}) {
           'Futures USDT fiyatları, Binance spot ' +
           (tryBook.symbolTry || `${coin.symbol}TRY`) +
           ' orta fiyatına göre TL’ye ölçeklendi. USDT-M derinlik bid/ask aynı çarpanla TL gösterilir.',
-        usdtTryRate
+        usdtTryRate: usdTryRate
       };
     }
     const orderBook = { ...orderBookRaw };

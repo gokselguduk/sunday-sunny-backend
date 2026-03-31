@@ -103,16 +103,25 @@ async function getTRYCoins() {
   }
 }
 
-function parseConfiguredSymbols(rawList) {
-  if (!rawList) return ['BTC', 'ETH', 'BNB', 'SOL', 'XRP'];
+const DEFAULT_TR_BASES = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOGE', 'DOT', 'LINK', 'LTC', 'ATOM'];
 
-  return [...new Set(
-    rawList
-      .split(',')
-      .map((s) => s.trim().toUpperCase())
-      .map((s) => s.replace(/^BINANCE_TR_COINS=/, ''))
-      .filter((s) => /^[A-Z0-9]+$/.test(s))
-  )];
+function parseConfiguredSymbols(rawList) {
+  if (!rawList || !String(rawList).trim()) return [...DEFAULT_TR_BASES];
+
+  const parsed = [
+    ...new Set(
+      String(rawList)
+        .split(',')
+        .map((s) => s.trim().toUpperCase())
+        .map((s) => s.replace(/^BINANCE_TR_COINS=/, ''))
+        .filter((s) => /^[A-Z0-9]+$/.test(s))
+    )
+  ];
+  if (!parsed.length) {
+    console.warn('BINANCE_TR_COINS geçersiz veya boş; varsayılan evren kullanılıyor');
+    return [...DEFAULT_TR_BASES];
+  }
+  return parsed;
 }
 async function getOHLCV(symbol, interval, limit) {
   if (!limit) limit = 500;
