@@ -470,15 +470,17 @@ scanner.subscribe(async (data) => {
 });
 
 // ── BAŞLAT ──────────────────────────────────
-const PORT = process.env.PORT || 3000;
+// Railway /health hemen 200 dönsün diye önce dinle; Binance ön yüklemesi arka planda (preload bitmeden listen gecikirse sağlık kontrolü düşer).
+const PORT = Number(process.env.PORT) || 3000;
+const LISTEN_HOST = process.env.BIND_HOST || '0.0.0.0';
 
-scanner
-  .preloadCoins()
-  .catch((e) => console.error('Coin evreni ön yüklenemedi:', e.message))
-  .finally(() => {
-    server.listen(PORT, () => {
-      console.log(`Sunucu calisiyor: http://localhost:${PORT}`);
-      btcPulse.startBtcPulse(io);
+server.listen(PORT, LISTEN_HOST, () => {
+  console.log(`Sunucu calisiyor: ${LISTEN_HOST}:${PORT}`);
+  btcPulse.startBtcPulse(io);
+  scanner
+    .preloadCoins()
+    .catch((e) => console.error('Coin evreni ön yüklenemedi:', e.message))
+    .finally(() => {
       scanner.startAutoScan();
     });
-  });
+});
