@@ -8,15 +8,20 @@ const LOOKBACK_DAYS = Math.min(
   Math.max(180, Math.floor(Number(process.env.WINNER_PATTERN_LOOKBACK_DAYS) || 730))
 );
 /** Benzerlik yüzdesi eşiği (yükselt = daha az sonuç). */
-const MIN_SIMILARITY = Math.min(95, Math.max(52, Number(process.env.WINNER_PATTERN_MIN_SIMILARITY) || 64));
+const MIN_SIMILARITY = Math.min(95, Math.max(55, Number(process.env.WINNER_PATTERN_MIN_SIMILARITY) || 69));
 /** Z-mesafe ölçeği (düşür = skor daha sıkı, örn. 4.15). */
 const SIM_DIST_SCALE = Math.max(3.2, Math.min(6, Number(process.env.WINNER_PATTERN_SIM_DIST_SCALE) || 4.15));
 /** En az kaç “yapı taşı” (hacim/RSI/aralık/kümülatif…) eşleşsin. */
-const MIN_STRUCTURAL_HITS = Math.min(5, Math.max(1, Number(process.env.WINNER_PATTERN_MIN_HITS) || 2));
+const MIN_STRUCTURAL_HITS = Math.min(5, Math.max(2, Number(process.env.WINNER_PATTERN_MIN_HITS) || 3));
 /** Bu benzerlik üstüyse daha az yapı taşı yeter. */
-const HIGH_SIM_ESCAPE = Math.min(92, Math.max(70, Number(process.env.WINNER_PATTERN_HIGH_SIM_ESCAPE) || 74));
-/** Listede en fazla kaç parite. */
-const MAX_SIMILAR_LISTED = Math.min(50, Math.max(5, Number(process.env.WINNER_PATTERN_MAX_MATCHES) || 14));
+const HIGH_SIM_ESCAPE = Math.min(92, Math.max(72, Number(process.env.WINNER_PATTERN_HIGH_SIM_ESCAPE) || 76));
+/** Listede en fazla kaç parite (gerçekçi: günde birkaç adet). */
+const MAX_SIMILAR_LISTED = Math.min(8, Math.max(2, Number(process.env.WINNER_PATTERN_MAX_MATCHES) || 5));
+/** Pencerede en az bir gün bu kadar günlük yükseliş yaşamış olmalı (ölü/volatilsiz eleyelim). */
+const MIN_MAX_SPIKE_DAY = Math.min(
+  0.5,
+  Math.max(0.025, Number(process.env.WINNER_PATTERN_MIN_MAX_DAY) || 0.04)
+);
 
 let cache = { at: 0, payload: null, error: null };
 
@@ -188,7 +193,7 @@ function buildPatternNarrativeTr(lookbackDays, sampleWinners, med) {
     `• Günlük mum aralığı (high−low) / fiyat ortalaması ≈ **%${ra}** (volatilite)\n` +
     `• Son gün hacmi, önceki ~20 güne göre medyanın ≈ **${vr}×** katı\n` +
     `• 5. gün sonu RSI ≈ **${rsi}**\n\n` +
-    `Aşağıdaki liste, **şu anki son 5 günü** bu profile sayısal olarak yakın olan paritelerdir. Yatırım tavsiyesi değildir.`
+    `Aşağıdaki kısa liste, **şu anki son 5 günü** bu profile en yakın ve geçmişte anlamlı tek günlük sıçrama göstermiş birkaç paritedir (çoklu liste yanıltıcı olmaması için sınırlı). Yatırım tavsiyesi değildir.`
   ).replace(/\*\*/g, '');
 }
 
@@ -302,12 +307,15 @@ async function computeWinnerPatternAnalysis(forceRefresh) {
     peers = ranked
       .map((d) => {
         if (!d.currentProfile) return null;
+        const maxDayR = Number(d.bestDayReturn);
+        if (!Number.isFinite(maxDayR) || maxDayR < MIN_MAX_SPIKE_DAY) return null;
         const sim = similarityScore(d.currentProfile, med, sig);
         const hits = countStructuralHits(d.currentProfile, med);
         return {
           symbol: d.symbol,
           similarity: sim,
           structuralHits: hits,
+          maxSingleDayPct: Math.round(maxDayR * 1000) / 10,
           longReturnPct: Math.round(d.longReturnPct * 100) / 100,
           features: {
             meanRet5d: Math.round(d.currentProfile.meanRet * 10000) / 10000,
@@ -320,7 +328,13 @@ async function computeWinnerPatternAnalysis(forceRefresh) {
         };
       })
       .filter(Boolean)
-      .sort((a, b) => b.similarity - a.similarity);
+      .sort((a, b) => {
+        const ds = b.similarity - a.similarity;
+        if (ds !== 0) return ds;
+        const dh = b.structuralHits - a.structuralHits;
+        if (dh !== 0) return dh;
+        return (b.maxSingleDayPct || 0) - (a.maxSingleDayPct || 0);
+      });
   }
 
   const topGainerSet = new Set(ranked.slice(0, topN).map((d) => d.symbol));
@@ -332,14 +346,22 @@ async function computeWinnerPatternAnalysis(forceRefresh) {
       const row = bySymbol.get(p.symbol);
       return hasMeaningfulRecentStructure(row?.currentProfile, medRef);
     })
+    .sort((a, b) => {
+      const ds = b.similarity - a.similarity;
+      if (ds !== 0) return ds;
+      const dh = b.structuralHits - a.structuralHits;
+      if (dh !== 0) return dh;
+      return (b.maxSingleDayPct || 0) - (a.maxSingleDayPct || 0);
+    })
     .slice(0, MAX_SIMILAR_LISTED);
 
   const patternNarrativeTr = buildPatternNarrativeTr(LOOKBACK_DAYS, archetype?.sampleWinners || 0, medRef);
 
   const filterSummaryTr =
-    `Liste daraltma: benzerlik ≥%${MIN_SIMILARITY}, en az ${MIN_STRUCTURAL_HITS} yapı taşı (hacim/RSI/aralık vb.) veya benzerlik ≥%${HIGH_SIM_ESCAPE}; ` +
-    'son 5 günü tamamen yatay/hacimsiz eşleşmeler elenir. En fazla ' +
-    `${MAX_SIMILAR_LISTED} parite. Railway’de WINNER_PATTERN_* ile ince ayar yapılabilir.`;
+    `Seçim sıkı: benzerlik ≥%${MIN_SIMILARITY}, en az ${MIN_STRUCTURAL_HITS} yapı taşı veya benzerlik ≥%${HIGH_SIM_ESCAPE}; ` +
+    `geçmişte en az bir gün ≥%${Math.round(MIN_MAX_SPIKE_DAY * 1000) / 10} tek günlük sıçrama kaydı; ` +
+    'son 5 gün “ölü yatay” profiller elenir. Liste kasıtlı olarak en fazla ' +
+    `${MAX_SIMILAR_LISTED} parite (günde birkaç güçlü aday gerçekçi). Ortam: WINNER_PATTERN_* .env.`;
 
   const payload = {
     ok: true,
@@ -357,8 +379,11 @@ async function computeWinnerPatternAnalysis(forceRefresh) {
       minStructuralHits: MIN_STRUCTURAL_HITS,
       highSimilarityEscape: HIGH_SIM_ESCAPE,
       maxMatches: MAX_SIMILAR_LISTED,
+      minMaxSingleDayPct: Math.round(MIN_MAX_SPIKE_DAY * 1000) / 10,
       distScale: SIM_DIST_SCALE
     },
+    selectionNoteTr:
+      'Liste uzun tutulmaz: piyasada günlük çok büyük sıçrayan parite sayısı doğal olarak düşüktür; yalnızca en sıkı eşleşen birkaç aday gösterilir.',
     filterSummaryTr,
     archetype,
     similarNow,

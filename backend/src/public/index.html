@@ -365,6 +365,8 @@ html[data-theme="light"] .kart{box-shadow:0 2px 10px rgba(15,30,60,0.06)}
 .gelir-narrative-box .gelir-narrative{font-size:12px;line-height:1.6;color:var(--text2);white-space:pre-wrap;word-break:break-word}
 .gelir-method{font-size:10px;color:var(--text3);line-height:1.45;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border)}
 .gelir-coin-sim{font-family:'Space Mono',monospace;font-size:13px;font-weight:800;color:var(--accent)}
+.gelir-wp-rank{flex-shrink:0;min-width:36px;height:36px;border-radius:11px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:12px;font-weight:800;color:var(--accent)}
+.gelir-wp-stat-row{font-size:10px;color:var(--text3);margin-top:6px;line-height:1.45}
 .gelir-coin-sub{font-size:11px;color:var(--text3);line-height:1.45;margin-top:8px}
 .gelir-coin-sub strong{color:var(--text1)}
 .gelir-tech-details summary{user-select:none}
@@ -2147,20 +2149,25 @@ function gelirBoardSymbolSet(){
 function gelirBuildSimilarCardsHtml(j, list){
   var lb=j.lookbackDays||730;
   var sim=list||[];
-  return sim.map(function(p){
+  return sim.map(function(p, idx){
     var base=String(p.symbol||'').replace(/USDT$/i,'');
     var safeBase=base.replace(/[^A-Z0-9]/g,'');
     var ret=p.longReturnPct!=null?p.longReturnPct:(p.return100d!=null?p.return100d:'—');
     var f=p.features||{};
-    var notes=(p.matchNotesTr||[]).slice(0,5).map(function(n){return'<li>'+escU(n)+'</li>';}).join('');
+    var maxDay=p.maxSingleDayPct!=null?p.maxSingleDayPct:'—';
+    var hits=p.structuralHits!=null?p.structuralHits:'—';
+    var notes=(p.matchNotesTr||[]).slice(0,3).map(function(n){return'<li>'+escU(n)+'</li>';}).join('');
     if(!notes)notes='<li>Profil benzerliği skorunda özetlenir.</li>';
     return'<div class="gelir-card" role="button" tabindex="0" onclick="gelirDetayAc(\''+safeBase+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();gelirDetayAc(\''+safeBase+'\')}">'+
       '<div class="gelir-card-top">'+
-        '<div><div style="font-family:\'Space Mono\',monospace;font-size:17px;font-weight:800">'+escU(base)+'</div>'+
-        '<div class="gelir-coin-sub">Son '+lb+' gün toplam getiri: <strong>'+ret+'%</strong> · 5g RSI '+escU(String(f.rsi!=null?f.rsi:'—'))+' · hacim oranı '+escU(String(f.volRatio!=null?f.volRatio:'—'))+'×</div></div>'+
-        '<span class="gelir-coin-sim">'+p.similarity+'%</span></div>'+
+        '<div class="gelir-wp-rank" aria-hidden="true">'+(idx+1)+'</div>'+
+        '<div style="flex:1;min-width:0">'+
+          '<div style="font-family:\'Space Mono\',monospace;font-size:17px;font-weight:800">'+escU(base)+'</div>'+
+          '<div class="gelir-wp-stat-row">Son '+lb+' günde kayıtlı tek günlük max: <strong style="color:var(--text2)">+'+escU(String(maxDay))+'%</strong> · yapı taşı '+escU(String(hits))+' · 5g RSI '+escU(String(f.rsi!=null?f.rsi:'—'))+' · hacim ×'+escU(String(f.volRatio!=null?f.volRatio:'—'))+'</div>'+
+          '<div class="gelir-coin-sub">Son '+lb+' gün toplam getiri: <strong>'+ret+'%</strong></div></div>'+
+        '<span class="gelir-coin-sim" title="Ralli öncesi profile yakınlık">'+p.similarity+'%</span></div>'+
       '<ul class="gelir-analiz">'+notes+'</ul>'+
-      '<div class="gelir-card-foot">Tam analiz için dokun → Analiz merkezi</div></div>';
+      '<div class="gelir-card-foot">Tam analiz → Analiz merkezi</div></div>';
   }).join('');
 }
 function gelirRefilterBoardOnly(){
@@ -2178,7 +2185,7 @@ function gelirRefilterBoardOnly(){
     });
   }
   var cards=gelirBuildSimilarCardsHtml(j, list);
-  var minSim=j.listFilters&&j.listFilters.minSimilarity!=null?j.listFilters.minSimilarity:64;
+  var minSim=j.listFilters&&j.listFilters.minSimilarity!=null?j.listFilters.minSimilarity:69;
   if(!cards){
     if(chk&&chk.checked&&full.length){
       cards='<p style="font-size:12px;color:var(--text3);line-height:1.55">Sinyal tahtasında (bu taramada) eşleşen parite yok. Kutuyu kapatıp tüm listeyi görebilirsiniz.</p>';
@@ -2213,7 +2220,7 @@ function gelirWinnerPattern(refresh){
       if(meta){
         meta.textContent=(j.cached?'Önbellek · ':'Yeni · ')+new Date(j.updatedAt).toLocaleString('tr-TR')+(j.lookbackDays?' · '+j.lookbackDays+'g pencere':'');
       }
-      if(note)note.textContent=[j.filterSummaryTr,j.note].filter(Boolean).join(' ');
+      if(note)note.textContent=[j.selectionNoteTr,j.filterSummaryTr,j.note].filter(Boolean).join(' ');
       var narr=String(j.patternNarrativeTr||j.note||'Özet hazırlanıyor…');
       var method=String(j.methodNoteTr||'');
       var arch=j.archetype;
@@ -2228,7 +2235,7 @@ function gelirWinnerPattern(refresh){
       out.innerHTML='<div class="gelir-narrative-box"><div class="gelir-narrative">'+escU(narr)+'</div>'+
         (method?'<p class="gelir-method">'+escU(method)+'</p>':'')+'</div>'+
         archTech+
-        '<div class="section-hdr" style="font-size:12px;margin-bottom:8px">Şu an aynı gelişim profiline yakın pariteler</div>'+
+        '<div class="section-hdr" style="font-size:12px;margin-bottom:8px">Büyük sıçramaya en yakın seçilmiş adaylar</div>'+
         '<div id="gelir-wp-cards"></div>'+
         '<p style="font-size:10px;color:var(--text3);margin-top:14px;line-height:1.45">İşlem süresi: '+(j.durationMs!=null?Math.round(j.durationMs/1000)+' sn':'—')+' · İşlenen parite: '+(j.symbolCount||'—')+'</p>';
       gelirRefilterBoardOnly();
