@@ -6,4 +6,4 @@ NODE_VERSION = "20"
 cmds = ["npm ci --omit=dev || npm install --omit=dev"]
 
 [start]
-cmd = "node src/index.js"
+cmd = "npm start"

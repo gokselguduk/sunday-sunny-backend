@@ -1,9 +1,9 @@
-# Railway: Root Directory = repo kökü (.) iken kullanılır.
+# Kök npm install: monoreposta postinstall backend’i kurar; yalnızca backend kökünde de çalışır.
 [variables]
 NODE_VERSION = "20"
 
 [phases.install]
-cmds = ["cd backend && (npm ci --omit=dev || npm install --omit=dev)"]
+cmds = ["npm install --omit=dev"]
 
 [start]
-cmd = "node backend/src/index.js"
+cmd = "npm start"

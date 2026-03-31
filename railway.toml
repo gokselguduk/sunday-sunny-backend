@@ -1,9 +1,8 @@
-# Root Directory = "." (repo kökü) — Nixpacks + kök nixpacks.toml
-# Docker kullanmak istersen: builder = "DOCKERFILE" + dockerfilePath = "Dockerfile"
+# NIXPACKS. Start: npm start — monorepo kökünde ./backend’e yönlendirir;
+# Railway Root Directory = backend iken de aynı package.json node src/index.js çalıştırır.
 [build]
 builder = "NIXPACKS"
 
 [deploy]
-# Kabuk yok: "cd" tek başına çalışmaz. Repo kökünden backend giriş dosyası:
-startCommand = "node backend/src/index.js"
+startCommand = "npm start"
 restartPolicyType = "ON_FAILURE"
