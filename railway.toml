@@ -4,5 +4,6 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "cd backend && node src/index.js"
+# Kabuk yok: "cd" tek başına çalışmaz. Repo kökünden backend giriş dosyası:
+startCommand = "node backend/src/index.js"
 restartPolicyType = "ON_FAILURE"
