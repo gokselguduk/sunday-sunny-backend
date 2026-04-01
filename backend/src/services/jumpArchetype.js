@@ -24,7 +24,10 @@ const LIVE_POOL_MULT = Math.min(5, Math.max(1, Math.floor(Number(process.env.JUM
 const MIN_TRAINING_SAMPLES = Math.max(12, Math.floor(Number(process.env.JUMP_ARCHETYPE_MIN_SAMPLES) || 24));
 const PROMISE_PEER_SIM_GAP = Math.min(25, Math.max(5, Number(process.env.JUMP_ARCHETYPE_PROMISE_GAP) || 14));
 
-let cache = { at: 0, payload: null };
+const caches = {
+  default: { at: 0, payload: null },
+  bigspike: { at: 0, payload: null }
+};
 
 function median(arr) {
   const a = [...arr].filter((x) => Number.isFinite(x)).sort((x, y) => x - y);
@@ -306,7 +309,58 @@ function buildFollowThroughTr(ft, spikePct) {
   );
 }
 
-async function computeJumpArchetypeAnalysis(forceRefresh) {
+function resolveJumpOpts(opts = {}) {
+  const key = opts.cacheKey === 'bigspike' ? 'bigspike' : 'default';
+  return {
+    cacheKey: key,
+    spikeMinDayPct: Math.min(
+      95,
+      Math.max(5, Number(opts.spikeMinDayPct) || SPIKE_MIN_DAY_PCT)
+    ),
+    minSimilarity: Math.min(95, Math.max(52, Number(opts.minSimilarity) || MIN_SIMILARITY)),
+    minStructuralHits: Math.min(5, Math.max(1, Number(opts.minStructuralHits) || MIN_STRUCTURAL_HITS)),
+    highSimEscape: Math.min(92, Math.max(70, Number(opts.highSimEscape) || HIGH_SIM_ESCAPE)),
+    maxListed: Math.min(60, Math.max(3, Number(opts.maxListed) || MAX_LISTED)),
+    livePoolMult: Math.min(5, Math.max(1, Math.floor(Number(opts.livePoolMult) || LIVE_POOL_MULT))),
+    minTrainingSamples: Math.max(8, Math.floor(Number(opts.minTrainingSamples) || MIN_TRAINING_SAMPLES)),
+    variant: opts.variant || (key === 'bigspike' ? 'bigspike' : 'default')
+  };
+}
+
+function buildBigSpikeCard(c, archetype) {
+  const f = c.features || {};
+  const cum = Number.isFinite(f.cumRet5d) ? Math.round(f.cumRet5d * 10000) / 100 : null;
+  const vr = f.volRatio != null ? Number(f.volRatio) : null;
+  const ra = f.rangeAvg != null ? Number(f.rangeAvg) : null;
+  let riseStyleTr =
+    'Geçmiş büyük sıçramalarda bu profile yakın kurulumlar; tek günlük hamle veya birkaç gün süren trend birlikte görülebilir.';
+  if (vr != null && ra != null && vr >= 1.35 && ra >= 0.1) {
+    riseStyleTr =
+      'Yüksek ön-gün hacim ve geniş günlük aralık — geçmişte sık: sert / patlamalı günlük hareket profiline yakın.';
+  } else if (vr != null && vr >= 1.15) {
+    riseStyleTr = 'Hacim tarafı güçlü — ilgi artışı ile uyumlu; yükseliş şekli yine de habere bağlıdır.';
+  }
+  const medSp = archetype?.historicalMedianSpikePct;
+  const p75Sp = archetype?.historicalP75SpikePct;
+  return {
+    targetHorizonTr:
+      'Kurulum günlük mumdadır; tipik yoğunluk çoğu zaman 24–72 saat bandında (kesin süre yok; borsa saatleri ve likiditeye bağlı).',
+    targetMoveTr:
+      medSp != null && p75Sp != null
+        ? `Geçmiş benzer ön-profil olaylarında tek günlük sıçrama: medyan ~%${medSp}, üst çeyrek ~%${p75Sp} (vaat değil, dağılım özeti).`
+        : 'Geçmiş benzer profillerdeki sıçrama büyüklüğü üstteki “vaat” sütunlarından okunur.',
+    riseStyleTr,
+    bulletsTr: [
+      cum != null ? `Son 5 işlem günü kümülatif (yaklaşık): %${cum}` : null,
+      c.spikePromisePct != null ? `Benzer geçmişte medyan sıçrama: ~%${c.spikePromisePct}` : null,
+      c.live24hPct != null ? `Şu an 24s: %${c.live24hPct}` : null
+    ].filter(Boolean)
+  };
+}
+
+async function computeJumpArchetypeAnalysis(forceRefresh, opts = {}) {
+  const cfg = resolveJumpOpts(opts);
+  const cache = caches[cfg.cacheKey];
   const now = Date.now();
   if (!forceRefresh && cache.payload && now - cache.at < CACHE_MS) {
     return { ...cache.payload, cached: true };
@@ -316,7 +370,7 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
   const coins = await binance.getTRYCoins();
   const winLen = 5;
   const limit = Math.min(1500, LOOKBACK_DAYS + 40);
-  const spikeTh = SPIKE_MIN_DAY_PCT / 100;
+  const spikeTh = cfg.spikeMinDayPct / 100;
 
   /** @type {{symbol:string,profile:object,spikeReturn:number,simToArchetype?:number}[]} */
   const training = [];
@@ -362,14 +416,14 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
     await binance.bekle(BETWEEN_MS);
   }
 
-  if (training.length < MIN_TRAINING_SAMPLES) {
+  if (training.length < cfg.minTrainingSamples) {
     return {
       ok: false,
       error: 'Yetersiz örnek',
-      detailTr: `Seçilen pencerede ve ≥%${SPIKE_MIN_DAY_PCT} günlük sıçrama eşiğinde yalnızca ${training.length} olay bulundu (minimum ${MIN_TRAINING_SAMPLES}). Eşiği düşürmek için JUMP_ARCHETYPE_MIN_DAY_PCT kullanın.`,
+      detailTr: `Seçilen pencerede ve ≥%${cfg.spikeMinDayPct} günlük sıçrama eşiğinde yalnızca ${training.length} olay bulundu (minimum ${cfg.minTrainingSamples}). Eşiği veya BIG_SPIKE_* / JUMP_ARCHETYPE_MIN_DAY_PCT ile ayarlayın.`,
       trainingSamples: training.length,
       lookbackDays: LOOKBACK_DAYS,
-      spikeMinDayPct: SPIKE_MIN_DAY_PCT
+      spikeMinDayPct: cfg.spikeMinDayPct
     };
   }
 
@@ -425,18 +479,18 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
     spikeDayMedian,
     trainingEvents: enriched.length,
     distinctPairs: uniqueSyms,
-    spikeMinDayPct: SPIKE_MIN_DAY_PCT,
+    spikeMinDayPct: cfg.spikeMinDayPct,
     historicalMedianSpikePct: Math.round(globalMedianSpike * 100) / 100,
     historicalP75SpikePct: Math.round(globalP75Spike * 100) / 100
   };
 
   const followThrough = summarizeFollowThrough(followStats);
   archetype.spikeFollowThrough = followThrough;
-  const followThroughTr = buildFollowThroughTr(followThrough, SPIKE_MIN_DAY_PCT);
+  const followThroughTr = buildFollowThroughTr(followThrough, cfg.spikeMinDayPct);
 
   const roleModelTr = buildJumpRoleModelTr({
     lookbackDays: LOOKBACK_DAYS,
-    spikePct: SPIKE_MIN_DAY_PCT,
+    spikePct: cfg.spikeMinDayPct,
     trainingN: enriched.length,
     flowN,
     pre5d: archetype.median,
@@ -446,7 +500,7 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
   const roleModelFullTr = [roleModelTr, followThroughTr].filter(Boolean).join('\n\n');
 
   const narrativeTr =
-    `Son **${LOOKBACK_DAYS} gün** ve **${uniqueSyms}** paritede toplam **${enriched.length}** adet günlük sıçrama (≥**%${SPIKE_MIN_DAY_PCT}** tek gün kapanış hareketi) tarandı. ` +
+    `Son **${LOOKBACK_DAYS} gün** ve **${uniqueSyms}** paritede toplam **${enriched.length}** adet günlük sıçrama (≥**%${cfg.spikeMinDayPct}** tek gün kapanış hareketi) tarandı. ` +
     `Her sıçramadan hemen önceki **5 işlem gününün** ortak özeti aşağıdaki teknik medyandır. ` +
     `Geçmişte bu havuzdaki sıçramaların tipik büyüklüğü: medyan **%${archetype.historicalMedianSpikePct}**, üst çeyrek **%${archetype.historicalP75SpikePct}**. ` +
     `Liste: şu anki son 5 günü bu küresel profile yakın olan pariteler; “vaat” sütunu, geçmişte benzer profile sahip olaylarda görülen sıçrama büyüklüğünün medyanıdır (gelecek garantisi değildir). Zaman: **günlük mum** — tanım gereği sıçrama, 5 günlük pencerenin **ertesi işlem gününde** ölçüldü.`;
@@ -480,10 +534,10 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
 
   peers.sort((a, b) => b.similarity - a.similarity);
 
-  const poolLimit = Math.min(peers.length, Math.ceil(MAX_LISTED * LIVE_POOL_MULT));
+  const poolLimit = Math.min(peers.length, Math.ceil(cfg.maxListed * cfg.livePoolMult));
   const pool = peers
-    .filter((p) => p.similarity >= MIN_SIMILARITY)
-    .filter((p) => p.structuralHits >= MIN_STRUCTURAL_HITS || p.similarity >= HIGH_SIM_ESCAPE)
+    .filter((p) => p.similarity >= cfg.minSimilarity)
+    .filter((p) => p.structuralHits >= cfg.minStructuralHits || p.similarity >= cfg.highSimEscape)
     .filter((p) => {
       const row = bySymbol.get(p.symbol);
       return hasMeaningfulRecentStructure(row?.currentProfile, med);
@@ -518,17 +572,29 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
   });
 
   withLive.sort((a, b) => b.potentialBlend - a.potentialBlend);
-  const candidates = withLive.slice(0, MAX_LISTED);
+  const candidates = withLive.slice(0, cfg.maxListed);
+
+  const candidatesWithCards =
+    cfg.variant === 'bigspike'
+      ? candidates.map((c) => ({ ...c, card: buildBigSpikeCard(c, archetype) }))
+      : candidates;
 
   const methodNoteTr =
-    `Tüm TR USDT-M perpetual pariteleri taranır; tek gün kapanış getirisi ≥%${SPIKE_MIN_DAY_PCT} olan her gün “sıçrama” sayılır ve önceki 5 gün profili havuza eklenir. ` +
+    `Tüm TR USDT-M perpetual pariteleri taranır; tek gün kapanış getirisi ≥%${cfg.spikeMinDayPct} olan her gün “sıçrama” sayılır ve önceki 5 gün profili havuza eklenir. ` +
     'Günlük mumdan ayrıca quote volume, işlem sayısı ve taker buy (agresif alım) okunur; rol modeli bunların sıçrama günü medyanlarını özetler. ' +
     'Arketip medyan + sapmadır. Vaat: benzer geçmiş profillerdeki sıçrama büyüklüğünün medyanı. ' +
     'Liste sırası: Binance **24 saatlik** ticker + profil benzerliği (anlık; günlük modelle birlikte okunmalı).';
 
   const filterSummaryTr =
-    `Ön süzgeç: benzerlik ≥%${MIN_SIMILARITY}, yapı taşı ≥${MIN_STRUCTURAL_HITS} (veya ≥%${HIGH_SIM_ESCAPE}), yatay 5g elendi. ` +
-    `Canlı sıralama: ${LIVE_POOL_MULT}× havuzdan en iyi ${MAX_LISTED} satır. Ortam: JUMP_ARCHETYPE_* .`;
+    `Ön süzgeç: benzerlik ≥%${cfg.minSimilarity}, yapı taşı ≥${cfg.minStructuralHits} (veya ≥%${cfg.highSimEscape}), yatay 5g elendi. ` +
+    `Canlı sıralama: ${cfg.livePoolMult}× havuzdan en iyi ${cfg.maxListed} satır. Ortam: JUMP_ARCHETYPE_* / BIG_SPIKE_* .`;
+
+  const alertBannerTr =
+    cfg.variant === 'bigspike'
+      ? candidatesWithCards.length > 0
+        ? `${candidatesWithCards.length} parite ≥%${cfg.spikeMinDayPct} büyük sıçrama ön-profil arketipine yakın — kartlarda hedef süre / yükseliş özeti.`
+        : `Şu an ≥%${cfg.spikeMinDayPct} modeline uygun aday yok veya filtreler sıkı.`
+      : null;
 
   const payload = {
     ok: true,
@@ -537,6 +603,7 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
     lookbackDays: LOOKBACK_DAYS,
     symbolCount: bySymbol.size,
     durationMs: Date.now() - started,
+    variant: cfg.variant,
     narrativeTr: narrativeTr.replace(/\*\*/g, ''),
     roleModelTr: roleModelFullTr,
     followThrough,
@@ -545,27 +612,50 @@ async function computeJumpArchetypeAnalysis(forceRefresh) {
     filterSummaryTr,
     horizonNoteTr,
     listFilters: {
-      minSimilarity: MIN_SIMILARITY,
-      minStructuralHits: MIN_STRUCTURAL_HITS,
-      highSimilarityEscape: HIGH_SIM_ESCAPE,
-      maxMatches: MAX_LISTED,
-      spikeMinDayPct: SPIKE_MIN_DAY_PCT
+      minSimilarity: cfg.minSimilarity,
+      minStructuralHits: cfg.minStructuralHits,
+      highSimilarityEscape: cfg.highSimEscape,
+      maxMatches: cfg.maxListed,
+      spikeMinDayPct: cfg.spikeMinDayPct
     },
     archetype,
-    candidates,
+    candidates: candidatesWithCards,
+    alertActive: cfg.variant === 'bigspike' && candidatesWithCards.length > 0,
+    alertBannerTr,
     note: 'Yatırım tavsiyesi değildir. Geçmiş dağılım geleceği göstermez; likidite ve haber fiyatı değiştirir.'
   };
 
-  cache = { at: Date.now(), payload };
+  caches[cfg.cacheKey] = { at: Date.now(), payload };
   return payload;
 }
 
+async function computeBigSpikeWatchAnalysis(forceRefresh) {
+  return computeJumpArchetypeAnalysis(forceRefresh, {
+    cacheKey: 'bigspike',
+    spikeMinDayPct: Math.min(90, Math.max(35, Number(process.env.BIG_SPIKE_MIN_DAY_PCT) || 50)),
+    minSimilarity: Math.min(92, Math.max(50, Number(process.env.BIG_SPIKE_MIN_SIMILARITY) || 58)),
+    minStructuralHits: Math.min(5, Math.max(1, Number(process.env.BIG_SPIKE_MIN_HITS) || 2)),
+    highSimEscape: Math.min(92, Math.max(68, Number(process.env.BIG_SPIKE_HIGH_SIM_ESCAPE) || 72)),
+    maxListed: Math.min(12, Math.max(3, Number(process.env.BIG_SPIKE_MAX_MATCHES) || 6)),
+    livePoolMult: Math.min(4, Math.max(1, Math.floor(Number(process.env.BIG_SPIKE_LIVE_POOL_MULT) || 2))),
+    minTrainingSamples: Math.max(10, Math.floor(Number(process.env.BIG_SPIKE_MIN_SAMPLES) || 18)),
+    variant: 'bigspike'
+  });
+}
+
+function getCachedBigSpikeWatch() {
+  if (caches.bigspike.payload) return { ...caches.bigspike.payload, cached: true };
+  return null;
+}
+
 function getCachedJumpArchetype() {
-  if (cache.payload) return { ...cache.payload, cached: true };
+  if (caches.default.payload) return { ...caches.default.payload, cached: true };
   return null;
 }
 
 module.exports = {
   computeJumpArchetypeAnalysis,
-  getCachedJumpArchetype
+  getCachedJumpArchetype,
+  computeBigSpikeWatchAnalysis,
+  getCachedBigSpikeWatch
 };

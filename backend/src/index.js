@@ -316,6 +316,30 @@ app.get('/api/analytics/jump-candidates', async (req, res) => {
   }
 });
 
+/**
+ * Gelir+ ile aynı sayfada: ≥%50 (varsayılan) tek günlük sıçrama öncesi 5g arketipi;
+ * uyumlu pariteler için hedef süre / yükseliş şekli kartları (BIG_SPIKE_* env).
+ */
+app.get('/api/analytics/big-spike-watch', async (req, res) => {
+  const refresh = req.query.refresh === '1' || req.query.refresh === 'true';
+  try {
+    if (refresh) {
+      const data = await jumpArchetype.computeBigSpikeWatchAnalysis(true);
+      return res.json(data);
+    }
+    const cached = jumpArchetype.getCachedBigSpikeWatch();
+    if (cached) return res.json(cached);
+    return res.json({
+      ok: false,
+      needsRefresh: true,
+      message:
+        'Büyük sıçrama modeli önbellekte yok. Gelir+ sayfasında “Modeli hesapla / yenile” ile başlatın (birkaç dakika sürebilir).'
+    });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message || 'big-spike-watch hatası' });
+  }
+});
+
 app.post('/api/prices/bulk', async (req, res) => {
   const symbols = Array.isArray(req.body?.symbols) ? req.body.symbols : [];
   if (!symbols.length) {

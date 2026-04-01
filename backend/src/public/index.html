@@ -367,6 +367,8 @@ html[data-theme="light"] .kart{box-shadow:0 2px 10px rgba(15,30,60,0.06)}
 .gelir-coin-sim{font-family:'Space Mono',monospace;font-size:13px;font-weight:800;color:var(--accent)}
 .gelir-wp-rank{flex-shrink:0;min-width:36px;height:36px;border-radius:11px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;font-size:12px;font-weight:800;color:var(--accent)}
 .gelir-wp-stat-row{font-size:10px;color:var(--text3);margin-top:6px;line-height:1.45}
+.gelir-bs-alert{border:1px solid rgba(255,193,7,0.45);background:rgba(255,193,7,0.08);border-radius:12px;padding:10px 14px;margin:0 16px 12px;font-size:12px;color:var(--text2);line-height:1.5}
+.gelir-bs-card .gelir-card-top{border-bottom-color:rgba(255,193,7,0.25)}
 .gelir-coin-sub{font-size:11px;color:var(--text3);line-height:1.45;margin-top:8px}
 .gelir-coin-sub strong{color:var(--text1)}
 .gelir-tech-details summary{user-select:none}
@@ -602,6 +604,18 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
     </div>
     <p style="font-size:10px;color:var(--text3);line-height:1.45;margin:0 16px 10px" id="gelir-wp-note"></p>
     <div style="padding:0 16px 24px" id="gelir-wp-out"><p style="font-size:12px;color:var(--text3)">Veri yükleniyor…</p></div>
+
+    <div class="section-hdr" style="margin-top:8px;padding-top:16px;border-top:1px solid var(--border)">Büyük sıçrama izleme</div>
+    <div style="padding:0 16px 10px">
+      <p style="font-size:12px;color:var(--text2);line-height:1.55">Son ~2 yılda <strong>tek gün ≥%50</strong> sıçramaların <strong>hemen öncesi 5 işlem günü</strong> profilinden çıkan arketip; şu anki son 5 gün bu yapıya yakınsa uyarı ve kart gösterilir. <strong>Hedef süre / yükseliş</strong> geçmiş benzer olayların dağılımına dayanır; garanti değildir.</p>
+    </div>
+    <div style="padding:0 16px 12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <button type="button" class="filtre-btn" id="gelir-bs-btn" onclick="gelirBigSpikeFetch(true)">Büyük sıçrama modelini hesapla / yenile</button>
+      <span class="btc-live" id="gelir-bs-meta" style="font-size:10px"><span id="gelir-bs-meta-txt">Önbellek yok</span></span>
+    </div>
+    <div id="gelir-bs-alert" class="gelir-bs-alert" style="display:none" role="status"></div>
+    <p style="font-size:10px;color:var(--text3);line-height:1.45;margin:0 16px 10px" id="gelir-bs-note"></p>
+    <div style="padding:0 16px 24px" id="gelir-bs-out"><p style="font-size:12px;color:var(--text3)">Gelir+ ile birlikte yüklenir veya yukarıdaki düğmeyi kullanın.</p></div>
   </div>
 
   <div class="page" id="page-analiz">
@@ -1960,7 +1974,7 @@ function sayfa(id,btn){
   if(id==='nakit')void loadNakitTab();
   if(id==='analiz')void analizPageEnter();
   if(id==='harita'){window.scrollTo(0,0);void renderHaritaPage();}
-  if(id==='gelir')void gelirWinnerPattern(false);
+  if(id==='gelir'){void gelirWinnerPattern(false);void gelirBigSpikeFetch(false);}
   if(id==='dashboard'){refreshDashHaritaUi();}
   if(id==='rapor'){
     renderRapor();
@@ -2242,6 +2256,80 @@ function gelirWinnerPattern(refresh){
     })
     .catch(function(){
       if(refresh&&btn){btn.disabled=false;btn.textContent='Hesapla / yenile';}
+      if(out)out.innerHTML='<p style="color:var(--red);font-size:12px">İstek başarısız</p>';
+    });
+}
+function gelirBuildBigSpikeCardsHtml(list){
+  var rows=list||[];
+  return rows.map(function(p){
+    var base=String(p.symbol||'').replace(/USDT$/i,'');
+    var safeBase=base.replace(/[^A-Z0-9]/g,'');
+    var card=p.card||{};
+    var bullets=(card.bulletsTr||[]).map(function(b){return'<li>'+escU(b)+'</li>';}).join('');
+    if(!bullets)bullets='<li>Profil ve 24s verisi kartta özetlenir.</li>';
+    return'<div class="gelir-card gelir-bs-card" role="button" tabindex="0" onclick="gelirDetayAc(\''+safeBase+'\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();gelirDetayAc(\''+safeBase+'\')}">'+
+      '<div class="gelir-card-top">'+
+        '<div><div style="font-family:\'Space Mono\',monospace;font-size:16px;font-weight:800">'+escU(base)+'</div>'+
+        '<div class="gelir-coin-sub">Benzerlik <strong>'+escU(String(p.similarity))+'%</strong> · Vaat (medyan) <strong>%'+escU(String(p.spikePromisePct!=null?p.spikePromisePct:'—'))+'</strong> · Üst çeyrek <strong>%'+escU(String(p.spikePromiseP75Pct!=null?p.spikePromiseP75Pct:'—'))+'</strong> · 24s <strong>'+(p.live24hPct!=null&&Number.isFinite(Number(p.live24hPct))?(Number(p.live24hPct)>=0?'+':'')+Number(p.live24hPct).toFixed(2):'—')+'%</strong></div></div>'+
+        '<span class="gelir-coin-sim" title="Ön-profil uyumu">'+escU(String(p.similarity))+'%</span></div>'+
+      '<ul class="gelir-analiz" style="margin-bottom:0">'+
+        '<li><strong>Hedef süre (özet):</strong> '+escU(card.targetHorizonTr||'—')+'</li>'+
+        '<li><strong>Hedef yükseliş (geçmiş dağılım):</strong> '+escU(card.targetMoveTr||'—')+'</li>'+
+        '<li><strong>Yükseliş şekli:</strong> '+escU(card.riseStyleTr||'—')+'</li>'+
+      '</ul>'+
+      '<ul class="gelir-analiz" style="margin-top:8px;padding-top:0">'+bullets+'</ul>'+
+      '<div class="gelir-card-foot">Detaylı analiz → Analiz merkezi</div></div>';
+  }).join('');
+}
+function gelirBigSpikeFetch(refresh){
+  var out=document.getElementById('gelir-bs-out');
+  var note=document.getElementById('gelir-bs-note');
+  var meta=document.getElementById('gelir-bs-meta-txt');
+  var btn=document.getElementById('gelir-bs-btn');
+  var alertEl=document.getElementById('gelir-bs-alert');
+  var url=BASE_URL+'/api/analytics/big-spike-watch'+(refresh?'?refresh=1':'');
+  if(refresh&&btn){btn.disabled=true;btn.textContent='Hesaplanıyor…';}
+  fetch(url)
+    .then(function(r){return r.json();})
+    .then(function(j){
+      if(refresh&&btn){btn.disabled=false;btn.textContent='Büyük sıçrama modelini hesapla / yenile';}
+      if(!out)return;
+      if(j.needsRefresh){
+        if(meta)meta.textContent='Önbellek yok';
+        if(note)note.textContent=j.message||'';
+        if(alertEl){alertEl.style.display='none';alertEl.textContent='';}
+        if(!refresh)out.innerHTML='<p style="font-size:12px;color:var(--text3)">Önbellek boş. Yukarıdan hesaplamayı başlatın (birkaç dakika sürebilir).</p>';
+        return;
+      }
+      if(j.ok===false){
+        out.innerHTML='<p style="color:var(--amber);font-size:12px;line-height:1.5">'+(j.detailTr||j.error||'Hata')+'</p>';
+        if(alertEl){alertEl.style.display='none';}
+        return;
+      }
+      if(meta){
+        meta.textContent=(j.cached?'Önbellek · ':'Yeni · ')+new Date(j.updatedAt).toLocaleString('tr-TR')+(j.lookbackDays?' · '+j.lookbackDays+'g':'')+
+          (j.archetype&&j.archetype.trainingEvents!=null?' · '+j.archetype.trainingEvents+' eğitim olayı':'');
+      }
+      if(note)note.textContent=[j.alertBannerTr,j.filterSummaryTr,j.horizonNoteTr,j.note].filter(Boolean).join(' ');
+      if(alertEl){
+        alertEl.style.display='block';
+        alertEl.style.opacity='1';
+        alertEl.textContent=j.alertBannerTr||'';
+        if(!j.alertBannerTr)alertEl.style.display='none';
+      }
+      var minSp=j.listFilters&&j.listFilters.spikeMinDayPct!=null?j.listFilters.spikeMinDayPct:50;
+      var arch=j.archetype||{};
+      var archLine='';
+      if(arch.historicalMedianSpikePct!=null){
+        archLine='<p style="font-size:10px;color:var(--text3);margin:0 0 10px;line-height:1.45">Arketip eşik ≥%'+escU(String(minSp))+' günlük sıçrama · Geçmiş medyan sıçrama <strong>%'+escU(String(arch.historicalMedianSpikePct))+'</strong> · Üst çeyrek <strong>%'+escU(String(arch.historicalP75SpikePct))+'</strong></p>';
+      }
+      var cards=gelirBuildBigSpikeCardsHtml(j.candidates||[]);
+      if(!cards)cards='<p style="font-size:11px;color:var(--text3)">Şu an bu profile yakın parite yok veya filtreler sıkı.</p>';
+      out.innerHTML=archLine+cards+
+        '<p style="font-size:10px;color:var(--text3);margin-top:14px;line-height:1.45">İşlem süresi: '+(j.durationMs!=null?Math.round(j.durationMs/1000)+' sn':'—')+' · Parite: '+(j.symbolCount||'—')+'</p>';
+    })
+    .catch(function(){
+      if(refresh&&btn){btn.disabled=false;btn.textContent='Büyük sıçrama modelini hesapla / yenile';}
       if(out)out.innerHTML='<p style="color:var(--red);font-size:12px">İstek başarısız</p>';
     });
 }
