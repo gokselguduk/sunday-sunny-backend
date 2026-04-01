@@ -327,6 +327,99 @@ function resolveJumpOpts(opts = {}) {
   };
 }
 
+function seededRand(seed) {
+  let s = (seed | 0) >>> 0;
+  return () => {
+    s = (Math.imul(s, 1103515245) + 12345) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+function randn(rand) {
+  let u = 0;
+  let v = 0;
+  while (u === 0) u = rand();
+  while (v === 0) v = rand();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function percentileOfSorted(sorted, p) {
+  if (!sorted.length) return null;
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor(p * (sorted.length - 1))));
+  return sorted[idx];
+}
+
+/**
+ * Son günlük kapanışlardan 5 işlem günü ileri: GBM (30g) + bootstrap (60g log-getiri).
+ */
+function computeForwardSim5d(closes, symbol) {
+  if (!closes || closes.length < 40) return null;
+  const S0 = closes[closes.length - 1];
+  if (!Number.isFinite(S0) || S0 <= 0) return null;
+
+  const rets = [];
+  for (let i = 1; i < closes.length; i++) {
+    if (closes[i - 1] > 0) rets.push(Math.log(closes[i] / closes[i - 1]));
+  }
+  if (rets.length < 25) return null;
+
+  const w = rets.slice(-30);
+  const mu = w.reduce((a, b) => a + b, 0) / w.length;
+  const m2 = w.reduce((s, x) => s + (x - mu) ** 2, 0) / Math.max(1, w.length - 1);
+  let sig = Math.sqrt(m2);
+  if (!Number.isFinite(sig) || sig < 1e-8) sig = 0.02;
+
+  const seed =
+    String(symbol)
+      .split('')
+      .reduce((a, ch) => a + ch.charCodeAt(0), 0) + Math.floor(S0 * 1e9);
+  const rand = seededRand(seed);
+  const randB = seededRand(seed + 7919);
+
+  const gbmPaths = Math.min(8000, Math.max(500, Number(process.env.BIG_SPIKE_SIM_GBM_PATHS) || 2500));
+  const bootPaths = Math.min(5000, Math.max(300, Number(process.env.BIG_SPIKE_SIM_BOOT_PATHS) || 1500));
+  const horizon = 5;
+
+  const terminal = [];
+  for (let p = 0; p < gbmPaths; p++) {
+    let s = S0;
+    for (let d = 0; d < horizon; d++) {
+      s *= Math.exp(mu - (sig * sig) / 2 + sig * randn(rand));
+    }
+    terminal.push(s);
+  }
+  terminal.sort((a, b) => a - b);
+  const pct = (x) => ((x - S0) / S0) * 100;
+  const gbmMed = pct(percentileOfSorted(terminal, 0.5));
+  const gbmP5 = pct(percentileOfSorted(terminal, 0.05));
+  const gbmP95 = pct(percentileOfSorted(terminal, 0.95));
+
+  const pool = rets.slice(-60);
+  const boot = [];
+  for (let p = 0; p < bootPaths; p++) {
+    let s = S0;
+    for (let d = 0; d < horizon; d++) {
+      s *= Math.exp(pool[Math.floor(randB() * pool.length)]);
+    }
+    boot.push(s);
+  }
+  boot.sort((a, b) => a - b);
+  const bMed = pct(percentileOfSorted(boot, 0.5));
+  const bP5 = pct(percentileOfSorted(boot, 0.05));
+  const bP95 = pct(percentileOfSorted(boot, 0.95));
+
+  return {
+    horizonDays: horizon,
+    lastClose: Math.round(S0 * 1e8) / 1e8,
+    gbmMedianPctFromLast: Math.round(gbmMed * 100) / 100,
+    gbmBandPctP5P95: [Math.round(gbmP5 * 100) / 100, Math.round(gbmP95 * 100) / 100],
+    bootstrapMedianPct: Math.round(bMed * 100) / 100,
+    bootstrapBandPctP5P95: [Math.round(bP5 * 100) / 100, Math.round(bP95 * 100) / 100],
+    compareTr:
+      'Tek günlük “vaat” (geçmiş benzer profilde medyan sıçrama) ile bu 5g simülasyonu farklı nesneler; biri tek gün dağılımı, diğeri ardışık 5 günlük stokastik yürüyüş.'
+  };
+}
+
 function buildBigSpikeCard(c, archetype) {
   const f = c.features || {};
   const cum = Number.isFinite(f.cumRet5d) ? Math.round(f.cumRet5d * 10000) / 100 : null;
@@ -342,6 +435,8 @@ function buildBigSpikeCard(c, archetype) {
   }
   const medSp = archetype?.historicalMedianSpikePct;
   const p75Sp = archetype?.historicalP75SpikePct;
+  const sim = c.forwardSim;
+  const simLines = sim ? [sim.compareTr] : [];
   return {
     targetHorizonTr:
       'Kurulum günlük mumdadır; tipik yoğunluk çoğu zaman 24–72 saat bandında (kesin süre yok; borsa saatleri ve likiditeye bağlı).',
@@ -352,8 +447,9 @@ function buildBigSpikeCard(c, archetype) {
     riseStyleTr,
     bulletsTr: [
       cum != null ? `Son 5 işlem günü kümülatif (yaklaşık): %${cum}` : null,
-      c.spikePromisePct != null ? `Benzer geçmişte medyan sıçrama: ~%${c.spikePromisePct}` : null,
-      c.live24hPct != null ? `Şu an 24s: %${c.live24hPct}` : null
+      c.spikePromisePct != null ? `Benzer geçmişte medyan tek-gün sıçrama: ~%${c.spikePromisePct}` : null,
+      c.live24hPct != null ? `Şu an 24s: %${c.live24hPct}` : null,
+      ...simLines
     ].filter(Boolean)
   };
 }
@@ -572,7 +668,17 @@ async function computeJumpArchetypeAnalysis(forceRefresh, opts = {}) {
   });
 
   withLive.sort((a, b) => b.potentialBlend - a.potentialBlend);
-  const candidates = withLive.slice(0, cfg.maxListed);
+  const candidatesRaw = withLive.slice(0, cfg.maxListed);
+
+  const candidates =
+    cfg.variant === 'bigspike'
+      ? candidatesRaw.map((c) => {
+          const row = bySymbol.get(c.symbol);
+          const closes = row?.candles?.map((x) => x.close).filter((x) => Number.isFinite(x) && x > 0);
+          const forwardSim = closes && closes.length >= 40 ? computeForwardSim5d(closes, c.symbol) : null;
+          return { ...c, forwardSim };
+        })
+      : candidatesRaw;
 
   const candidatesWithCards =
     cfg.variant === 'bigspike'
@@ -582,7 +688,10 @@ async function computeJumpArchetypeAnalysis(forceRefresh, opts = {}) {
   const methodNoteTr =
     `Tüm TR USDT-M perpetual pariteleri taranır; tek gün kapanış getirisi ≥%${cfg.spikeMinDayPct} olan her gün “sıçrama” sayılır ve önceki 5 gün profili havuza eklenir. ` +
     'Günlük mumdan ayrıca quote volume, işlem sayısı ve taker buy (agresif alım) okunur; rol modeli bunların sıçrama günü medyanlarını özetler. ' +
-    'Arketip medyan + sapmadır. Vaat: benzer geçmiş profillerdeki sıçrama büyüklüğünün medyanı. ' +
+    'Arketip medyan + sapmadır. Vaat: benzer geçmiş profillerdeki tek-gün sıçrama büyüklüğünün medyanı. ' +
+    (cfg.variant === 'bigspike'
+      ? 'Kartlarda ayrıca 5 işlem günü ileri simülasyon (GBM + bootstrap; son kapanıştan kümülatif % bantları) gösterilir; bu, tek-gün vaat ile aynı şey değildir. '
+      : '') +
     'Liste sırası: Binance **24 saatlik** ticker + profil benzerliği (anlık; günlük modelle birlikte okunmalı).';
 
   const filterSummaryTr =
@@ -638,7 +747,8 @@ async function computeBigSpikeWatchAnalysis(forceRefresh) {
     highSimEscape: Math.min(92, Math.max(68, Number(process.env.BIG_SPIKE_HIGH_SIM_ESCAPE) || 72)),
     maxListed: Math.min(12, Math.max(3, Number(process.env.BIG_SPIKE_MAX_MATCHES) || 6)),
     livePoolMult: Math.min(4, Math.max(1, Math.floor(Number(process.env.BIG_SPIKE_LIVE_POOL_MULT) || 2))),
-    minTrainingSamples: Math.max(10, Math.floor(Number(process.env.BIG_SPIKE_MIN_SAMPLES) || 18)),
+    /** Varsayılan 15: genişletilmiş TR evreninde ≥%50 sıçrama eğitim örnekleri için yeterli; sıkı veri isteyenler BIG_SPIKE_MIN_SAMPLES=18 yapar */
+    minTrainingSamples: Math.max(10, Math.floor(Number(process.env.BIG_SPIKE_MIN_SAMPLES) || 15)),
     variant: 'bigspike'
   });
 }

@@ -517,7 +517,7 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
   <div class="page active" id="page-dashboard">
     <div class="dash-stats">
       <div class="stat-box stat-go" role="button" tabindex="0" id="stat-box-sinyal" title="Tüm sinyaller" onclick="goSinyallerFiltre('tum')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('tum')}"><div class="stat-num" id="s-sinyal" style="color:var(--accent)">—</div><div class="stat-lbl">Sinyal</div><div class="stat-sym-preview" id="stat-sym-preview" style="font-size:9px;color:var(--text3);margin-top:4px;line-height:1.25;text-align:center"></div></div>
-      <div class="stat-box stat-go" role="button" tabindex="0" title="🔥 Nadir (80+)" onclick="goSinyallerFiltre('nadir')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('nadir')}"><div class="stat-num" id="s-nadir" style="color:var(--green)">—</div><div class="stat-lbl">🔥 Nadir</div></div>
+      <div class="stat-box stat-go" id="stat-box-nadir" role="button" tabindex="0" title="🔥 Nadir (72+)" onclick="goSinyallerFiltre('nadir')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('nadir')}"><div class="stat-num" id="s-nadir" style="color:var(--green)">—</div><div class="stat-lbl">🔥 Nadir</div></div>
       <div class="stat-box"><div class="stat-num" id="s-kur" style="color:var(--amber)">—</div><div class="stat-lbl">USD/TRY</div></div>
     </div>
     <p id="board-hint" style="font-size:10px;color:var(--text3);text-align:center;padding:0 16px 10px;line-height:1.45"></p>
@@ -532,11 +532,11 @@ html[data-theme="light"] .hm-cell-val{text-shadow:0 1px 0 rgba(255,255,255,0.45)
     <div class="invest-wrap" id="invest-guidance-root"><p class="invest-disclaimer">Tahta verisi yüklenince burada 3 strateji profili ve potansiyel sıralı parite özeti oluşur. Yatırım tavsiyesi değildir.</p></div>
     <div class="fb-grid">
       <div class="firsat-banner fb-nadir stat-go" role="button" tabindex="0" title="Nadir listesine git" style="flex-direction:column;align-items:flex-start;gap:4px" onclick="goSinyallerFiltre('nadir')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('nadir')}">
-        <div style="font-size:10px;color:var(--text3)">🔥 Nadir Fırsat (80+)</div>
+        <div style="font-size:10px;color:var(--text3)" id="lbl-nadir-fb">🔥 Nadir Fırsat (72+)</div>
         <div class="fb-sayi" id="b-nadir-sayi" style="color:var(--green)">0</div>
       </div>
       <div class="firsat-banner fb-guclu stat-go" role="button" tabindex="0" title="Güçlü listesine git" style="flex-direction:column;align-items:flex-start;gap:4px" onclick="goSinyallerFiltre('guclu')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goSinyallerFiltre('guclu')}">
-        <div style="font-size:10px;color:var(--text3)">✅ Güçlü Fırsat (65+)</div>
+        <div style="font-size:10px;color:var(--text3)" id="lbl-guclu-fb">✅ Güçlü Fırsat (62+)</div>
         <div class="fb-sayi" id="b-guclu-sayi" style="color:var(--accent)">0</div>
       </div>
     </div>
@@ -858,6 +858,22 @@ let coinList=[];
 let scanMeta=null;
 let perfMeta=null;
 let pushConfig=null;
+/** Sunucu /api/push/config → firsatTiers; yoksa backend varsayılanı ile uyumlu */
+let tierNadirMin=72,tierGucluMin=62,tierIyiMin=50;
+function applyFirsatTiers(pc){
+  if(!pc||typeof pc!=='object')return;
+  if(pc.nadirMin!=null&&Number.isFinite(Number(pc.nadirMin)))tierNadirMin=Number(pc.nadirMin);
+  if(pc.gucluMin!=null&&Number.isFinite(Number(pc.gucluMin)))tierGucluMin=Number(pc.gucluMin);
+  if(pc.iyiMin!=null&&Number.isFinite(Number(pc.iyiMin)))tierIyiMin=Number(pc.iyiMin);
+}
+function syncFirsatTierLabels(){
+  var nd=document.getElementById('stat-box-nadir');
+  if(nd)nd.title='\uD83D\uDD25 Nadir ('+tierNadirMin+'+)';
+  var l1=document.getElementById('lbl-nadir-fb');
+  if(l1)l1.textContent='\uD83D\uDD25 Nadir F\u0131rsat ('+tierNadirMin+'+)';
+  var l2=document.getElementById('lbl-guclu-fb');
+  if(l2)l2.textContent='\u2705 G\u00FC\u00E7l\u00FC F\u0131rsat ('+tierGucluMin+'+)';
+}
 let pollIntervalId=null;
 let nadirTrail={},storageHint={},performanceSnap=null,livePrices={},livePricesAt=null;
 let fiyatIntervalId=null;
@@ -1034,9 +1050,9 @@ function haritaPiyasaClick(rawBase){
 }
 function renk(fs){
   const n=Number(fs)||0;
-  if(n>=80)return'var(--green)';
-  if(n>=65)return'var(--accent)';
-  if(n>=50)return'var(--accent2)';
+  if(n>=tierNadirMin)return'var(--green)';
+  if(n>=tierGucluMin)return'var(--accent)';
+  if(n>=tierIyiMin)return'var(--accent2)';
   return'var(--text3)';
 }
 function escSvgText(s){
@@ -1305,9 +1321,10 @@ function pickArgmax(arr,scoreFn){
 function isEliteSignal(s){
   if(s.absentThisScan)return false;
   const fs=s.firsatSkoru?.skor||0;
-  if(fs>=82)return true;
-  if(fs>=78&&gv(s)>=90)return true;
-  if(fs>=74&&s.mtfDetay?.allAligned&&technicalLayerCount(s)>=4)return true;
+  const t=tierNadirMin;
+  if(fs>=t+10)return true;
+  if(fs>=t+6&&gv(s)>=90)return true;
+  if(fs>=t+2&&s.mtfDetay?.allAligned&&technicalLayerCount(s)>=4)return true;
   return false;
 }
 function playEliteChime(){
@@ -1621,6 +1638,8 @@ function veriCek(){
     const scanData=scanRes.status==='fulfilled'?scanRes.value:null;
     perfMeta=perfRes.status==='fulfilled'?perfRes.value:null;
     pushConfig=pushRes.status==='fulfilled'?pushRes.value:null;
+    applyFirsatTiers(pushConfig);
+    syncFirsatTierLabels();
     if(!scanData||typeof scanData!=='object'){
       scanMeta=scanMeta||{isScanning:false,totalCoins:0,scannedCoins:0};
       sig=[];
@@ -1766,7 +1785,7 @@ function guncelle(){
   initUiMinTp1Once();
   const vis=sig.filter(signalPassesUiMinTp1);
   const fresh=vis.filter(s=>!s.absentThisScan);
-  const t=vis.length,nadir=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=80).length,guclu=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=65).length;
+  const t=vis.length,nadir=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=tierNadirMin).length,guclu=fresh.filter(s=>(s.firsatSkoru?.skor||0)>=tierGucluMin).length;
   const fg=sig[0]?.sentiment?.value||14;
   document.getElementById('s-sinyal').textContent=t;
   document.getElementById('s-nadir').textContent=nadir;
@@ -2259,6 +2278,45 @@ function gelirWinnerPattern(refresh){
       if(out)out.innerHTML='<p style="color:var(--red);font-size:12px">İstek başarısız</p>';
     });
 }
+function gelirBuildBigSpikeCompareTableHtml(list){
+  var rows=list||[];
+  var hasSim=rows.some(function(p){return p.forwardSim;});
+  if(!hasSim)return '';
+  var thead='<div class="gelir-bs-compare-wrap" style="margin-bottom:14px;overflow-x:auto">'+
+    '<table style="font-size:11px;width:100%;max-width:720px;border-collapse:collapse">'+
+    '<caption style="caption-side:top;text-align:left;font-size:11px;font-weight:600;margin-bottom:8px;color:var(--text2)">Tek gün vaat (geçmiş) vs 5 işlem günü simülasyon (son kapanıştan kümülatif %)</caption>'+
+    '<thead><tr style="border-bottom:1px solid rgba(255,255,255,0.12)">'+
+    '<th style="text-align:left;padding:6px 8px">Parite</th>'+
+    '<th style="text-align:right;padding:6px 8px">Vaat medyan</th>'+
+    '<th style="text-align:right;padding:6px 8px">GBM 5g medyan</th>'+
+    '<th style="text-align:right;padding:6px 8px">GBM p5–p95</th>'+
+    '<th style="text-align:right;padding:6px 8px">Boot 5g medyan</th>'+
+    '<th style="text-align:right;padding:6px 8px">Boot p5–p95</th>'+
+    '</tr></thead><tbody>';
+  var body=rows.map(function(p){
+    var sim=p.forwardSim;
+    if(!sim)return '';
+    var base=String(p.symbol||'').replace(/USDT$/i,'');
+    var va=p.spikePromisePct!=null?escU(String(p.spikePromisePct)):'—';
+    var gbm=sim.gbmMedianPctFromLast!=null?escU(String(sim.gbmMedianPctFromLast)):'—';
+    var g5=sim.gbmBandPctP5P95&&sim.gbmBandPctP5P95[0]!=null?escU(String(sim.gbmBandPctP5P95[0])):'—';
+    var g95=sim.gbmBandPctP5P95&&sim.gbmBandPctP5P95[1]!=null?escU(String(sim.gbmBandPctP5P95[1])):'—';
+    var bm=sim.bootstrapMedianPct!=null?escU(String(sim.bootstrapMedianPct)):'—';
+    var b5=sim.bootstrapBandPctP5P95&&sim.bootstrapBandPctP5P95[0]!=null?escU(String(sim.bootstrapBandPctP5P95[0])):'—';
+    var b95=sim.bootstrapBandPctP5P95&&sim.bootstrapBandPctP5P95[1]!=null?escU(String(sim.bootstrapBandPctP5P95[1])):'—';
+    return '<tr style="border-bottom:1px solid rgba(255,255,255,0.06)">'+
+      '<td style="padding:6px 8px;font-family:\'Space Mono\',monospace">'+escU(base)+'</td>'+
+      '<td style="text-align:right;padding:6px 8px">%'+va+'</td>'+
+      '<td style="text-align:right;padding:6px 8px">%'+gbm+'</td>'+
+      '<td style="text-align:right;padding:6px 8px;font-size:10px">%'+g5+' … %'+g95+'</td>'+
+      '<td style="text-align:right;padding:6px 8px">%'+bm+'</td>'+
+      '<td style="text-align:right;padding:6px 8px;font-size:10px">%'+b5+' … %'+b95+'</td>'+
+      '</tr>';
+  }).join('');
+  return thead+body+'</tbody></table>'+
+    '<p style="font-size:9px;color:var(--text3);margin:8px 0 0;line-height:1.45">Vaat: benzer geçmiş ön-profilde tek günlük sıçrama medyanı. '+
+    'Simülasyon: son günlük kapanış serisinden GBM (30g) + bootstrap (60g log-getiri), 5 işlem günü kümülatif. İkisi farklı tanım; yatırım tavsiyesi değildir.</p></div>';
+}
 function gelirBuildBigSpikeCardsHtml(list){
   var rows=list||[];
   return rows.map(function(p){
@@ -2323,9 +2381,10 @@ function gelirBigSpikeFetch(refresh){
       if(arch.historicalMedianSpikePct!=null){
         archLine='<p style="font-size:10px;color:var(--text3);margin:0 0 10px;line-height:1.45">Arketip eşik ≥%'+escU(String(minSp))+' günlük sıçrama · Geçmiş medyan sıçrama <strong>%'+escU(String(arch.historicalMedianSpikePct))+'</strong> · Üst çeyrek <strong>%'+escU(String(arch.historicalP75SpikePct))+'</strong></p>';
       }
+      var cmp=gelirBuildBigSpikeCompareTableHtml(j.candidates||[]);
       var cards=gelirBuildBigSpikeCardsHtml(j.candidates||[]);
       if(!cards)cards='<p style="font-size:11px;color:var(--text3)">Şu an bu profile yakın parite yok veya filtreler sıkı.</p>';
-      out.innerHTML=archLine+cards+
+      out.innerHTML=archLine+cmp+cards+
         '<p style="font-size:10px;color:var(--text3);margin-top:14px;line-height:1.45">İşlem süresi: '+(j.durationMs!=null?Math.round(j.durationMs/1000)+' sn':'—')+' · Parite: '+(j.symbolCount||'—')+'</p>';
     })
     .catch(function(){
@@ -2514,9 +2573,9 @@ function horizonKartHTML(s){
 }
 function fList(){
   let l=sig.filter(signalPassesUiMinTp1);
-  if(aktifF==='nadir')l=l.filter(s=>(s.firsatSkoru?.skor||0)>=80);
-  if(aktifF==='nadirhist')l=l.filter(s=>(nadirTrail[s.symbol]?.maxSkor||0)>=80);
-  if(aktifF==='guclu')l=l.filter(s=>(s.firsatSkoru?.skor||0)>=65);
+  if(aktifF==='nadir')l=l.filter(s=>(s.firsatSkoru?.skor||0)>=tierNadirMin);
+  if(aktifF==='nadirhist')l=l.filter(s=>(nadirTrail[s.symbol]?.maxSkor||0)>=tierNadirMin);
+  if(aktifF==='guclu')l=l.filter(s=>(s.firsatSkoru?.skor||0)>=tierGucluMin);
   if(aktifF==='div')l=l.filter(s=>s.divergence?.bullish||s.divergence?.hidden_bullish);
   if(aktifF==='4tf')l=l.filter(s=>s.mtfDetay?.allAligned);
   if(aktifF==='fvg')l=l.filter(s=>s.fvg?.inBullishFVG);
@@ -2554,11 +2613,11 @@ function kartHTML(s){
   const px=pxFor(s),canli=canliFiyatVar(s);
   const chg=s.priceChange24h||0,circ=2*Math.PI*22,dash=(g/100)*circ;
   const bd=[];
-  if(fs>=80)bd.push('<span class="badge b-fire">🔥 NADİR '+fs+'</span>');
-  else if(fs>=65)bd.push('<span class="badge b-green">✅ GÜÇLÜ '+fs+'</span>');
+  if(fs>=tierNadirMin)bd.push('<span class="badge b-fire">🔥 NADİR '+fs+'</span>');
+  else if(fs>=tierGucluMin)bd.push('<span class="badge b-green">✅ GÜÇLÜ '+fs+'</span>');
   else if(fs>=50)bd.push('<span class="badge b-blue">👍 İYİ '+fs+'</span>');
   const tr=nadirTrail[s.symbol];
-  if(tr&&tr.maxSkor>=80&&fs<80){
+  if(tr&&tr.maxSkor>=tierNadirMin&&fs<tierNadirMin){
     bd.push('<span class="badge badge-nadir-hist" title="Son Nadir: '+(tr.lastSeen||'')+'">⭐ Tepe '+tr.maxSkor+'</span>');
   }
   if(s.mtfDetay?.allAligned)bd.push('<span class="badge b-green">'+(s.mtfDetay?.hasWeekly?'5TF':'4TF')+' ⚡</span>');
@@ -2664,7 +2723,7 @@ function renderSinyallerSafe(){
         const eta=scanMeta.etaSeconds?` ~${scanMeta.etaSeconds}s`:'';
         el.innerHTML=`<div class="bos">Filtrede henüz sonuç yok<br>Tarama sürüyor (${scanMeta.scannedCoins||0}/${scanMeta.totalCoins||0})${eta}</div>`;
       }else{
-        el.innerHTML=aktifF==='nadirhist'?'<div class="bos">Bu taramada geçmişte Nadir görülmüş coin yok<br>14 gün içinde 80+ olanlar burada listelenir</div>':aktifF==='tp1gt2'?'<div class="bos">Bu taramada ATR TP1 yüzdesi %2’yi aşan sinyal yok<br>TP1 min. (Dashboard) veya başka filtreler listeyi daraltıyor olabilir</div>':'<div class="bos">Bu filtrede sinyal yok'+(getUiMinTp1Pct()>0?' · Dashboard’da TP1 min. alanını kontrol edin':'')+'</div>';
+        el.innerHTML=aktifF==='nadirhist'?'<div class="bos">Bu taramada geçmişte Nadir görülmüş coin yok<br>14 gün içinde '+tierNadirMin+'+ olanlar burada listelenir</div>':aktifF==='tp1gt2'?'<div class="bos">Bu taramada ATR TP1 yüzdesi %2’yi aşan sinyal yok<br>TP1 min. (Dashboard) veya başka filtreler listeyi daraltıyor olabilir</div>':'<div class="bos">Bu filtrede sinyal yok'+(getUiMinTp1Pct()>0?' · Dashboard’da TP1 min. alanını kontrol edin':'')+'</div>';
       }
       return;
     }
@@ -2943,8 +3002,8 @@ function listeKartHTML(row){
   const st=row.onBoard?'<span class="badge b-green">Tahtada</span>':'<span class="badge b-amber">Eşik altı</span>';
   let tier='';
   if(typeof fs==='number'){
-    if(fs>=80)tier='<span class="badge b-fire">NADİR</span>';
-    else if(fs>=65)tier='<span class="badge b-green">GÜÇLÜ</span>';
+    if(fs>=tierNadirMin)tier='<span class="badge b-fire">NADİR</span>';
+    else if(fs>=tierGucluMin)tier='<span class="badge b-green">GÜÇLÜ</span>';
     else if(fs>=50)tier='<span class="badge b-blue">İYİ</span>';
   }
   const ai=row.aiVerdict?`<span class="badge b-blue">${row.aiVerdict}</span>`:'';
@@ -3060,8 +3119,8 @@ function renderRapor(){
   let favFf={};
   try{favFf=JSON.parse(localStorage.getItem('ss_ff')||'{}');}catch(e){favFf={};}
   try{
-  const t=sig.length,nadir=sig.filter(s=>(s.firsatSkoru?.skor||0)>=80).length;
-  const guclu=sig.filter(s=>(s.firsatSkoru?.skor||0)>=65).length,iyi=sig.filter(s=>(s.firsatSkoru?.skor||0)>=50).length;
+  const t=sig.length,nadir=sig.filter(s=>(s.firsatSkoru?.skor||0)>=tierNadirMin).length;
+  const guclu=sig.filter(s=>(s.firsatSkoru?.skor||0)>=tierGucluMin).length,iyi=sig.filter(s=>(s.firsatSkoru?.skor||0)>=tierIyiMin).length;
   const aligned=sig.filter(s=>s.mtfDetay?.allAligned).length,div=sig.filter(s=>s.divergence?.bullish||s.divergence?.hidden_bullish).length;
   const fvg=sig.filter(s=>s.fvg?.inBullishFVG).length,arb=sig.filter(s=>s.arbitraj?.isOpportunity).length;
   const anom=sig.filter(s=>s.anomaly?.isAnomaly).length,ag=sig.filter(s=>s.ai?.verdict==='GÜÇLÜ AL').length,aa=sig.filter(s=>s.ai?.verdict==='AL').length;
@@ -3126,9 +3185,9 @@ function renderRapor(){
     <div class="rapor-compact">
       <div class="rapor-compact-t">Bu tarama · tahta</div>
       <div class="rapor-mosaic">
-        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--green)">${nadir}</div><div class="rapor-cell-l">Nadir 80+</div></div>
-        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent)">${guclu}</div><div class="rapor-cell-l">Güçlü 65+</div></div>
-        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent2)">${iyi}</div><div class="rapor-cell-l">İyi 50+</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--green)">${nadir}</div><div class="rapor-cell-l">Nadir ${tierNadirMin}+</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent)">${guclu}</div><div class="rapor-cell-l">Güçlü ${tierGucluMin}+</div></div>
+        <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent2)">${iyi}</div><div class="rapor-cell-l">İyi ${tierIyiMin}+</div></div>
         <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent2)">${aligned}</div><div class="rapor-cell-l">4TF</div></div>
         <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent)">${div}</div><div class="rapor-cell-l">Div</div></div>
         <div class="rapor-cell"><div class="rapor-cell-v" style="color:var(--accent2)">${fvg}</div><div class="rapor-cell-l">FVG</div></div>
@@ -3143,9 +3202,9 @@ function renderRapor(){
     <div class="rapor-compact">
       <div class="rapor-compact-t">Skor dilimine göre geçmiş başarı</div>
       <div class="rapor-tier-wrap">
-        ${perfTierMini('Nadir 80+',nadirPerf,'var(--green)')}
-        ${perfTierMini('Güçlü 65–79',gucluPerf,'var(--accent)')}
-        ${perfTierMini('İyi 50–64',iyiPerf,'var(--accent2)')}
+        ${perfTierMini('Nadir '+tierNadirMin+'+',nadirPerf,'var(--green)')}
+        ${perfTierMini('Güçlü '+tierGucluMin+'–'+(tierNadirMin-1),gucluPerf,'var(--accent)')}
+        ${perfTierMini('İyi '+tierIyiMin+'–'+(tierGucluMin-1),iyiPerf,'var(--accent2)')}
       </div>
       ${aggResolved===0?'<p style="font-size:9px;color:var(--text3);margin:8px 0 0;line-height:1.45">Sonuçlanan 0 iken tablolar “—” gösterir. Redis ve fiyat tetiklemesi geldikçe dolar.</p>':''}
     </div>

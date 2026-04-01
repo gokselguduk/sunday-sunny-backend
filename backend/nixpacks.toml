@@ -1,4 +1,5 @@
 # Railway: Root Directory = "backend" iken bu klasör kök olur.
+# Büyük sıçrama + 5g simülasyon: BIG_SPIKE_* ve BIG_SPIKE_SIM_* (opsiyonel) — dashboard’ta tanımlanır.
 [variables]
 NODE_VERSION = "20"
 

@@ -1,4 +1,5 @@
 const memory = require('./memory');
+const firsatTiers = require('./firsatTiers');
 
 const TZ = process.env.NADIR_ALERT_TZ || 'Europe/Istanbul';
 const COOLDOWN_MS = parseInt(process.env.NADIR_PUSH_COOLDOWN_MS ?? String(45 * 60 * 1000), 10);
@@ -19,8 +20,9 @@ function isNightSilentHour() {
 }
 
 function pickNadirSignals(signals) {
+  const min = firsatTiers.NADIR_MIN_SCORE;
   return signals
-    .filter((s) => (s.firsatSkoru?.skor || 0) >= 80)
+    .filter((s) => (s.firsatSkoru?.skor || 0) >= min)
     .sort((a, b) => (b.firsatSkoru?.skor || 0) - (a.firsatSkoru?.skor || 0));
 }
 
@@ -64,7 +66,8 @@ function getNadirAlertConfigForClient() {
       startHour: parseInt(process.env.NIGHT_SILENT_START_HOUR ?? '23', 10),
       endHour: parseInt(process.env.NIGHT_SILENT_END_HOUR ?? '7', 10)
     },
-    nadirCooldownMs: COOLDOWN_MS
+    nadirCooldownMs: COOLDOWN_MS,
+    ...firsatTiers.forClient()
   };
 }
 

@@ -120,13 +120,8 @@ function createTierBucket(label, min, max) {
   };
 }
 
-function classifyTier(firsatSkor) {
-  if (typeof firsatSkor !== 'number') return null;
-  if (firsatSkor >= 80) return 'nadir';
-  if (firsatSkor >= 65) return 'guclu';
-  if (firsatSkor >= 50) return 'iyi';
-  return null;
-}
+const firsatTiers = require('./firsatTiers');
+const { classifyTier } = firsatTiers;
 
 function percent(value, total) {
   if (!total) return 0;
@@ -253,10 +248,13 @@ async function getTierPerformance(limit) {
   try {
     const r = getRedis();
     const keys = await r.lrange('signals:history', 0, maxItems);
+    const nMin = firsatTiers.NADIR_MIN_SCORE;
+    const gMin = firsatTiers.GUCLU_MIN_SCORE;
+    const iMin = firsatTiers.IYI_MIN_SCORE;
     const tiers = {
-      nadir: createTierBucket('NADIR (80+)', 80, 100),
-      guclu: createTierBucket('GUCLU (65-79)', 65, 79),
-      iyi: createTierBucket('IYI (50-64)', 50, 64)
+      nadir: createTierBucket(`NADIR (${nMin}+)`, nMin, 100),
+      guclu: createTierBucket(`GUCLU (${gMin}–${nMin - 1})`, gMin, nMin - 1),
+      iyi: createTierBucket(`IYI (${iMin}–${gMin - 1})`, iMin, gMin - 1)
     };
 
     let unknownTier = 0;
@@ -295,9 +293,23 @@ async function getTierPerformance(limit) {
   } catch (err) {
     return {
       tiers: {
-        nadir: summarizeTier(createTierBucket('NADIR (80+)', 80, 100)),
-        guclu: summarizeTier(createTierBucket('GUCLU (65-79)', 65, 79)),
-        iyi: summarizeTier(createTierBucket('IYI (50-64)', 50, 64))
+        nadir: summarizeTier(
+          createTierBucket(`NADIR (${firsatTiers.NADIR_MIN_SCORE}+)`, firsatTiers.NADIR_MIN_SCORE, 100)
+        ),
+        guclu: summarizeTier(
+          createTierBucket(
+            `GUCLU (${firsatTiers.GUCLU_MIN_SCORE}–${firsatTiers.NADIR_MIN_SCORE - 1})`,
+            firsatTiers.GUCLU_MIN_SCORE,
+            firsatTiers.NADIR_MIN_SCORE - 1
+          )
+        ),
+        iyi: summarizeTier(
+          createTierBucket(
+            `IYI (${firsatTiers.IYI_MIN_SCORE}–${firsatTiers.GUCLU_MIN_SCORE - 1})`,
+            firsatTiers.IYI_MIN_SCORE,
+            firsatTiers.GUCLU_MIN_SCORE - 1
+          )
+        )
       },
       unknownTier: 0,
       sampleSize: 0
@@ -397,7 +409,7 @@ async function recordNadirFromScan(signals) {
     const nowIso = new Date().toISOString();
     for (const s of signals) {
       const sc = s.firsatSkoru?.skor;
-      if (sc == null || sc < 80 || !s.symbol) continue;
+      if (sc == null || sc < firsatTiers.NADIR_MIN_SCORE || !s.symbol) continue;
       const prev = trail[s.symbol] || {};
       trail[s.symbol] = {
         maxSkor: Math.max(prev.maxSkor || 0, sc),

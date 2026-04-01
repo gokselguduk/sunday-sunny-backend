@@ -103,7 +103,17 @@ async function getTRYCoins() {
   }
 }
 
-const DEFAULT_TR_BASES = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOGE', 'DOT', 'LINK', 'LTC', 'ATOM'];
+/**
+ * BINANCE_TR_COINS boşken kullanılır: spot TR listesi ile USDT-M perpetual kesişimi.
+ * Gelir+ büyük sıçrama / sıçrama arketipi için yeterli örnek üretmek üzere likit bazlar genişletildi.
+ * Daraltmak veya özelleştirmek için Railway’de BINANCE_TR_COINS tanımlayın.
+ */
+const DEFAULT_TR_BASES = [
+  'BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'ADA', 'AVAX', 'DOGE', 'DOT', 'LINK', 'LTC', 'ATOM',
+  'MATIC', 'ARB', 'OP', 'WIF', 'NOT', 'ONDO', 'INJ', 'TIA', 'SUI', 'SEI', 'APT', 'NEAR',
+  'FIL', 'ETC', 'ALGO', 'AAVE', 'MKR', 'QTUM', 'XLM', 'TRX', 'UNI', 'CRV', 'IMX', 'GALA',
+  'ENS', 'STX', 'WLD', 'PENDLE', '1000PEPE', 'BABY', 'NIGHT', 'HUMA', 'G', 'XP'
+];
 
 function parseConfiguredSymbols(rawList) {
   if (!rawList || !String(rawList).trim()) return [...DEFAULT_TR_BASES];

@@ -1,5 +1,11 @@
 # NIXPACKS. Start: npm start — monorepo kökünde ./backend’e yönlendirir;
 # Railway Root Directory = backend iken de aynı package.json node src/index.js çalıştırır.
+#
+# Gelir+ “büyük sıçrama” analizi (GET /api/analytics/big-spike-watch) kodda; ek paket gerekmez.
+# BINANCE_TR_COINS boşsa backend varsayılan ~46 likit baz (TR∩Futures) kullanır — backend/.env.example.
+# İsteğe bağlı Railway Variables: BINANCE_TR_COINS, BIG_SPIKE_MIN_DAY_PCT, BIG_SPIKE_MIN_SIMILARITY,
+# BIG_SPIKE_MIN_HITS, BIG_SPIKE_HIGH_SIM_ESCAPE, BIG_SPIKE_MAX_MATCHES, BIG_SPIKE_LIVE_POOL_MULT,
+# BIG_SPIKE_MIN_SAMPLES (varsayılan 15), BIG_SPIKE_SIM_GBM_PATHS, BIG_SPIKE_SIM_BOOT_PATHS, JUMP_ARCHETYPE_CACHE_MS.
 [build]
 builder = "NIXPACKS"
 

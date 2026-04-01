@@ -9,6 +9,7 @@ const memory = require('./memory');
 const scanner = require('./scanner');
 const binance = require('./binance');
 const cryptoNews = require('./cryptoNews');
+const firsatTiers = require('./firsatTiers');
 
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514';
 const PLACEHOLDER_KEY = 'buraya_claude_api_key_gelecek';
@@ -90,11 +91,14 @@ function formatTierPerf(tp) {
   const row = (name, b) =>
     `${name}: çözümlü ${b.resolved}, bekleyen ${b.pending}, ` +
     `TP1+ %${b.tp1Rate}, TP2+ %${b.tp2Rate}, TP3 %${b.tp3Rate}, SL %${b.slRate}`;
+  const nMin = firsatTiers.NADIR_MIN_SCORE;
+  const gMin = firsatTiers.GUCLU_MIN_SCORE;
+  const iMin = firsatTiers.IYI_MIN_SCORE;
   return [
     'Bu platformda kayıtlı sinyallerden türetilen tier özetleri (geçmiş performans, geleceği garanti etmez):',
-    row('Nadir (80+)', t.nadir),
-    row('Güçlü (65–79)', t.guclu),
-    row('İyi (50–64)', t.iyi),
+    row(`Nadir (${nMin}+)`, t.nadir),
+    row(`Güçlü (${gMin}–${nMin - 1})`, t.guclu),
+    row(`İyi (${iMin}–${gMin - 1})`, t.iyi),
     `(Örneklem: ~${tp.sampleSize || 0} kayıt anahtarı tarandı.)`
   ].join('\n');
 }

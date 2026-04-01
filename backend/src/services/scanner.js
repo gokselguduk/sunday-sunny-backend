@@ -22,6 +22,7 @@ const {
 } = require('./kriptoAnalizSistemi');
 const { fetchMacroSnapshot } = require('./macroSnapshot');
 const { fetchBtcOnChainSnapshot } = require('./onChainSnapshot');
+const firsatTiers = require('./firsatTiers');
 
 /** Parite → son tam tarama sinyali (taramalar arası birleşik tahta) */
 const signalRegistry = new Map();
@@ -535,8 +536,12 @@ async function scanMarket() {
 
   broadcast({ type:'scan_complete', data: board, scan:{ ...scanState }, time:new Date().toISOString() });
 
-  const nadir  = board.filter(r => !r.absentThisScan && r.firsatSkoru?.skor >= 80).length;
-  const guclu  = board.filter(r => !r.absentThisScan && r.firsatSkoru?.skor >= 65).length;
+  const nadir = board.filter(
+    (r) => !r.absentThisScan && (r.firsatSkoru?.skor || 0) >= firsatTiers.NADIR_MIN_SCORE
+  ).length;
+  const guclu = board.filter(
+    (r) => !r.absentThisScan && (r.firsatSkoru?.skor || 0) >= firsatTiers.GUCLU_MIN_SCORE
+  ).length;
   const div    = board.filter(r => r.divergence?.bullish||r.divergence?.hidden_bullish).length;
   const fvg    = board.filter(r => r.fvg?.inBullishFVG).length;
   const arb    = board.filter(r => r.arbitraj?.isOpportunity).length;

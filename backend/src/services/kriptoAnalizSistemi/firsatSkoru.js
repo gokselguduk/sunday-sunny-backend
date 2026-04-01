@@ -1,7 +1,9 @@
 const { SEZON } = require('./constants');
+const firsatTiers = require('../firsatTiers');
 
 /**
  * Tek başarı kaynağı: PPT tabanlı kriptoAnaliz çıktısından 0–100 fırsat skoru.
+ * Ölçek: güçlü kurulumların üst banda (Nadir eşiği) çıkabilmesi için MTF + checklist ağırlıkları güncellenir.
  */
 function deriveFirsatFromKriptoAnaliz(ka, signal) {
   if (!ka) {
@@ -11,13 +13,15 @@ function deriveFirsatFromKriptoAnaliz(ka, signal) {
   let skor = 0;
   const oz = ka.checklist20?.ozet || {};
   const otPuan = Number(oz.otomatikPuanYaklasik) || 0;
-  skor += Math.round((otPuan / 20) * 36);
+  skor += Math.round((otPuan / 20) * 42);
 
   const g = ka.mtfUyumu?.guven;
-  if (g === 'YUKSEK') skor += 24;
-  else if (g === 'ORTA') skor += 16;
-  else if (g === 'DUSUK') skor += 8;
+  if (g === 'YUKSEK') skor += 28;
+  else if (g === 'ORTA') skor += 18;
+  else if (g === 'DUSUK') skor += 10;
   else if (g === 'LONG_YOK') skor += 0;
+
+  if (signal?.mtfDetay?.allAligned && g === 'YUKSEK') skor += 5;
 
   const p = ka.hacimFiyat?.profil;
   if (p === 'GUC_BULL') skor += 14;
@@ -46,7 +50,7 @@ function deriveFirsatFromKriptoAnaliz(ka, signal) {
   if (signal?.orderBook?.orderFlowScore < -2) skor -= 3;
 
   if (signal?.anomaly?.signal === 'MANIPULASYON') skor -= 25;
-  else if (signal?.anomaly?.isAnomaly) skor = Math.round(skor * 0.55);
+  else if (signal?.anomaly?.isAnomaly) skor = Math.round(skor * 0.62);
 
   const mk = ka.makroKatman;
   if (mk?.entegre) {
@@ -66,15 +70,19 @@ function deriveFirsatFromKriptoAnaliz(ka, signal) {
 
   const final = Math.min(Math.max(Math.round(skor), 0), 100);
 
+  const nMin = firsatTiers.NADIR_MIN_SCORE;
+  const gMin = firsatTiers.GUCLU_MIN_SCORE;
+  const iMin = firsatTiers.IYI_MIN_SCORE;
+
   let seviye = 'BEKLE';
   let emoji = '⏳';
-  if (final >= 80) {
+  if (final >= nMin) {
     seviye = 'NADİR FIRSAT';
     emoji = '🔥';
-  } else if (final >= 65) {
+  } else if (final >= gMin) {
     seviye = 'GÜÇLÜ FIRSAT';
     emoji = '✅';
-  } else if (final >= 50) {
+  } else if (final >= iMin) {
     seviye = 'İYİ FIRSAT';
     emoji = '👍';
   } else if (final >= 35) {
